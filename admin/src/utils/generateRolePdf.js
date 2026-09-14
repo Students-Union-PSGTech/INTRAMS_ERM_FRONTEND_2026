@@ -1,9 +1,10 @@
-﻿import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 function normalizeRole(role) {
   const value = String(role || '').toLowerCase();
-  if (value === 'convenor') return 'convenor';
-  if (value === 'volunteer') return 'volunteer';
+  if (value === 'convenor' || value === 'convenors') return 'convenor';
+  if (value === 'volunteer' || value === 'volunteers') return 'volunteer';
+  if (value === 'faculty' || value === 'faculty_advisor') return 'faculty';
   return 'secretary';
 }
 
@@ -11,6 +12,7 @@ function getRoleLabel(role) {
   const value = normalizeRole(role);
   if (value === 'convenor') return 'Convenor';
   if (value === 'volunteer') return 'Volunteer';
+  if (value === 'faculty') return 'Faculty Advisor';
   return 'Secretary';
 }
 
@@ -18,6 +20,7 @@ function getRoleTitle(role) {
   const value = normalizeRole(role);
   if (value === 'convenor') return 'Event Convenor Details Report';
   if (value === 'volunteer') return 'Event Volunteer Details Report';
+  if (value === 'faculty') return 'Event Faculty Advisor Details Report';
   return 'Event Secretary Details Report';
 }
 
@@ -64,7 +67,7 @@ function getAssociationEntries(data, role) {
       map[associationName].push({
         name: member?.name || member?.secretaryName || member?.convenorName || member?.volunteerName || '—',
         rollNo: member?.rollNo || member?.rollNumber || member?.roll_no || member?.roll_number || '—',
-        year: member?.year || member?.yearOfStudy || member?.studyYear || '4TH YEAR',
+        year: member?.year ? (String(member.year).toUpperCase().includes('YEAR') ? String(member.year).toUpperCase() : `${member.year}TH YEAR`) : '4TH YEAR',
         department: member?.department || member?.dept || member?.specialization || '—',
         phone: member?.phone || member?.phoneNo || member?.phone_no || member?.mobile || '—',
       });
@@ -74,7 +77,7 @@ function getAssociationEntries(data, role) {
   const entries = Object.entries(map);
   if (entries.length > 0) return entries;
 
-  return [['General Association', [{ name: 'NIL', rollNo: 'NIL', year: '4TH YEAR', department: 'NIL', phone: '0000000000' }]]];
+  return [['General Association', [{ name: 'NIL', rollNo: 'NIL', year: '4TH YEAR', department: '—', phone: '0000000000' }]]];
 }
 
 export async function generateRolePdf({ role, data }) {
@@ -83,82 +86,102 @@ export async function generateRolePdf({ role, data }) {
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
 
-  const pageWidth = 841.89;
-  const pageHeight = 595.28;
-  const outerX = 15;
-  const outerY = 15;
+  const pageWidth = 841.89; // Landscape A4 width
+  const pageHeight = 595.28; // Landscape A4 height
+  const outerMargin = 18;
   const tableX = 35;
-  const tableWidth = 770;
-  const colWidths = [50, 190, 110, 82, 190, 148];
+  const tableWidth = pageWidth - tableX * 2; // 771.89 pt
+  const colWidths = [45, 210, 110, 85, 203.89, 118]; // S.No, Name, Roll No, Year, Dept, Phone
 
-  const page = pdfDoc.addPage([pageWidth, pageHeight]);
+  const drawPageBorder = (page) => {
+    page.drawRectangle({
+      x: outerMargin,
+      y: outerMargin,
+      width: pageWidth - outerMargin * 2,
+      height: pageHeight - outerMargin * 2,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.5,
+    });
+  };
 
-  page.drawRectangle({
-    x: outerX,
-    y: outerY,
-    width: pageWidth - outerX * 2,
-    height: pageHeight - outerY * 2,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 1.5,
-  });
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawPageBorder(currentPage);
 
+  // Title Header
   const title = getRoleTitle(role);
   const titleWidth = fontBold.widthOfTextAtSize(title, 20);
-  page.drawText(title, {
+  currentPage.drawText(title, {
     x: (pageWidth - titleWidth) / 2,
-    y: pageHeight - 62,
+    y: pageHeight - 55,
     size: 20,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
 
+  // Timestamp Subtitle
   const now = new Date();
-  const generatedText = `Generated on ${now.toLocaleDateString('en-GB')}, ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}`;
-  const generatedWidth = fontItalic.widthOfTextAtSize(generatedText, 9);
-  page.drawText(generatedText, {
+  const dateStr = now.toLocaleDateString('en-GB'); // DD/MM/YYYY
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
+  const generatedText = `Generated on ${dateStr}, ${timeStr}`;
+  const generatedWidth = fontItalic.widthOfTextAtSize(generatedText, 10);
+  currentPage.drawText(generatedText, {
     x: (pageWidth - generatedWidth) / 2,
-    y: pageHeight - 80,
-    size: 9,
+    y: pageHeight - 74,
+    size: 10,
     font: fontItalic,
     color: rgb(0, 0, 0),
   });
 
-  let currentY = pageHeight - 112;
+  let currentY = pageHeight - 105;
   const associationGroups = getAssociationEntries(data, role);
+
+  const checkAddPage = (requiredHeight) => {
+    if (currentY - requiredHeight < outerMargin + 25) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      drawPageBorder(currentPage);
+      currentY = pageHeight - 50;
+    }
+  };
 
   associationGroups.forEach(([associationName, members]) => {
     const bannerHeight = 24;
     const headerHeight = 24;
     const rowHeight = 24;
-    const sectionGap = 14;
+    const sectionGap = 16;
 
+    // Ensure space for banner + header + at least 1 row
+    checkAddPage(bannerHeight + headerHeight + rowHeight);
+
+    // Association Banner (Dark Blue)
     const bannerY = currentY - bannerHeight;
-    page.drawRectangle({
+    currentPage.drawRectangle({
       x: tableX,
       y: bannerY,
       width: tableWidth,
       height: bannerHeight,
-      color: rgb(0.06, 0.28, 0.41),
+      color: rgb(0.14, 0.32, 0.48), // Dark Blue #24527a
       borderColor: rgb(0, 0, 0),
       borderWidth: 1,
     });
 
-    page.drawText(associationName, {
+    currentPage.drawText(associationName, {
       x: tableX + 8,
       y: bannerY + 7,
       size: 11,
       font: fontBold,
-      color: rgb(1, 1, 1),
+      color: rgb(1, 1, 1), // White Text
     });
 
     currentY -= bannerHeight;
+
+    // Table Header Row (Light Blue-Grey #d9e2ec, Black Text)
     const headerY = currentY - headerHeight;
-    page.drawRectangle({
+    currentPage.drawRectangle({
       x: tableX,
       y: headerY,
       width: tableWidth,
       height: headerHeight,
-      color: rgb(0.06, 0.28, 0.41),
+      color: rgb(0.85, 0.89, 0.93), // Light grey-blue #d9e2ec
       borderColor: rgb(0, 0, 0),
       borderWidth: 1,
     });
@@ -169,18 +192,18 @@ export async function generateRolePdf({ role, data }) {
     headerValues.forEach((header, index) => {
       const width = colWidths[index];
       const textWidth = fontBold.widthOfTextAtSize(header, 10);
-      const centered = index === 0 || index === 2 || index === 3;
-      const textX = centered ? xPos + (width - textWidth) / 2 : xPos + 8;
+      const isCentered = index === 0 || index === 2 || index === 3;
+      const textX = isCentered ? xPos + (width - textWidth) / 2 : xPos + 8;
 
-      page.drawText(header, {
+      currentPage.drawText(header, {
         x: textX,
         y: headerY + 7,
         size: 10,
         font: fontBold,
-        color: rgb(1, 1, 1),
+        color: rgb(0, 0, 0), // Black Text
       });
 
-      page.drawLine({
+      currentPage.drawLine({
         start: { x: xPos, y: headerY },
         end: { x: xPos, y: headerY + headerHeight },
         thickness: 1,
@@ -190,7 +213,7 @@ export async function generateRolePdf({ role, data }) {
       xPos += width;
     });
 
-    page.drawLine({
+    currentPage.drawLine({
       start: { x: xPos, y: headerY },
       end: { x: xPos, y: headerY + headerHeight },
       thickness: 1,
@@ -199,17 +222,19 @@ export async function generateRolePdf({ role, data }) {
 
     currentY = headerY;
 
+    // Member Data Rows (White Background, Black Text)
     members.forEach((member, memberIndex) => {
+      checkAddPage(rowHeight);
+
       const rowTop = currentY;
       const rowBottom = rowTop - rowHeight;
-      const rowColor = memberIndex % 2 === 0 ? rgb(1, 1, 1) : rgb(0.92, 0.94, 0.96);
 
-      page.drawRectangle({
+      currentPage.drawRectangle({
         x: tableX,
         y: rowBottom,
         width: tableWidth,
         height: rowHeight,
-        color: rowColor,
+        color: rgb(1, 1, 1), // White
         borderColor: rgb(0, 0, 0),
         borderWidth: 1,
       });
@@ -227,10 +252,10 @@ export async function generateRolePdf({ role, data }) {
       values.forEach((value, index) => {
         const width = colWidths[index];
         const textWidth = fontRegular.widthOfTextAtSize(value, 9.5);
-        const centered = index === 0 || index === 2 || index === 3;
-        const textX = centered ? cellX + (width - textWidth) / 2 : cellX + 8;
+        const isCentered = index === 0 || index === 2 || index === 3;
+        const textX = isCentered ? cellX + (width - textWidth) / 2 : cellX + 8;
 
-        page.drawText(value, {
+        currentPage.drawText(value, {
           x: textX,
           y: rowBottom + 7,
           size: 9.5,
@@ -238,7 +263,7 @@ export async function generateRolePdf({ role, data }) {
           color: rgb(0, 0, 0),
         });
 
-        page.drawLine({
+        currentPage.drawLine({
           start: { x: cellX, y: rowTop },
           end: { x: cellX, y: rowBottom },
           thickness: 1,
@@ -248,7 +273,7 @@ export async function generateRolePdf({ role, data }) {
         cellX += width;
       });
 
-      page.drawLine({
+      currentPage.drawLine({
         start: { x: cellX, y: rowTop },
         end: { x: cellX, y: rowBottom },
         thickness: 1,
