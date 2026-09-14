@@ -371,7 +371,7 @@ export async function generateLabPdf(eventData = {}) {
   currentY -= 35;
   const gridX = 55;
   const gridWidth = 485.28;
-  const gridColW = gridWidth / 4; // 121.32
+  const gridColW = gridWidth / 3; // 161.76
   const gridHeaderH = 22;
   const gridRadioH = 28;
 
@@ -385,7 +385,7 @@ export async function generateLabPdf(eventData = {}) {
     borderWidth: 1.2,
   });
 
-  const dayHeaders = ['DAY 1', 'DAY 2', 'DAY 3', '2 DAYS'];
+  const dayHeaders = ['DAY 1', 'DAY 2', '2 DAYS'];
   dayHeaders.forEach((dh, idx) => {
     const textW = fontBold.widthOfTextAtSize(dh, 9.5);
     page2.drawText(dh, {
@@ -395,7 +395,7 @@ export async function generateLabPdf(eventData = {}) {
       font: fontBold,
       color: rgb(0, 0, 0),
     });
-    if (idx < 3) {
+    if (idx < 2) {
       page2.drawLine({
         start: { x: gridX + (idx + 1) * gridColW, y: currentY },
         end: { x: gridX + (idx + 1) * gridColW, y: currentY - gridHeaderH },
@@ -419,17 +419,16 @@ export async function generateLabPdf(eventData = {}) {
 
   // Determine selected day
   let selectedDayIdx = 0; // default Day 1
-  if (selectedDayStr.includes('2') && selectedDayStr.includes('day')) selectedDayIdx = 3;
-  else if (selectedDayStr.includes('3')) selectedDayIdx = 2;
+  if (selectedDayStr.includes('both') || selectedDayStr.includes('2 day') || selectedDayStr.includes('all')) selectedDayIdx = 2;
   else if (selectedDayStr.includes('2')) selectedDayIdx = 1;
   else if (selectedDayStr.includes('1')) selectedDayIdx = 0;
 
-  for (let d = 0; d < 4; d++) {
+  for (let d = 0; d < 3; d++) {
     const cx = gridX + d * gridColW + gridColW / 2;
     const cy = currentY - gridRadioH / 2;
     drawRadioCircle(page2, cx, cy, d === selectedDayIdx);
 
-    if (d < 3) {
+    if (d < 2) {
       page2.drawLine({
         start: { x: gridX + (d + 1) * gridColW, y: currentY },
         end: { x: gridX + (d + 1) * gridColW, y: currentY - gridRadioH },

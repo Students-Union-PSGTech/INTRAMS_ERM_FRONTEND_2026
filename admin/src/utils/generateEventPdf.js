@@ -501,13 +501,11 @@ export async function generateEventPdf(eventData = {}) {
   });
 
   const selectedDayStr = String(formSpecs.day || ev.day || '1').toLowerCase();
-  let daySelIdx = 0;
-  if (selectedDayStr.includes('2')) daySelIdx = 1;
-  else if (selectedDayStr.includes('3')) daySelIdx = 2;
+  let daySelIdx = selectedDayStr.includes('2') ? 1 : 0;
 
-  const dayLabels = ['Day 1', 'Day 2', 'Day 3'];
+  const dayLabels = ['Day 1', 'Day 2'];
   dayLabels.forEach((dl, idx) => {
-    const lx = gridBoxX + 20 + idx * 150;
+    const lx = gridBoxX + 60 + idx * 200;
     page4.drawText(dl, { x: lx, y: p4Y - 24, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
     drawRadioCircle(page4, lx + 45, p4Y - 20, idx === daySelIdx);
   });
