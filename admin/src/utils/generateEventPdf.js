@@ -55,16 +55,17 @@ export async function generateEventPdf(eventData = {}) {
   };
 
   // Draw Bottom Signature Lines (Secretary & Faculty Advisor)
-  const drawFooterSignatures = (page) => {
-    page.drawText('Signature of the Secretary', {
-      x: margin + 30,
+  const drawFooterSignatures = (page, showColon = false) => {
+    const colonStr = showColon ? ':' : '';
+    page.drawText(`Signature of the Secretary${colonStr}`, {
+      x: margin + 20,
       y: margin + 25,
       size: 10.5,
       font: fontRegular,
       color: rgb(0, 0, 0),
     });
-    page.drawText('Signature of the Faculty Advisor', {
-      x: pageWidth - margin - 200,
+    page.drawText(`Signature of the Faculty Advisor${colonStr}`, {
+      x: pageWidth - margin - 210,
       y: margin + 25,
       size: 10.5,
       font: fontRegular,
@@ -462,7 +463,7 @@ export async function generateEventPdf(eventData = {}) {
   p3Y -= 12;
   p3Y = drawPage3Table(page3, tX, p3Y, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], judgeRows);
 
-  drawFooterSignatures(page3);
+  drawFooterSignatures(page3, true);
 
   // ==========================================
   // PAGE 4: EVENT DETAILS & RESOURCE MATRIX
@@ -704,7 +705,7 @@ export async function generateEventPdf(eventData = {}) {
     p5Y -= 25;
   });
 
-  drawFooterSignatures(page5);
+  drawFooterSignatures(page5, true);
 
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });
