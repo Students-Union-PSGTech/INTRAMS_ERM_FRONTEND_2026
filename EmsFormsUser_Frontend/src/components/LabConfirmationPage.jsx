@@ -130,6 +130,7 @@ function LabConfirmationPage() {
               {events.map((ev) => {
                 const formSpecs = ev.form || {};
                 const convenors = ev.contacts?.convenors || [];
+                const isApproved = formSpecs.lab_status === 'approved' || formSpecs.lab_status === 'confirmed' || ev.lab_status === 'approved' || ev.status === 'approved';
 
                 return (
                   <div
@@ -214,15 +215,28 @@ function LabConfirmationPage() {
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-zinc-800 flex justify-end">
+                    <div className="pt-3 border-t border-zinc-800 flex items-center justify-between">
+                      <span className="text-[11px] font-medium text-zinc-400">
+                        {isApproved ? 'Approved by Admin' : 'Awaiting Admin Approval'}
+                      </span>
                       <button
                         onClick={() => handleDownloadPDF(ev._id, ev.name || ev.event_name)}
-                        disabled={downloadingId === ev._id}
-                        className="px-4 py-2 bg-white hover:bg-zinc-200 text-black rounded-none text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 disabled:opacity-50"
-                        style={{ color: '#000000', backgroundColor: '#ffffff' }}
+                        disabled={!isApproved || downloadingId === ev._id}
+                        title={!isApproved ? 'PDF auto-generates after admin approval' : 'Download Lab Confirmation Form PDF'}
+                        className={`px-4 py-2 text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5 ${
+                          isApproved
+                            ? 'bg-white hover:bg-zinc-200 text-black cursor-pointer'
+                            : 'bg-zinc-800 text-zinc-500 cursor-not-allowed border border-zinc-700'
+                        }`}
                       >
-                        <Download className="w-3.5 h-3.5" style={{ color: '#000000' }} />
-                        <span>{downloadingId === ev._id ? 'LOADING...' : 'PDF FORM'}</span>
+                        <Download className="w-3.5 h-3.5" />
+                        <span>
+                          {downloadingId === ev._id
+                            ? 'LOADING...'
+                            : isApproved
+                            ? 'DOWNLOAD PDF'
+                            : 'AWAITING APPROVAL'}
+                        </span>
                       </button>
                     </div>
                   </div>

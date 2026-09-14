@@ -141,8 +141,8 @@ export async function generateLabPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  // STUDENTS UNION 2025-26
-  const unionTitle = 'STUDENTS UNION 2025-26';
+  // STUDENTS UNION 2026-27
+  const unionTitle = 'STUDENTS UNION 2026-27';
   const unionTitleW = fontBold.widthOfTextAtSize(unionTitle, 20);
   page1.drawText(unionTitle, {
     x: (pageWidth - unionTitleW) / 2,
@@ -152,11 +152,11 @@ export async function generateLabPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  // Center Kriya Logo area left blank as requested for different event logos
+  // Center Logo area left blank as requested for different event logos
   // (Reserved vertical space ~ 115pt left blank)
 
-  // KRIYA 2025 Header
-  const kriyaText = 'KRIYA 2025';
+  // INTRAMS 2026 Header
+  const kriyaText = 'INTRAMS 2026';
   const kriyaTextW = fontBold.widthOfTextAtSize(kriyaText, 18);
   page1.drawText(kriyaText, {
     x: (pageWidth - kriyaTextW) / 2,
