@@ -141,8 +141,8 @@ export async function generateLabPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  // STUDENTS UNION 2026-2027
-  const unionTitle = 'STUDENTS UNION 2026-2027';
+  // STUDENTS UNION 26-27
+  const unionTitle = 'STUDENTS UNION 26-27';
   const unionTitleW = fontBold.widthOfTextAtSize(unionTitle, 20);
   page1.drawText(unionTitle, {
     x: (pageWidth - unionTitleW) / 2,
