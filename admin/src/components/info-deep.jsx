@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { adminAPI, resolveAssetUrl } from '../api';
 import { getApiErrorMessage } from '../utils/apiError';
 import { handlePdfBlob } from '../utils/pdf';
-import { generateEventPdf } from '../utils/generateEventPdf';
 import { getAllocated, getRequested } from '../utils/allocation';
 import { useToast } from '../context/ToastContext';
 import PageHeader from './ui/PageHeader';
@@ -57,23 +56,16 @@ export default function EventDetail() {
     if (!event) return;
     try {
       setPdfLoading(type);
-      if (type === 'event') {
-        let pdfBlob;
-        try {
-          pdfBlob = await generateEventPdf(event);
-        } catch (_) {
-          const res = await adminAPI.getEventPDF(event._id);
-          pdfBlob = res.data;
-        }
-        await handlePdfBlob({ data: pdfBlob }, { filename: `Event_${event.name || event.event_name || event._id}_DRAFT_ERM.pdf` });
-      } else {
-        const map = {
-          items: () => adminAPI.getEventItemsPDF(event._id),
-          procurement: () => adminAPI.getProcurementPDF(event._id),
-        };
-        const res = await map[type]();
-        await handlePdfBlob(res, { filename: `${type}_${event.event_id || event._id}.pdf` });
-      }
+      const map = {
+        event: () => adminAPI.getEventPDF(event._id),
+        items: () => adminAPI.getEventItemsPDF(event._id),
+        procurement: () => adminAPI.getProcurementPDF(event._id),
+      };
+      const res = await map[type]();
+      const filename = type === 'event'
+        ? `Event_${event.name || event.event_name || event._id}_DRAFT_ERM.pdf`
+        : `${type}_${event.event_id || event._id}.pdf`;
+      await handlePdfBlob(res, { filename });
     } catch (err) {
       showToast(getApiErrorMessage(err, 'Unable to generate PDF.'), 'error');
     } finally {
