@@ -33,11 +33,11 @@ export default function AnimatedNetworkBackground() {
         return {
           x: Math.random() * width,
           y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 2.4,
-          vy: (Math.random() - 0.5) * 2.4,
+          vx: (Math.random() - 0.5) * 0.45,
+          vy: (Math.random() - 0.5) * 0.45,
           r: Math.random() * 2.2 + 1.2,
           pulse: Math.random() * Math.PI * 2,
-          pulseSpeed: 0.04 + Math.random() * 0.04,
+          pulseSpeed: 0.008 + Math.random() * 0.008,
           color: isWhite ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 174, 239, 0.9)',
           glowColor: isWhite ? 'rgba(255, 255, 255, ' : 'rgba(0, 174, 239, ',
         };
@@ -85,7 +85,7 @@ export default function AnimatedNetworkBackground() {
         if (p.x < 0 || p.x > width) p.vx *= -1;
         if (p.y < 0 || p.y > height) p.vy *= -1;
 
-        // Cursor orbital & magnetic pull interaction
+        // Gentle Cursor orbital & magnetic pull interaction
         if (pointer.active) {
           const dx = pointer.x - p.x;
           const dy = pointer.y - p.y;
@@ -94,12 +94,12 @@ export default function AnimatedNetworkBackground() {
 
           if (dist < maxDist) {
             const force = (maxDist - dist) / maxDist;
-            // Magnetic attraction
-            p.x += (dx / (dist || 1)) * force * 3.8;
-            p.y += (dy / (dist || 1)) * force * 3.8;
-            // Orbital tangential swirl when mouse moves fast
-            p.vx += (pointer.vx * force * 0.15) - (dy / (dist || 1)) * force * 0.8;
-            p.vy += (pointer.vy * force * 0.15) + (dx / (dist || 1)) * force * 0.8;
+            // Gentle magnetic attraction
+            p.x += (dx / (dist || 1)) * force * 0.6;
+            p.y += (dy / (dist || 1)) * force * 0.6;
+            // Gentle tangential swirl
+            p.vx += (pointer.vx * force * 0.03) - (dy / (dist || 1)) * force * 0.15;
+            p.vy += (pointer.vy * force * 0.03) + (dx / (dist || 1)) * force * 0.15;
           }
         }
 
