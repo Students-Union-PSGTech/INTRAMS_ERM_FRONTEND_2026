@@ -1,545 +1,693 @@
-import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PSG_LOGO_BASE64 } from './psgLogoBase64';
 
 /**
- * Generates exact high-fidelity DRAFT ERM FORM PDF matching official PSG College of Technology INTRAMS standard.
+ * Generates exact high-fidelity 5-Page EVENT RESOURCE FORM PDF matching official PSG College of Technology INTRAMS standard.
  */
 export async function generateEventPdf(eventData = {}) {
   const pdfDoc = await PDFDocument.create();
   const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
 
   const pageWidth = 595.28; // A4 Portrait width
   const pageHeight = 841.89; // A4 Portrait height
-  const margin = 45;
-  const contentWidth = pageWidth - margin * 2; // 505.28
+  const margin = 35;
+  const contentWidth = pageWidth - margin * 2; // 525.28
 
-  // 1. Load PSG Crest Logo Image
-  let logoImage = null;
+  // Load PSG Crest Emblem
+  let psgLogo = null;
   try {
-    const logoRes = await fetch('/psg_logo.png');
-    if (logoRes.ok) {
-      const logoBytes = await logoRes.arrayBuffer();
-      logoImage = await pdfDoc.embedPng(logoBytes);
-    }
+    const cleanBase64 = PSG_LOGO_BASE64.replace(/^data:image\/png;base64,/, '');
+    const bytes = Uint8Array.from(atob(cleanBase64), (c) => c.charCodeAt(0));
+    psgLogo = await pdfDoc.embedPng(bytes);
   } catch (_) {
-    logoImage = null;
+    try {
+      const res = await fetch('/psg_logo.png');
+      if (res.ok) {
+        const bytes = await res.arrayBuffer();
+        psgLogo = await pdfDoc.embedPng(bytes);
+      }
+    } catch (_) {}
   }
 
-  // Helper to draw watermark on page background
-  const drawWatermark = (page) => {
-    const watermarkText = 'INTRAMS 2026';
-    page.drawText(watermarkText, {
-      x: 85,
-      y: 250,
-      size: 70,
-      font: fontBold,
-      color: rgb(0.78, 0.78, 0.78), // Slightly thicker translucent grey background
-      rotate: degrees(45),
+  // Draw Page Border Frame
+  const drawPageBorder = (page) => {
+    page.drawRectangle({
+      x: margin,
+      y: margin,
+      width: contentWidth,
+      height: pageHeight - margin * 2,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
     });
   };
 
-  // Helper to draw college logo emblem on top left
-  const drawCollegeLogo = (page, startX, startY) => {
-    if (logoImage) {
-      page.drawImage(logoImage, {
-        x: startX,
-        y: startY,
-        width: 55,
-        height: 68,
-      });
-    } else {
-      // Vector fallback box
-      const boxWidth = 48;
-      const boxHeight = 54;
-      page.drawRectangle({
-        x: startX,
-        y: startY,
-        width: boxWidth,
-        height: boxHeight,
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1.2,
-      });
-      const divY = startY + 20;
-      page.drawLine({
-        start: { x: startX, y: divY },
-        end: { x: startX + boxWidth, y: divY },
-        thickness: 1,
-        color: rgb(0, 0, 0),
-      });
-      const midX = startX + boxWidth / 2;
-      page.drawLine({
-        start: { x: midX, y: divY },
-        end: { x: midX, y: startY + boxHeight },
-        thickness: 1,
-        color: rgb(0, 0, 0),
-      });
-      page.drawCircle({
-        x: startX + 12,
-        y: divY + (startY + boxHeight - divY) / 2,
-        size: 6,
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1.2,
-      });
-      page.drawRectangle({
-        x: midX + 6,
-        y: divY + (startY + boxHeight - divY) / 2 - 5,
-        width: 10,
-        height: 10,
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1.2,
-      });
-      const text1951 = '1951';
-      const textW = fontBold.widthOfTextAtSize(text1951, 8.5);
-      page.drawText(text1951, {
-        x: startX + (boxWidth - textW) / 2,
-        y: startY + 6,
-        size: 8.5,
-        font: fontBold,
-        color: rgb(0, 0, 0),
-      });
-    }
+  // Draw Bottom Signature Lines (Secretary & Faculty Advisor)
+  const drawFooterSignatures = (page) => {
+    page.drawText('Signature of the Secretary', {
+      x: margin + 30,
+      y: margin + 25,
+      size: 10.5,
+      font: fontRegular,
+      color: rgb(0, 0, 0),
+    });
+    page.drawText('Signature of the Faculty Advisor', {
+      x: pageWidth - margin - 200,
+      y: margin + 25,
+      size: 10.5,
+      font: fontRegular,
+      color: rgb(0, 0, 0),
+    });
   };
 
-  // Helper to draw clean table grid
-  const drawTable = (page, { startX, startY, colWidths, headers, rows, headerHeight = 24, rowHeight = 24 }) => {
-    let currentY = startY;
+  // Extract Event Data fields safely
+  const ev = eventData || {};
+  const formSpecs = ev.form || {};
+  const clubName = ev.associationName || ev.club_name || ev.clubName || ev.association || formSpecs.associationName || 'Students Union';
+  const eventName = ev.name || ev.event_name || ev.eventName || formSpecs.eventName || 'sample_event';
+  const eventId = ev.event_id || ev.id || ev._id || 'EVNT47';
+  const tagline = ev.tagline || formSpecs.tagline || 'Find the time complexity';
+  const about = ev.about || ev.description || formSpecs.about || '—';
 
-    // 1. Draw Header Row
+  const secretarialList = ev.contacts?.secretaries || ev.secretaries || ev.contacts?.secretary || [];
+  const secRows = Array.isArray(secretarialList) && secretarialList.length > 0
+    ? secretarialList.map(s => [s.name || 'Sample', s.roll_number || s.rollNo || '23N213', s.mobile || s.phone || '1234567890', s.department || 'B.TECH TEXTILE TECH', s.year || '1ST YEAR'])
+    : [
+        ['Sample', '23N213', '1234567890', 'B.TECH FASHION TECH', '1ST YEAR'],
+        ['Sample', '23N213', '1234567890', 'B.TECH TEXTILE TECH', '1ST YEAR'],
+      ];
+
+  const convenorList = ev.contacts?.convenors || ev.convenors || [];
+  const convRows = Array.isArray(convenorList) && convenorList.length > 0
+    ? convenorList.map(c => [c.name || 'Sample', c.roll_number || c.rollNo || '23N213', c.mobile || c.phone || '1234567890', c.department || 'BE EEE (SW)', c.year || '3RD YEAR'])
+    : [
+        ['Sample', '23N213', '1234567890', 'BE EEE (SW)', '3RD YEAR'],
+        ['Sample', '23N213', '1234567890', 'BE CIVIL', '3RD YEAR'],
+      ];
+
+  const volunteerList = ev.contacts?.volunteers || ev.volunteers || [];
+  const volRows = Array.isArray(volunteerList) && volunteerList.length > 0
+    ? volunteerList.map(v => [v.name || 'Sample', v.roll_number || v.rollNo || '23N213', v.mobile || v.phone || '1234567890', v.department || 'B.TECH TEXTILE TECH', v.year || '3RD YEAR'])
+    : [
+        ['Sample', '23N213', '1234567890', 'B.TECH TEXTILE TECH', '3RD YEAR'],
+        ['Sample', '23N213', '1234567890', 'BE METLY', '2ND YEAR'],
+      ];
+
+  const facultyObj = ev.contacts?.faculty_advisor || ev.facultyAdvisor || {};
+  const facRows = [
+    [facultyObj.name || 'Sample', facultyObj.designation || facultyObj.department || 'Sample', facultyObj.mobile || facultyObj.phone || '1234567890']
+  ];
+
+  const judgeObj = ev.contacts?.judge || ev.judge || {};
+  const judgeRows = [
+    [judgeObj.name || 'Sample', judgeObj.designation || 'Sample', judgeObj.mobile || judgeObj.phone || '1234567890']
+  ];
+
+  // Helper to draw bordered table for Page 3
+  const drawPage3Table = (page, startX, startY, colWidths, headers, rows) => {
+    let currentY = startY;
+    const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+
+    // Header Row
     page.drawRectangle({
       x: startX,
-      y: currentY - headerHeight,
-      width: contentWidth,
-      height: headerHeight,
+      y: currentY - 24,
+      width: tableWidth,
+      height: 24,
       borderColor: rgb(0, 0, 0),
-      borderWidth: 1,
+      borderWidth: 1.2,
+      color: rgb(0.89, 0.95, 0.98),
     });
 
     let cellX = startX;
     headers.forEach((h, idx) => {
       const w = colWidths[idx];
-      const lines = String(h).split('\n');
-      const totalTextH = lines.length * 9;
-      const textStartY = currentY - (headerHeight - totalTextH) / 2 - 7;
-
-      lines.forEach((lineText, lineIdx) => {
-        const textW = fontBold.widthOfTextAtSize(lineText.trim(), 9);
-        const textX = cellX + Math.max(2, (w - textW) / 2);
-        page.drawText(lineText.trim(), {
-          x: textX,
-          y: textStartY - lineIdx * 9.5,
-          size: 9,
-          font: fontBold,
-          color: rgb(0, 0, 0),
-        });
-      });
-
-      page.drawLine({
-        start: { x: cellX, y: currentY },
-        end: { x: cellX, y: currentY - headerHeight },
-        thickness: 1,
+      const textW = fontBold.widthOfTextAtSize(h, 9.5);
+      page.drawText(h, {
+        x: cellX + (w - textW) / 2,
+        y: currentY - 16,
+        size: 9.5,
+        font: fontBold,
         color: rgb(0, 0, 0),
       });
-
-      cellX += w;
-    });
-
-    // Rightmost border of header
-    page.drawLine({
-      start: { x: startX + contentWidth, y: currentY },
-      end: { x: startX + contentWidth, y: currentY - headerHeight },
-      thickness: 1,
-      color: rgb(0, 0, 0),
-    });
-
-    currentY -= headerHeight;
-
-    // 2. Draw Data Rows
-    rows.forEach((row) => {
-      page.drawRectangle({
-        x: startX,
-        y: currentY - rowHeight,
-        width: contentWidth,
-        height: rowHeight,
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1,
-      });
-
-      let rCellX = startX;
-      row.forEach((val, idx) => {
-        const w = colWidths[idx];
-        const strVal = String(val ?? '').trim();
-        const textW = fontRegular.widthOfTextAtSize(strVal, 9);
-        const isCentered = idx === 0 || idx === 1 || idx === 3;
-        const textX = isCentered ? rCellX + Math.max(3, (w - textW) / 2) : rCellX + 6;
-
-        page.drawText(strVal, {
-          x: textX,
-          y: currentY - rowHeight + 7,
-          size: 9,
-          font: fontRegular,
-          color: rgb(0, 0, 0),
-        });
-
+      if (idx < headers.length - 1) {
         page.drawLine({
-          start: { x: rCellX, y: currentY },
-          end: { x: rCellX, y: currentY - rowHeight },
+          start: { x: cellX + w, y: currentY },
+          end: { x: cellX + w, y: currentY - 24 },
           thickness: 1,
           color: rgb(0, 0, 0),
         });
+      }
+      cellX += w;
+    });
 
-        rCellX += w;
+    currentY -= 24;
+
+    // Data Rows
+    rows.forEach((row) => {
+      const rowH = 24;
+      page.drawRectangle({
+        x: startX,
+        y: currentY - rowH,
+        width: tableWidth,
+        height: rowH,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1.2,
       });
 
-      page.drawLine({
-        start: { x: startX + contentWidth, y: currentY },
-        end: { x: startX + contentWidth, y: currentY - rowHeight },
-        thickness: 1,
-        color: rgb(0, 0, 0),
+      cellX = startX;
+      row.forEach((val, idx) => {
+        const w = colWidths[idx];
+        const strVal = String(val || '');
+        const font = fontRegular;
+        const textW = font.widthOfTextAtSize(strVal, 9);
+        page.drawText(strVal, {
+          x: cellX + (w - textW) / 2,
+          y: currentY - 16,
+          size: 9,
+          font: font,
+          color: rgb(0, 0, 0),
+        });
+        if (idx < row.length - 1) {
+          page.drawLine({
+            start: { x: cellX + w, y: currentY },
+            end: { x: cellX + w, y: currentY - rowH },
+            thickness: 1,
+            color: rgb(0, 0, 0),
+          });
+        }
+        cellX += w;
       });
 
-      currentY -= rowHeight;
+      currentY -= rowH;
     });
 
     return currentY;
   };
 
-  // Extract Event Data safely
-  const ev = eventData || {};
-  const clubName = ev.associationName || ev.club_name || ev.clubName || ev.association || 'Computational Sciences Association';
-  const eventName = ev.name || ev.event_name || ev.eventName || '—';
-  const eventCategory = ev.category || ev.event_category || ev.type || 'Solo';
-
-  // Extract Personnel
-  const secretarialList = ev.secretaries || ev.secretary || [];
-  const secRows = Array.isArray(secretarialList) && secretarialList.length > 0
-    ? secretarialList.map(s => [s.name || s.secretaryName || '—', s.rollNo || s.roll_number || '—', s.phone || s.mobile || '—'])
-    : [[ev.secretaryName || '—', ev.secretaryRollNo || '—', ev.secretaryPhone || '—']];
-
-  const convenorList = ev.convenors || ev.convenor || [];
-  let convRows = Array.isArray(convenorList) && convenorList.length > 0
-    ? convenorList.map(c => [c.name || c.convenorName || '—', c.rollNo || c.roll_number || '—', c.department || c.dept || 'Information Technology', c.phone || c.mobile || '—'])
-    : [];
-  if (convRows.length === 0) {
-    convRows = [
-      ['—', '—', 'Information Technology', '—'],
-      ['—', '—', 'Electrical & Electronics Engineering', '—'],
-    ];
-  }
-
-  const facultyObj = ev.facultyAdvisor || ev.faculty || {};
-  const facultyRows = [
-    [
-      `${facultyObj.name || ev.facultyName || '—'} / ${facultyObj.designation || ev.facultyDesignation || '—'}`,
-      facultyObj.department || ev.facultyDepartment || 'Mechanical Engineering',
-      facultyObj.phone || ev.facultyPhone || '—',
-    ]
-  ];
+  // Helper to draw radio circle (open or filled)
+  const drawRadioCircle = (page, cx, cy, isSelected) => {
+    page.drawCircle({
+      x: cx,
+      y: cy,
+      size: 6,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+      color: rgb(1, 1, 1),
+    });
+    if (isSelected) {
+      page.drawCircle({
+        x: cx,
+        y: cy,
+        size: 3.5,
+        color: rgb(0, 0, 0),
+      });
+    }
+  };
 
   // ==========================================
-  // PAGE 1: HEADER & PERSONNEL DETAILS (Balanced Spacing)
+  // PAGE 1: COVER PAGE
   // ==========================================
   const page1 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page1);
+  drawPageBorder(page1);
 
-  // College Logo Emblem
-  drawCollegeLogo(page1, margin, pageHeight - margin - 62);
-
-  // Top Header Titles
-  const headersList = [
-    { text: 'PSG COLLEGE OF TECHNOLOGY', size: 14, font: fontBold },
-    { text: 'STUDENTS UNION 2026-2027', size: 11, font: fontBold },
-    { text: 'DRAFT ERM FORM', size: 11.5, font: fontBold },
-    { text: 'INTRAMS 2026', size: 11.5, font: fontBold },
-  ];
-
-  let headerY = pageHeight - margin - 10;
-  headersList.forEach(item => {
-    const w = item.font.widthOfTextAtSize(item.text, item.size);
-    page1.drawText(item.text, {
-      x: (pageWidth - w) / 2,
-      y: headerY,
-      size: item.size,
-      font: item.font,
-      color: rgb(0, 0, 0),
+  // Top Left PSG Crest Logo
+  if (psgLogo) {
+    page1.drawImage(psgLogo, {
+      x: 160,
+      y: 728,
+      width: 48,
+      height: 60,
     });
-    headerY -= (item.size + 4);
+  }
+
+  // Header College Text
+  page1.drawText('PSG College of', { x: 218, y: 760, size: 17, font: fontRegular, color: rgb(0, 0, 0) });
+  page1.drawText('Technology, Coimbatore', { x: 218, y: 738, size: 17, font: fontRegular, color: rgb(0, 0, 0) });
+
+  // STUDENTS UNION 2026-2027
+  const unionText = 'STUDENTS UNION 2026-2027';
+  const unionW = fontBold.widthOfTextAtSize(unionText, 20);
+  page1.drawText(unionText, {
+    x: (pageWidth - unionW) / 2,
+    y: 675,
+    size: 20,
+    font: fontBold,
+    color: rgb(0, 0, 0),
   });
 
-  let curY = pageHeight - margin - 110;
+  // Center Kriya Logo area LEFT BLANK as requested
+  // (Vertical space reserved ~120pt left blank)
 
-  // Metadata Block
-  const metaLines = [
-    { label: 'CLUB NAME: ', val: clubName },
-    { label: 'EVENT NAME: ', val: eventName },
-    { label: 'EVENT CATEGORY: ', val: eventCategory },
-  ];
-
-  metaLines.forEach(m => {
-    page1.drawText(m.label, { x: margin, y: curY, size: 10.5, font: fontBold, color: rgb(0, 0, 0) });
-    const lblW = fontBold.widthOfTextAtSize(m.label, 10.5);
-    page1.drawText(m.val, { x: margin + lblW, y: curY, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-    curY -= 20;
+  // INTRAMS 2026 Header
+  const intramsText = 'INTRAMS 2026';
+  const intramsW = fontBold.widthOfTextAtSize(intramsText, 18);
+  page1.drawText(intramsText, {
+    x: (pageWidth - intramsW) / 2,
+    y: 485,
+    size: 18,
+    font: fontBold,
+    color: rgb(0, 0, 0),
   });
 
-  curY -= 25; // Spacing before 1st table
-
-  // 1. SECRETARY DETAILS
-  page1.drawText('SECRETARY DETAILS:', { x: margin, y: curY, size: 11, font: fontBold, color: rgb(0, 0, 0) });
-  curY -= 10;
-  curY = drawTable(page1, {
-    startX: margin,
-    startY: curY,
-    colWidths: [210, 160, 135.28],
-    headers: ['NAME', 'ROLL NUMBER', 'MOBILE NO'],
-    rows: secRows,
-    headerHeight: 24,
-    rowHeight: 24,
+  // Event Resource Form Subtitle
+  const formSub = 'Event Resource Form';
+  const formSubW = fontBold.widthOfTextAtSize(formSub, 16);
+  page1.drawText(formSub, {
+    x: (pageWidth - formSubW) / 2,
+    y: 450,
+    size: 16,
+    font: fontBold,
+    color: rgb(0, 0, 0),
   });
 
-  curY -= 40; // Balanced spacing between 1st and 2nd table
-
-  // 2. CONVENORS DETAILS
-  page1.drawText('CONVENORS DETAILS:', { x: margin, y: curY, size: 11, font: fontBold, color: rgb(0, 0, 0) });
-  curY -= 10;
-  curY = drawTable(page1, {
-    startX: margin,
-    startY: curY,
-    colWidths: [140, 110, 140, 115.28],
-    headers: ['NAME', 'ROLL NUMBER', 'DEPARTMENT & YEAR', 'MOBILE NO'],
-    rows: convRows,
-    headerHeight: 24,
-    rowHeight: 24,
+  // ASSOCIATION/CLUB NAME
+  page1.drawText(`ASSOCIATION/CLUB NAME : ${clubName}`, {
+    x: 55,
+    y: 380,
+    size: 13.5,
+    font: fontBold,
+    color: rgb(0, 0, 0),
   });
 
-  curY -= 40; // Balanced spacing between 2nd and 3rd table
-
-  // 3. FACULTY ADVISOR DETAILS
-  page1.drawText('FACULTY ADVISOR DETAILS:', { x: margin, y: curY, size: 11, font: fontBold, color: rgb(0, 0, 0) });
-  curY -= 10;
-  curY = drawTable(page1, {
-    startX: margin,
-    startY: curY,
-    colWidths: [190, 175, 140.28],
-    headers: ['NAME/ DESIGNATION', 'DEPARTMENT', 'MOBILE NO'],
-    rows: facultyRows,
-    headerHeight: 24,
-    rowHeight: 24,
-  });
-
-  // Bottom Signature
-  page1.drawText('SECRETARY SIGNATURE', {
-    x: pageWidth - margin - 150,
-    y: margin + 25,
-    size: 10.5,
+  // EVENT NAME
+  page1.drawText(`EVENT NAME : ${eventName}`, {
+    x: 55,
+    y: 340,
+    size: 13.5,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
 
   // ==========================================
-  // PAGE 2: EVENT DESCRIPTION & ROUNDS
+  // PAGE 2: INSTRUCTIONS & GUIDELINES
   // ==========================================
   const page2 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page2);
+  drawPageBorder(page2);
 
-  let p2Y = pageHeight - margin - 10;
-  page2.drawText('EVENT DESCRIPTION', { x: margin, y: p2Y, size: 12.5, font: fontBold, color: rgb(0, 0, 0) });
+  let p2Y = pageHeight - margin - 35;
+
+  const instHeader = 'INSTRUCTIONS';
+  const instHeaderW = fontBold.widthOfTextAtSize(instHeader, 16);
+  page2.drawText(instHeader, {
+    x: (pageWidth - instHeaderW) / 2,
+    y: p2Y,
+    size: 16,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
   // Underline
   page2.drawLine({
-    start: { x: margin, y: p2Y - 2 },
-    end: { x: margin + 150, y: p2Y - 2 },
-    thickness: 1,
+    start: { x: (pageWidth - instHeaderW) / 2, y: p2Y - 3 },
+    end: { x: (pageWidth + instHeaderW) / 2, y: p2Y - 3 },
+    thickness: 1.2,
     color: rgb(0, 0, 0),
   });
 
-  p2Y -= 32;
+  p2Y -= 30;
 
-  const descFields = [
-    { label: 'EVENT NAME: ', val: eventName },
-    { label: 'TEAM / INDIVIDUAL EVENT: ', val: eventCategory },
-    { label: 'Preferred Date/Time: ', val: ev.preferredDate || ev.date || '' },
-    { label: 'Preferred Venue: ', val: ev.preferredVenue || ev.venue || '' },
-    { label: `TEAM SIZE: MIN ${ev.minTeamSize || 1} / MAX ${ev.maxTeamSize || 1}`, val: '' },
-    { label: 'EXPECTED PARTICIPANT COUNT: ', val: String(ev.expectedParticipants || ev.participantCount || '') },
-    { label: 'ONE LINE DESCRIPTION: ', val: ev.shortDescription || ev.oneLineDescription || '' },
-    { label: 'ABOUT THE EVENT:', val: '' },
-    { label: '', val: ev.about || ev.description || '' },
-  ];
-
-  descFields.forEach(f => {
-    if (f.label) {
-      page2.drawText(f.label, { x: margin, y: p2Y, size: 10.5, font: fontBold, color: rgb(0, 0, 0) });
-      if (f.val) {
-        const lw = fontBold.widthOfTextAtSize(f.label, 10.5);
-        page2.drawText(f.val, { x: margin + lw, y: p2Y, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-      }
-      p2Y -= 22;
-    } else if (f.val) {
-      page2.drawText(f.val, { x: margin, y: p2Y, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-      p2Y -= 28;
-    }
+  const subTitle = '(TO BE READ BEFORE FILLING THE FORM)';
+  const subTitleW = fontBold.widthOfTextAtSize(subTitle, 11);
+  page2.drawText(subTitle, {
+    x: (pageWidth - subTitleW) / 2,
+    y: p2Y,
+    size: 11,
+    font: fontBold,
+    color: rgb(0, 0, 0),
   });
 
+  p2Y -= 35;
+
+  page2.drawText('* Kindly submit a separate form for each event, in case of multiple events.', {
+    x: margin + 15,
+    y: p2Y,
+    size: 10,
+    font: fontItalic,
+    color: rgb(0, 0, 0),
+  });
+  p2Y -= 18;
+
+  page2.drawText('If an event is conducted over two days (for example, a preliminary round on Day 1 and a final round on Day), include', {
+    x: margin + 15,
+    y: p2Y,
+    size: 10,
+    font: fontItalic,
+    color: rgb(0, 0, 0),
+  });
   p2Y -= 15;
+  page2.drawText('all requirements in the same form.', {
+    x: margin + 15,
+    y: p2Y,
+    size: 10,
+    font: fontItalic,
+    color: rgb(0, 0, 0),
+  });
 
-  // Rounds Section
-  const roundsList = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds : [
-    {
-      name: ev.round1Name || 'Round 1',
-      description: ev.round1Description || '—',
-      duration: ev.round1Duration || '—',
-      scoring: ev.round1Scoring || '—',
-      tieBreaker: ev.round1TieBreaker || '—',
-    }
+  p2Y -= 35;
+
+  page2.drawText('General Guidelines', {
+    x: margin + 15,
+    y: p2Y,
+    size: 12,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
+
+  p2Y -= 22;
+
+  const guidelinesList = [
+    '1. All event and workshop proposals will be reviewed and approved based on feasibility and relevance.',
+    '2. Each club or association can propose up to two events, one workshop, and one paper presentation.',
+    '3. Events and workshops should preferably be innovative or aligned with emerging technologies related to the respective stream.',
+    '4. Kindly make sure that the judges are present for the entire duration of the event to ensure smooth evaluation.',
+    '5. As per Students Union guidelines, cash prizes or mementos should not be provided by clubs/associations.',
+    '6. Details of any external guests, as recommended by the Students Union, should be entered in the required items table.',
+    '7. Certificates for winners, runners-up, coordinators, and volunteers will be issued by the Students Union.',
+    '8. If any materials are needed before the event day, clearly mention "Required in advance" near the Items Name column.',
+    '9. Event venues will be allotted based on availability by the Students Union.',
+    '10. Projectors available in the allotted halls may be used, and will not be provided by the Students Union.',
+    '11. Winner and runner-up details should be submitted within one hour after the event concludes along the judges signature.',
+    '12. Participants should arrange their own HDMI cables or VGA converters if required.',
+    '13. Clubs and associations are advised to keep sufficient copies of the submitted form for reference.',
+    '14. Requests for changes after submission may not be entertained, so ensure all details are finalised before submitting.',
+    '15. The completed form must be submitted to the designated point of contact for your club or association.',
+    '16. For any clarifications or additional details, contact your respective point of contact.',
   ];
 
-  roundsList.forEach((r, rIdx) => {
-    const roundTitle = `ROUND – ${rIdx + 1} NAME & DESCRIPTION`;
-    page2.drawText(roundTitle, { x: margin, y: p2Y, size: 11, font: fontBold, color: rgb(0, 0, 0) });
-    p2Y -= 20;
-
-    const rFields = [
-      { label: 'NAME: ', val: r.name || `Round ${rIdx + 1}` },
-      { label: 'DESCRIPTION: ', val: r.description || '—' },
-      { label: 'DURATION: ', val: r.duration || '—' },
-      { label: 'SCORING: ', val: r.scoring || '—' },
-      { label: 'TIE-BREAKING CRITERIA: ', val: r.tieBreaker || r.tie_breaking_criteria || '—' },
-    ];
-
-    rFields.forEach(rf => {
-      page2.drawText(rf.label, { x: margin, y: p2Y, size: 10.5, font: fontBold, color: rgb(0, 0, 0) });
-      const rw = fontBold.widthOfTextAtSize(rf.label, 10.5);
-      page2.drawText(String(rf.val), { x: margin + rw, y: p2Y, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-      p2Y -= 20;
-    });
-
-    p2Y -= 18;
+  guidelinesList.forEach((guide) => {
+    if (guide.length > 95) {
+      const cut = guide.lastIndexOf(' ', 92);
+      const l1 = guide.substring(0, cut);
+      const l2 = '   ' + guide.substring(cut + 1);
+      page2.drawText(l1, { x: margin + 25, y: p2Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+      p2Y -= 14;
+      page2.drawText(l2, { x: margin + 25, y: p2Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+      p2Y -= 18;
+    } else {
+      page2.drawText(guide, { x: margin + 25, y: p2Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+      p2Y -= 18;
+    }
   });
+
+  drawFooterSignatures(page2);
 
   // ==========================================
-  // PAGE 3: ITEMS REQUIRED (Full Height Spacing)
+  // PAGE 3: PERSONNEL & CONTACT TABLES
   // ==========================================
   const page3 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page3);
+  drawPageBorder(page3);
 
-  let p3Y = pageHeight - margin - 10;
-  const itemTitle = 'ITEMS REQUIRED';
-  const itemTW = fontBold.widthOfTextAtSize(itemTitle, 13);
-  page3.drawText(itemTitle, { x: (pageWidth - itemTW) / 2, y: p3Y, size: 13, font: fontBold, color: rgb(0, 0, 0) });
-  page3.drawLine({
-    start: { x: (pageWidth - itemTW) / 2, y: p3Y - 2 },
-    end: { x: (pageWidth + itemTW) / 2, y: p3Y - 2 },
-    thickness: 1,
+  let p3Y = pageHeight - margin - 35;
+
+  const prevTitle = `Event Preview: ${eventId}`;
+  const prevTitleW = fontBold.widthOfTextAtSize(prevTitle, 16);
+  page3.drawText(prevTitle, {
+    x: (pageWidth - prevTitleW) / 2,
+    y: p3Y,
+    size: 16,
+    font: fontBold,
     color: rgb(0, 0, 0),
   });
+
+  p3Y -= 40;
+
+  const tX = margin + 15;
+  const p3ColWidths5 = [100, 85, 95, 125, 80];
+
+  // Secretary Details
+  page3.drawText('Secretary Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  p3Y -= 12;
+  p3Y = drawPage3Table(page3, tX, p3Y, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], secRows);
 
   p3Y -= 30;
 
-  // Extract requested items list (15 rows max)
-  const itemsList = ev.items || ev.requirements || ev.itemsRequired || [];
-  const itemRows = [];
+  // Convenor Details
+  page3.drawText('Convenor Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  p3Y -= 12;
+  p3Y = drawPage3Table(page3, tX, p3Y, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], convRows);
 
-  for (let i = 1; i <= 15; i++) {
-    const itemData = itemsList[i - 1] || {};
-    itemRows.push([
-      String(i),
-      itemData.name || itemData.itemName || '',
-      itemData.specifications || itemData.specs || '',
-      itemData.quantity ? String(itemData.quantity) : '',
-      itemData.pricePerUnit ? String(itemData.pricePerUnit) : '',
-      itemData.totalPrice ? String(itemData.totalPrice) : '',
-    ]);
-  }
+  p3Y -= 30;
 
-  drawTable(page3, {
-    startX: margin,
-    startY: p3Y,
-    colWidths: [40, 145, 140, 60, 60, 60.28],
-    headers: ['S.NO.', 'ITEM NAME', 'SPECIFICATIONS\n(COLOUR)', 'QUANTITY', 'PRICE PER\nUNIT', 'TOTAL\nPRICE'],
-    rows: itemRows,
-    headerHeight: 30,
-    rowHeight: 26, // Spaced out comfortably over Page 3 height
-  });
+  // Volunteer Details
+  page3.drawText('Volunteer Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  p3Y -= 12;
+  p3Y = drawPage3Table(page3, tX, p3Y, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], volRows);
+
+  p3Y -= 30;
+
+  // Faculty Advisor Details
+  page3.drawText('Faculty Advisor Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  p3Y -= 12;
+  p3Y = drawPage3Table(page3, tX, p3Y, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], facRows);
+
+  p3Y -= 30;
+
+  // Judge Details
+  page3.drawText('Judge Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  p3Y -= 12;
+  p3Y = drawPage3Table(page3, tX, p3Y, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], judgeRows);
+
+  drawFooterSignatures(page3);
 
   // ==========================================
-  // PAGE 4: INSTRUCTIONS
+  // PAGE 4: EVENT DETAILS & RESOURCE MATRIX
   // ==========================================
   const page4 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page4);
+  drawPageBorder(page4);
 
-  let p4Y = pageHeight - margin - 10;
-  const instTitle = 'INSTRUCTIONS';
-  const instW = fontBold.widthOfTextAtSize(instTitle, 13);
-  page4.drawText(instTitle, { x: (pageWidth - instW) / 2, y: p4Y, size: 13, font: fontBold, color: rgb(0, 0, 0) });
-  page4.drawLine({
-    start: { x: (pageWidth - instW) / 2, y: p4Y - 2 },
-    end: { x: (pageWidth + instW) / 2, y: p4Y - 2 },
-    thickness: 1,
-    color: rgb(0, 0, 0),
-  });
+  let p4Y = pageHeight - margin - 35;
 
-  p4Y -= 18;
-  const subInst = '(TO BE READ BEFORE FILLING THE FORM)';
-  const subW = fontBold.widthOfTextAtSize(subInst, 10.5);
-  page4.drawText(subInst, { x: (pageWidth - subW) / 2, y: p4Y, size: 10.5, font: fontBold, color: rgb(0, 0, 0) });
-
-  p4Y -= 28;
-
-  const note1 = '* If two different events are to be conducted then fill the above form for each event separately and submit it.';
-  page4.drawText(note1, { x: margin, y: p4Y, size: 9.8, font: fontBold, color: rgb(0, 0, 0) });
-  p4Y -= 16;
-
-  const note2 = '** If the same event continues on both the days (i.e.) Preliminary round on first day and final round on second day, then';
-  page4.drawText(note2, { x: margin, y: p4Y, size: 9.8, font: fontBold, color: rgb(0, 0, 0) });
-  p4Y -= 14;
-  const note2b = 'fill the needed requirement in the same form.';
-  page4.drawText(note2b, { x: margin, y: p4Y, size: 9.8, font: fontBold, color: rgb(0, 0, 0) });
-
-  p4Y -= 24;
-  page4.drawText('Instructions:', { x: margin, y: p4Y, size: 10.5, font: fontBold, color: rgb(0, 0, 0) });
-  p4Y -= 20;
-
-  const instructionsTextList = [
-    '1. "No cash prize / memento" or any other form of prizes should be given by clubs to the event winners.',
-    '2. Memento for the external chief guest will be provided by the Students Union if filled-in the items required table.',
-    '3. Certificates to the winners, runners, convenors & volunteers of each event will be provided by the Students Union.',
-    '4. If any materials are required prior to the day of the event, please mention "Required in advance" near that material in the "Item Name" column.',
-    '5. Printouts required by the clubs must be taken by the clubs themselves.',
-    '6. Any events in the form of "Treasure Hunt" should be avoided.',
-    '7. Events should be conducted only in specified halls.',
-    '8. Materials sourced or purchased directly by the club will not be reimbursed through the Students Union.',
-    '9. The Students Union is not obliged to provide all items requested by the club, only approved items will be provided.',
-    '10. Halls will be allotted on the basis of availability.',
-    '11. Mic will only be provided on the basis of event and number of participants.',
-    '12. The projector will not be provided by the Students Union, use the projector available in the hall.',
-    '13. HDMI cables / VGA converter will not be provided.',
-    '14. Take enough copies of the Form, for your reference.',
-    '15. Send it to the point of contact allotted to your club.',
-    '16. For more details contact your respective point of contact.',
-  ];
-
-  instructionsTextList.forEach(ins => {
-    if (ins.length > 92) {
-      const cut = ins.lastIndexOf(' ', 88);
-      const line1 = ins.substring(0, cut);
-      const line2 = '   ' + ins.substring(cut + 1);
-      page4.drawText(line1, { x: margin, y: p4Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
-      p4Y -= 14;
-      page4.drawText(line2, { x: margin, y: p4Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
-      p4Y -= 18;
-    } else {
-      page4.drawText(ins, { x: margin, y: p4Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
-      p4Y -= 18;
-    }
-  });
-
-  page4.drawText('SECRETARY SIGNATURE', {
-    x: pageWidth - margin - 150,
-    y: margin + 65,
-    size: 10.5,
+  const detTitle = 'Event Details';
+  const detTitleW = fontBold.widthOfTextAtSize(detTitle, 16);
+  page4.drawText(detTitle, {
+    x: (pageWidth - detTitleW) / 2,
+    y: p4Y,
+    size: 16,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
+
+  p4Y -= 35;
+
+  const gridBoxX = margin + 15;
+  const gridBoxWidth = 495.28;
+
+  // Box 1: Day Selection Row
+  const box1H = 38;
+  page4.drawRectangle({
+    x: gridBoxX,
+    y: p4Y - box1H,
+    width: gridBoxWidth,
+    height: box1H,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1.2,
+  });
+
+  const selectedDayStr = String(formSpecs.day || ev.day || '1').toLowerCase();
+  let daySelIdx = 0;
+  if (selectedDayStr.includes('2')) daySelIdx = 1;
+  else if (selectedDayStr.includes('3')) daySelIdx = 2;
+
+  const dayLabels = ['Day 1', 'Day 2', 'Day 3'];
+  dayLabels.forEach((dl, idx) => {
+    const lx = gridBoxX + 20 + idx * 150;
+    page4.drawText(dl, { x: lx, y: p4Y - 24, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+    drawRadioCircle(page4, lx + 45, p4Y - 20, idx === daySelIdx);
+  });
+
+  p4Y -= box1H;
+
+  // Box 2: Parameters
+  const box2H = 75;
+  page4.drawRectangle({
+    x: gridBoxX,
+    y: p4Y - box2H,
+    width: gridBoxWidth,
+    height: box2H,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1.2,
+  });
+
+  const roundsCount = Array.isArray(ev.rounds) ? ev.rounds.length : 2;
+  const expectedParticipants = ev.expectedParticipants || formSpecs.expectedParticipants || 7;
+  const durationText = formSpecs.duration || ev.duration || '11';
+
+  page4.drawText(`No. of Rounds: ${roundsCount}`, { x: gridBoxX + 15, y: p4Y - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  page4.drawText(`Expected no of Participants: ${expectedParticipants}`, { x: gridBoxX + 15, y: p4Y - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  page4.drawText(`Duration of the event: ${durationText}`, { x: gridBoxX + 15, y: p4Y - 62, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+
+  p4Y -= box2H;
+
+  // Box 3: Individual vs Team
+  const box3H = 50;
+  page4.drawRectangle({
+    x: gridBoxX,
+    y: p4Y - box3H,
+    width: gridBoxWidth,
+    height: box3H,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1.2,
+  });
+
+  // Vertical Divider in Box 3
+  page4.drawLine({
+    start: { x: gridBoxX + 240, y: p4Y },
+    end: { x: gridBoxX + 240, y: p4Y - box3H },
+    thickness: 1.2,
+    color: rgb(0, 0, 0),
+  });
+
+  const isTeam = String(formSpecs.participant_type || ev.participant_type || '').toLowerCase().includes('team');
+  page4.drawText('Individual:', { x: gridBoxX + 15, y: p4Y - 30, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 85, p4Y - 26, !isTeam);
+
+  page4.drawText('Team:', { x: gridBoxX + 255, y: p4Y - 20, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 310, p4Y - 16, isTeam);
+  page4.drawText(`Min Size: ${formSpecs.team_min || 1}`, { x: gridBoxX + 255, y: p4Y - 35, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+  page4.drawText(`Max Size: ${formSpecs.team_max || 1}`, { x: gridBoxX + 255, y: p4Y - 47, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+
+  p4Y -= box3H;
+
+  // Box 4: Halls Required
+  const box4H = 75;
+  page4.drawRectangle({
+    x: gridBoxX,
+    y: p4Y - box4H,
+    width: gridBoxWidth,
+    height: box4H,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1.2,
+  });
+
+  const hallsCount = formSpecs.halls_required || 1;
+  const preferredHalls = formSpecs.preferred_halls || ev.preferred_halls || '1123';
+  const reasonForHalls = formSpecs.reason_for_halls || ',n, ,';
+
+  page4.drawText(`No of Halls Required: ${hallsCount}`, { x: gridBoxX + 15, y: p4Y - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  page4.drawText(`Preferred Halls: ${preferredHalls}`, { x: gridBoxX + 15, y: p4Y - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  page4.drawText(`Reason: ${reasonForHalls}`, { x: gridBoxX + 15, y: p4Y - 62, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+
+  p4Y -= box4H;
+
+  // Box 5: Slot Details
+  const box5H = 85;
+  page4.drawRectangle({
+    x: gridBoxX,
+    y: p4Y - box5H,
+    width: gridBoxWidth,
+    height: box5H,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1.2,
+  });
+
+  const slotStr = String(formSpecs.slot || ev.slot || '1').toLowerCase();
+  let slotIdx = 0;
+  if (slotStr.includes('full') || slotStr.includes('both')) slotIdx = 2;
+  else if (slotStr.includes('2') || slotStr.includes('afternoon')) slotIdx = 1;
+  else if (slotStr.includes('1') || slotStr.includes('morning')) slotIdx = 0;
+
+  page4.drawText('Slot Details:', { x: gridBoxX + 15, y: p4Y - 20, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  page4.drawText('Slot 1: 9:30 to 12:30', { x: gridBoxX + 35, y: p4Y - 38, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 175, p4Y - 34, slotIdx === 0);
+
+  page4.drawText('Slot 2: 1:30 to 4:30', { x: gridBoxX + 35, y: p4Y - 55, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 175, p4Y - 51, slotIdx === 1);
+
+  page4.drawText('Full Day', { x: gridBoxX + 35, y: p4Y - 72, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 175, p4Y - 68, slotIdx === 2);
+
+  p4Y -= box5H;
+
+  // Box 6: Extension Boxes
+  const box6H = 55;
+  page4.drawRectangle({
+    x: gridBoxX,
+    y: p4Y - box6H,
+    width: gridBoxWidth,
+    height: box6H,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1.2,
+  });
+
+  const extBoxesCount = formSpecs.extension_boxes || 0;
+  const reasonExt = formSpecs.reason_for_extension_boxes || 'bhk';
+
+  page4.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : ''}`, { x: gridBoxX + 15, y: p4Y - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  page4.drawText(`Reason: ${reasonExt}`, { x: gridBoxX + 15, y: p4Y - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+
+  drawFooterSignatures(page4);
+
+  // ==========================================
+  // PAGE 5: EVENT DESCRIPTION & ROUND RULES
+  // ==========================================
+  const page5 = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawPageBorder(page5);
+
+  let p5Y = pageHeight - margin - 35;
+
+  const descHeader = 'EVENT DESCRIPTION';
+  const descHeaderW = fontBold.widthOfTextAtSize(descHeader, 16);
+  page5.drawText(descHeader, {
+    x: (pageWidth - descHeaderW) / 2,
+    y: p5Y,
+    size: 16,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
+  // Underline
+  page5.drawLine({
+    start: { x: (pageWidth - descHeaderW) / 2, y: p5Y - 3 },
+    end: { x: (pageWidth + descHeaderW) / 2, y: p5Y - 3 },
+    thickness: 1.2,
+    color: rgb(0, 0, 0),
+  });
+
+  p5Y -= 45;
+
+  page5.drawText(`EVENT NAME : ${eventName.toUpperCase()}`, { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  p5Y -= 30;
+
+  page5.drawText('ONE LINE DESCRIPTION (TAG LINE) :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  p5Y -= 20;
+  page5.drawText(tagline, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+  p5Y -= 35;
+
+  page5.drawText('ABOUT THE EVENT :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  p5Y -= 20;
+  page5.drawText(about, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+  page5.drawText(about, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+  p5Y -= 45;
+
+  // Rounds List on Page 5
+  const roundsList = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds : [
+    { name: 'dfbngf', description: 'iokj', rules: ['njjnj'] }
+  ];
+
+  roundsList.forEach((rd, rIdx) => {
+    page5.drawText(`ROUND - ${rIdx + 1}`, { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+    p5Y -= 25;
+
+    page5.drawText(`NAME : ${rd.name || `Round ${rIdx + 1}`}`, { x: 55, y: p5Y, size: 11.5, font: fontBold, color: rgb(0, 0, 0) });
+    p5Y -= 25;
+
+    page5.drawText('DESCRIPTION :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+    p5Y -= 20;
+    page5.drawText(rd.description || '—', { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+    p5Y -= 30;
+
+    page5.drawText('ROUND RULES :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+    p5Y -= 20;
+
+    const rules = Array.isArray(rd.rules) && rd.rules.length > 0 ? rd.rules : ['njjnj'];
+    rules.forEach((rl) => {
+      page5.drawText(`• ${rl}`, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+      p5Y -= 20;
+    });
+
+    p5Y -= 25;
+  });
+
+  drawFooterSignatures(page5);
 
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });
