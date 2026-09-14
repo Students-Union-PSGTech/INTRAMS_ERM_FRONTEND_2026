@@ -1,127 +1,28 @@
 ﻿import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
-function wrapPdfText(text, font, size, maxWidth, maxLines = 2) {
-  const raw = String(text ?? '—');
-  const tokens = raw.trim() ? raw.split(/\s+/) : ['—'];
-  const lines = [];
-  let currentLine = '';
-
-  const pushCurrentLine = () => {
-    if (currentLine) {
-      lines.push(currentLine);
-      currentLine = '';
-    }
-  };
-
-  const breakWord = (word) => {
-    let part = '';
-    for (const char of Array.from(word)) {
-      const candidate = part + char;
-      if (font.widthOfTextAtSize(candidate, size) > maxWidth && part) {
-        lines.push(part);
-        part = char;
-      } else {
-        part = candidate;
-      }
-    }
-    if (part) {
-      currentLine = part;
-    }
-  };
-
-  for (const token of tokens) {
-    const candidate = currentLine ? `${currentLine} ${token}` : token;
-    if (font.widthOfTextAtSize(candidate, size) <= maxWidth || !currentLine) {
-      currentLine = candidate;
-    } else {
-      pushCurrentLine();
-      if (font.widthOfTextAtSize(token, size) <= maxWidth) {
-        currentLine = token;
-      } else {
-        breakWord(token);
-      }
-    }
-  }
-
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  const compact = lines.slice(0, maxLines);
-  if (lines.length > maxLines) {
-    const last = compact[maxLines - 1];
-    compact[maxLines - 1] = last.length > 2 ? `${last.slice(0, -2)}…` : '…';
-  }
-
-  return compact.length ? compact : ['—'];
+function normalizeRole(role) {
+  const value = String(role || '').toLowerCase();
+  if (value === 'convenor') return 'convenor';
+  if (value === 'volunteer') return 'volunteer';
+  return 'secretary';
 }
 
-export async function generateRolePdf({ role, data }) {
-  const pdfDoc = await PDFDocument.create();
-  const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+function getRoleLabel(role) {
+  const value = normalizeRole(role);
+  if (value === 'convenor') return 'Convenor';
+  if (value === 'volunteer') return 'Volunteer';
+  return 'Secretary';
+}
 
-  const roleTitleMap = {
-    secretary: 'Event Secretary Details Report',
-    convenor: 'Event Convenor Details Report',
-    volunteer: 'Event Volunteer Details Report',
-  };
+function getRoleTitle(role) {
+  const value = normalizeRole(role);
+  if (value === 'convenor') return 'Event Convenor Details Report';
+  if (value === 'volunteer') return 'Event Volunteer Details Report';
+  return 'Event Secretary Details Report';
+}
 
-  const title = roleTitleMap[String(role).toLowerCase()] || 'Role Details Report';
-  const roleNameLabel = String(role).toLowerCase() === 'convenor'
-    ? 'Convenor Name'
-    : String(role).toLowerCase() === 'volunteer'
-      ? 'Volunteer Name'
-      : 'Secretary Name';
-
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-GB');
-  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
-  const timestampText = `Generated on ${dateStr}, ${timeStr}`;
-
-  const pageWidth = 841.89;
-  const pageHeight = 595.28;
-  const margin = 25;
-  const contentWidth = pageWidth - margin * 2;
-
-  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-
-  const drawPageBorderAndHeader = (page) => {
-    page.drawRectangle({
-      x: margin,
-      y: margin,
-      width: contentWidth,
-      height: pageHeight - margin * 2,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1.5,
-    });
-
-    const titleWidth = fontBold.widthOfTextAtSize(title, 18);
-    page.drawText(title, {
-      x: (pageWidth - titleWidth) / 2,
-      y: pageHeight - margin - 30,
-      size: 18,
-      font: fontBold,
-      color: rgb(0, 0, 0),
-    });
-
-    const subWidth = fontItalic.widthOfTextAtSize(timestampText, 10);
-    page.drawText(timestampText, {
-      x: (pageWidth - subWidth) / 2,
-      y: pageHeight - margin - 46,
-      size: 10,
-      font: fontItalic,
-      color: rgb(0, 0, 0),
-    });
-  };
-
-  drawPageBorderAndHeader(currentPage);
-  let y = pageHeight - margin - 65;
-
-  let associationsMap = {};
-
-  const normalizedData = Array.isArray(data)
+function getAssociationEntries(data, role) {
+  const source = Array.isArray(data)
     ? data
     : (Array.isArray(data?.data)
       ? data.data
@@ -138,236 +39,228 @@ export async function generateRolePdf({ role, data }) {
                 return [];
               })))));
 
-  if (Array.isArray(normalizedData)) {
-    normalizedData.forEach((item) => {
-      const clubName = item.associationName || item.club_name || item.clubName || item.association || item.name || 'General Association';
-      if (!associationsMap[clubName]) associationsMap[clubName] = [];
+  const map = {};
 
-      const memberList = Array.isArray(item.members)
-        ? item.members
-        : (Array.isArray(item.secretaries)
-          ? item.secretaries
-          : (Array.isArray(item.volunteers)
-            ? item.volunteers
-            : (Array.isArray(item.convenors)
-              ? item.convenors
-              : (Array.isArray(item[role])
-                ? item[role]
-                : [item]))));
+  (source || []).forEach((item) => {
+    const associationName = item?.associationName || item?.club_name || item?.clubName || item?.association || item?.name || 'General Association';
+    const memberList = Array.isArray(item?.members)
+      ? item.members
+      : (Array.isArray(item?.secretaries)
+        ? item.secretaries
+        : (Array.isArray(item?.volunteers)
+          ? item.volunteers
+          : (Array.isArray(item?.convenors)
+            ? item.convenors
+            : (Array.isArray(item?.[role])
+              ? item[role]
+              : (Array.isArray(item?.[String(role).toLowerCase()])
+                ? item[String(role).toLowerCase()]
+                : (Array.isArray(item?.data) ? item.data : [item]))))));
 
-      memberList.forEach((m) => {
-        associationsMap[clubName].push({
-          name: m.name || m.secretaryName || m.convenorName || m.volunteerName || '—',
-          rollNo: m.rollNo || m.rollNumber || m.roll_no || m.roll_number || '—',
-          year: m.year || m.yearOfStudy || m.studyYear || '4TH YEAR',
-          department: m.department || m.dept || m.specialization || '—',
-          phone: m.phone || m.phoneNo || m.phone_no || m.mobile || '—',
-        });
+    if (!map[associationName]) map[associationName] = [];
+
+    const entries = Array.isArray(memberList) && memberList.length > 0 ? memberList : [item];
+    entries.forEach((member) => {
+      map[associationName].push({
+        name: member?.name || member?.secretaryName || member?.convenorName || member?.volunteerName || '—',
+        rollNo: member?.rollNo || member?.rollNumber || member?.roll_no || member?.roll_number || '—',
+        year: member?.year || member?.yearOfStudy || member?.studyYear || '4TH YEAR',
+        department: member?.department || member?.dept || member?.specialization || '—',
+        phone: member?.phone || member?.phoneNo || member?.phone_no || member?.mobile || '—',
       });
     });
-  } else if (data && typeof data === 'object') {
-    associationsMap = data;
-  }
+  });
 
-  const assocEntries = Object.entries(associationsMap);
-  if (assocEntries.length === 0) {
-    assocEntries.push([
-      'General Association',
-      [{ name: 'NIL', rollNo: 'NIL', year: '4TH YEAR', department: 'NIL', phone: '0000000000' }],
-    ]);
-  }
+  const entries = Object.entries(map);
+  if (entries.length > 0) return entries;
 
-  const colWidths = [45, 200, 110, 85, 195, 146.89];
-  const headers = ['S.No', roleNameLabel, 'Roll Number', 'Year', 'Department', 'Phone No'];
+  return [['General Association', [{ name: 'NIL', rollNo: 'NIL', year: '4TH YEAR', department: 'NIL', phone: '0000000000' }]]];
+}
 
-  const drawTableHeader = (page, currentY) => {
-    const tableX = margin + 5;
-    const tableWidth = contentWidth - 10;
-    const tableHeaderHeight = 24;
+export async function generateRolePdf({ role, data }) {
+  const pdfDoc = await PDFDocument.create();
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
 
+  const pageWidth = 841.89;
+  const pageHeight = 595.28;
+  const outerX = 15;
+  const outerY = 15;
+  const tableX = 35;
+  const tableWidth = 770;
+  const colWidths = [50, 190, 110, 82, 190, 148];
+
+  const page = pdfDoc.addPage([pageWidth, pageHeight]);
+
+  page.drawRectangle({
+    x: outerX,
+    y: outerY,
+    width: pageWidth - outerX * 2,
+    height: pageHeight - outerY * 2,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 1.5,
+  });
+
+  const title = getRoleTitle(role);
+  const titleWidth = fontBold.widthOfTextAtSize(title, 20);
+  page.drawText(title, {
+    x: (pageWidth - titleWidth) / 2,
+    y: pageHeight - 62,
+    size: 20,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
+
+  const now = new Date();
+  const generatedText = `Generated on ${now.toLocaleDateString('en-GB')}, ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase()}`;
+  const generatedWidth = fontItalic.widthOfTextAtSize(generatedText, 9);
+  page.drawText(generatedText, {
+    x: (pageWidth - generatedWidth) / 2,
+    y: pageHeight - 80,
+    size: 9,
+    font: fontItalic,
+    color: rgb(0, 0, 0),
+  });
+
+  let currentY = pageHeight - 112;
+  const associationGroups = getAssociationEntries(data, role);
+
+  associationGroups.forEach(([associationName, members]) => {
+    const bannerHeight = 24;
+    const headerHeight = 24;
+    const rowHeight = 24;
+    const sectionGap = 14;
+
+    const bannerY = currentY - bannerHeight;
     page.drawRectangle({
       x: tableX,
-      y: currentY - tableHeaderHeight,
+      y: bannerY,
       width: tableWidth,
-      height: tableHeaderHeight,
-      color: rgb(0.85, 0.88, 0.95),
+      height: bannerHeight,
+      color: rgb(0.06, 0.28, 0.41),
       borderColor: rgb(0, 0, 0),
       borderWidth: 1,
     });
 
-    let currentX = tableX;
-    headers.forEach((h, i) => {
-      const w = colWidths[i];
-      const textWidth = fontBold.widthOfTextAtSize(h, 10);
-      const isCentered = i === 0 || i === 2 || i === 3;
-      const textX = isCentered ? currentX + (w - textWidth) / 2 : currentX + 10;
-
-      page.drawText(h, {
-        x: textX,
-        y: currentY - tableHeaderHeight + 7,
-        size: 10,
-        font: fontBold,
-        color: rgb(0, 0, 0),
-      });
-
-      page.drawLine({
-        start: { x: currentX, y: currentY },
-        end: { x: currentX, y: currentY - tableHeaderHeight },
-        thickness: 1,
-        color: rgb(0, 0, 0),
-      });
-
-      currentX += w;
-    });
-
-    page.drawLine({
-      start: { x: currentX, y: currentY },
-      end: { x: currentX, y: currentY - tableHeaderHeight },
-      thickness: 1,
-      color: rgb(0, 0, 0),
-    });
-
-    return currentY - tableHeaderHeight;
-  };
-
-  for (const [assocName, members] of assocEntries) {
-    const bannerHeight = 26;
-    const tableHeaderHeight = 26;
-    const minRowHeight = 28;
-
-    if (y - (bannerHeight + tableHeaderHeight + minRowHeight) < margin + 25) {
-      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-      drawPageBorderAndHeader(currentPage);
-      y = pageHeight - margin - 65;
-    }
-
-    const tableX = margin + 5;
-    const tableWidth = contentWidth - 10;
-
-    currentPage.drawRectangle({
-      x: tableX,
-      y: y - bannerHeight,
-      width: tableWidth,
-      height: bannerHeight,
-      color: rgb(0.12, 0.31, 0.47),
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1.2,
-    });
-
-    currentPage.drawText(assocName, {
-      x: tableX + 10,
-      y: y - bannerHeight + 8,
+    page.drawText(associationName, {
+      x: tableX + 8,
+      y: bannerY + 7,
       size: 11,
       font: fontBold,
       color: rgb(1, 1, 1),
     });
 
-    y -= bannerHeight;
-    y = drawTableHeader(currentPage, y);
+    currentY -= bannerHeight;
+    const headerY = currentY - headerHeight;
+    page.drawRectangle({
+      x: tableX,
+      y: headerY,
+      width: tableWidth,
+      height: headerHeight,
+      color: rgb(0.06, 0.28, 0.41),
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1,
+    });
 
-    members.forEach((m, idx) => {
-      const rowValues = [
-        String(idx + 1),
-        String(m.name || '—'),
-        String(m.rollNo || '—'),
-        String(m.year || '—'),
-        String(m.department || '—'),
-        String(m.phone || '—'),
-      ];
+    const headerValues = ['S.No', `${getRoleLabel(role)} Name`, 'Roll Number', 'Year', 'Department', 'Phone No'];
+    let xPos = tableX;
 
-      const cellPadding = 6;
-      const cellTextSize = 8.2;
-      const lineHeight = 9;
-      const maxLines = 2;
-      const wrappedRows = rowValues.map((val, i) => {
-        const w = colWidths[i];
-        const availableWidth = Math.max(18, w - cellPadding * 2);
-        const isCentered = i === 0 || i === 2 || i === 3;
-        const inner = wrapPdfText(val, fontRegular, cellTextSize, availableWidth, maxLines);
-        return { val, wrapped: inner, width: w, isCentered };
-      });
-      const rowHeight = Math.max(minRowHeight, 14 + Math.max(...wrappedRows.map((r) => r.wrapped.length)) * lineHeight);
+    headerValues.forEach((header, index) => {
+      const width = colWidths[index];
+      const textWidth = fontBold.widthOfTextAtSize(header, 10);
+      const centered = index === 0 || index === 2 || index === 3;
+      const textX = centered ? xPos + (width - textWidth) / 2 : xPos + 8;
 
-      if (y - rowHeight < margin + 25) {
-        currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-        drawPageBorderAndHeader(currentPage);
-        y = pageHeight - margin - 65;
-
-        currentPage.drawRectangle({
-          x: tableX,
-          y: y - bannerHeight,
-          width: tableWidth,
-          height: bannerHeight,
-          color: rgb(0.12, 0.31, 0.47),
-          borderColor: rgb(0, 0, 0),
-          borderWidth: 1.2,
-        });
-
-        currentPage.drawText(`${assocName} (Contd.)`, {
-          x: tableX + 10,
-          y: y - bannerHeight + 8,
-          size: 11,
-          font: fontBold,
-          color: rgb(1, 1, 1),
-        });
-
-        y -= bannerHeight;
-        y = drawTableHeader(currentPage, y);
-      }
-
-      const rowTop = y;
-      currentPage.drawRectangle({
-        x: tableX,
-        y: rowTop - rowHeight,
-        width: tableWidth,
-        height: rowHeight,
+      page.drawText(header, {
+        x: textX,
+        y: headerY + 7,
+        size: 10,
+        font: fontBold,
         color: rgb(1, 1, 1),
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1,
       });
 
-      let cellX = tableX;
-      wrappedRows.forEach((entry) => {
-        const textLines = entry.wrapped;
-        const contentHeight = textLines.length * lineHeight;
-        const startY = rowTop - rowHeight + (rowHeight - contentHeight) / 2 + 7;
-
-        textLines.forEach((line, lineIndex) => {
-          const textWidth = fontRegular.widthOfTextAtSize(line, cellTextSize);
-          const xPos = entry.isCentered ? cellX + (entry.width - textWidth) / 2 : cellX + cellPadding;
-          const yPos = startY - lineIndex * lineHeight;
-
-          currentPage.drawText(line, {
-            x: xPos,
-            y: yPos,
-            size: cellTextSize,
-            font: fontRegular,
-            color: rgb(0, 0, 0),
-          });
-        });
-
-        currentPage.drawLine({
-          start: { x: cellX, y: rowTop },
-          end: { x: cellX, y: rowTop - rowHeight },
-          thickness: 1,
-          color: rgb(0, 0, 0),
-        });
-
-        cellX += entry.width;
-      });
-
-      currentPage.drawLine({
-        start: { x: cellX, y: rowTop },
-        end: { x: cellX, y: rowTop - rowHeight },
+      page.drawLine({
+        start: { x: xPos, y: headerY },
+        end: { x: xPos, y: headerY + headerHeight },
         thickness: 1,
         color: rgb(0, 0, 0),
       });
 
-      y -= rowHeight;
+      xPos += width;
     });
 
-    y -= 16;
-  }
+    page.drawLine({
+      start: { x: xPos, y: headerY },
+      end: { x: xPos, y: headerY + headerHeight },
+      thickness: 1,
+      color: rgb(0, 0, 0),
+    });
+
+    currentY = headerY;
+
+    members.forEach((member, memberIndex) => {
+      const rowTop = currentY;
+      const rowBottom = rowTop - rowHeight;
+      const rowColor = memberIndex % 2 === 0 ? rgb(1, 1, 1) : rgb(0.92, 0.94, 0.96);
+
+      page.drawRectangle({
+        x: tableX,
+        y: rowBottom,
+        width: tableWidth,
+        height: rowHeight,
+        color: rowColor,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1,
+      });
+
+      const values = [
+        String(memberIndex + 1),
+        String(member.name || '—'),
+        String(member.rollNo || '—'),
+        String(member.year || '—'),
+        String(member.department || '—'),
+        String(member.phone || '—'),
+      ];
+
+      let cellX = tableX;
+      values.forEach((value, index) => {
+        const width = colWidths[index];
+        const textWidth = fontRegular.widthOfTextAtSize(value, 9.5);
+        const centered = index === 0 || index === 2 || index === 3;
+        const textX = centered ? cellX + (width - textWidth) / 2 : cellX + 8;
+
+        page.drawText(value, {
+          x: textX,
+          y: rowBottom + 7,
+          size: 9.5,
+          font: fontRegular,
+          color: rgb(0, 0, 0),
+        });
+
+        page.drawLine({
+          start: { x: cellX, y: rowTop },
+          end: { x: cellX, y: rowBottom },
+          thickness: 1,
+          color: rgb(0, 0, 0),
+        });
+
+        cellX += width;
+      });
+
+      page.drawLine({
+        start: { x: cellX, y: rowTop },
+        end: { x: cellX, y: rowBottom },
+        thickness: 1,
+        color: rgb(0, 0, 0),
+      });
+
+      currentY = rowBottom;
+    });
+
+    currentY -= sectionGap;
+  });
+
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });
 }

@@ -6,9 +6,9 @@ import { adminAPI } from '../../api';
 import { getApiErrorMessage } from '../../utils/apiError';
 import { useToast } from '../../context/ToastContext';
 import { handlePdfBlob } from '../../utils/pdf';
+import { generateRolePdf } from '../../utils/generateRolePdf';
 import Button from '../ui/Button';
 import PageHeader from '../ui/PageHeader';
-import Card from '../ui/Card';
 
 const ROLES = [
   { id: 'secretary', label: 'Secretary' },
@@ -25,23 +25,34 @@ export default function RolePdf() {
 
   const onSelect = (role) => setSelected(role);
 
-  const getRolePdf = async () => {
-    const res = await adminAPI.getRoleWisePDF(selected);
-    const pdfBlob = res?.data;
-    if (!pdfBlob || pdfBlob.size < 100) {
-      throw new Error('The server returned an invalid PDF.');
+  const generateExactPdfBlob = async () => {
+    let rawData = [];
+    try {
+      const res = await adminAPI.getAssociations();
+      rawData = res.data?.data || res.data?.associations || [];
+    } catch (_) {
+      rawData = [];
     }
-    return pdfBlob;
+    return await generateRolePdf({ role: selected, data: rawData });
   };
 
   const previewPdf = async () => {
     try {
       setBusy('preview');
-      const pdfBlob = await getRolePdf();
-      const url = await handlePdfBlob(
-        { data: pdfBlob },
-        { filename: `Role_${selected}.pdf`, preview: true }
-      );
+      let pdfBlob;
+      try {
+        const res = await adminAPI.getRoleWisePDF(selected);
+        pdfBlob = res.data;
+      } catch (_) {
+        pdfBlob = await generateExactPdfBlob();
+      }
+
+      // If blob is small or not a valid PDF response, fallback to generating exact screenshot format
+      if (!pdfBlob || pdfBlob.size < 100) {
+        pdfBlob = await generateExactPdfBlob();
+      }
+
+      const url = await handlePdfBlob({ data: pdfBlob }, { filename: `Role_${selected}.pdf`, preview: true });
       if (url) {
         setPreviewUrl(url);
         setPreviewOpen(true);
@@ -56,7 +67,18 @@ export default function RolePdf() {
   const downloadPdf = async () => {
     try {
       setBusy('download');
-      const pdfBlob = await getRolePdf();
+      let pdfBlob;
+      try {
+        const res = await adminAPI.getRoleWisePDF(selected);
+        pdfBlob = res.data;
+      } catch (_) {
+        pdfBlob = await generateExactPdfBlob();
+      }
+
+      if (!pdfBlob || pdfBlob.size < 100) {
+        pdfBlob = await generateExactPdfBlob();
+      }
+
       await handlePdfBlob({ data: pdfBlob }, { filename: `Role_${selected}.pdf` });
     } catch (err) {
       showToast(getApiErrorMessage(err, 'Unable to download PDF.'), 'error');
@@ -77,7 +99,7 @@ export default function RolePdf() {
       } else if (typeof rawData === 'object' && rawData !== null) {
         Object.entries(rawData).forEach(([clubName, members]) => {
           if (Array.isArray(members)) {
-            members.forEach((m) => {
+            members.forEach(m => {
               flattenRows.push({
                 Club: clubName,
                 Name: m.name || '',
@@ -85,7 +107,7 @@ export default function RolePdf() {
                 Year: m.year || '',
                 Department: m.department || '',
                 Phone: m.phone || m.mobile || '',
-                Event: m.eventName || '',
+                Event: m.eventName || ''
               });
             });
           }
@@ -99,9 +121,7 @@ export default function RolePdf() {
 
       const keys = Object.keys(flattenRows[0]);
       const escape = (s) => `"${String(s ?? '').replace(/"/g, '""')}"`;
-      const csvContent = [keys.join(',')]
-        .concat(flattenRows.map((r) => keys.map((k) => escape(r[k])).join(',')))
-        .join('\n');
+      const csvContent = [keys.join(',')].concat(flattenRows.map((r) => keys.map((k) => escape(r[k])).join(','))).join('\n');
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -118,6 +138,7 @@ export default function RolePdf() {
     }
   };
 
+
   return (
     <div>
       <PageHeader
@@ -126,31 +147,29 @@ export default function RolePdf() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="p-5">
+        <div className="p-5 bg-[#050505] border border-[#252525]">
           <h3 className="font-heading font-bold text-[#FFFFFF] text-sm uppercase tracking-wider mb-3">SELECT ROLE</h3>
           <RoleSelector roles={ROLES} selected={selected} onSelect={onSelect} />
           <div className="mt-5 flex flex-wrap gap-2">
-            <Button variant="secondary" loading={busy === 'preview'} onClick={previewPdf}>PREVIEW PDF</Button>
-            <Button loading={busy === 'download'} onClick={downloadPdf}>DOWNLOAD PDF</Button>
-            <Button variant="ghost" onClick={exportCsv} loading={busy === 'export'}>EXPORT CSV</Button>
+            <Button variant="secondary" loading={busy === 'preview'} onClick={previewPdf}>
+              PREVIEW PDF
+            </Button>
+            <Button loading={busy === 'download'} onClick={downloadPdf}>
+              DOWNLOAD PDF
+            </Button>
+            <Button variant="ghost" onClick={exportCsv} loading={busy === 'export'}>
+              EXPORT CSV
+            </Button>
           </div>
-        </Card>
+        </div>
 
-        <Card className="col-span-1 lg:col-span-2 p-5">
+        <div className="col-span-2 p-5 bg-[#050505] border border-[#252525]">
           <ReportSummary role={selected} />
-        </Card>
+        </div>
       </div>
 
-      <PdfPreviewModal
-        open={previewOpen}
-        url={previewUrl}
-        filename={`Role_${selected}.pdf`}
-        onClose={() => {
-          if (previewUrl) URL.revokeObjectURL(previewUrl);
-          setPreviewUrl('');
-          setPreviewOpen(false);
-        }}
-      />
+      <PdfPreviewModal open={previewOpen} url={previewUrl} filename={`Role_${selected}.pdf`} onClose={() => setPreviewOpen(false)} />
     </div>
   );
 }
+
