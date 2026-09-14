@@ -38,7 +38,7 @@ export async function generateEventPdf(eventData = {}) {
       width: contentWidth,
       height: pageHeight - margin * 2,
       borderColor: rgb(0, 0, 0),
-      borderWidth: 1.2,
+      borderWidth: 1.5,
     });
   };
 

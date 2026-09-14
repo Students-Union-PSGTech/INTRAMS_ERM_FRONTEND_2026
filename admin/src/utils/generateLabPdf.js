@@ -121,7 +121,7 @@ export async function generateLabPdf(eventData = {}) {
     width: contentWidth,
     height: pageHeight - margin * 2,
     borderColor: rgb(0, 0, 0),
-    borderWidth: 1.2,
+    borderWidth: 1.5,
   });
 
   // Top Left PSG Crest Logo
@@ -271,7 +271,7 @@ export async function generateLabPdf(eventData = {}) {
     width: contentWidth,
     height: pageHeight - margin * 2,
     borderColor: rgb(0, 0, 0),
-    borderWidth: 1.2,
+    borderWidth: 1.5,
   });
 
   // Section 1: CONVENOR DETAILS Header
