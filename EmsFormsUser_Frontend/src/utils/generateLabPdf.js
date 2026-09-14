@@ -226,10 +226,19 @@ export async function generateLabPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  // Dotted lines under headers
-  const dottedLine = '........................................';
-  page1.drawText(dottedLine, { x: 55, y: 245, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
-  page1.drawText(dottedLine, { x: 330, y: 245, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+  // Signature lines under headers
+  page1.drawLine({
+    start: { x: 55, y: 250 },
+    end: { x: 235, y: 250 },
+    thickness: 1,
+    color: rgb(0, 0, 0),
+  });
+  page1.drawLine({
+    start: { x: 330, y: 250 },
+    end: { x: 510, y: 250 },
+    thickness: 1,
+    color: rgb(0, 0, 0),
+  });
 
   // Details under left signature
   page1.drawText('Name:', { x: 55, y: 215, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
