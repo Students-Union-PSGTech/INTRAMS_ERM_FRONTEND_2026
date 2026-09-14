@@ -10,12 +10,11 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     return <div className="min-h-screen bg-[var(--bg)]" />;
   }
 
-  const token = localStorage.getItem('token');
-  if (!user && !token) {
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = user?.role ?? localStorage.getItem('role') ?? 'member';
+  const userRole = user.role || 'member';
   if (allowedRoles?.length && !allowedRoles.includes(userRole)) {
     const defaultHome = userRole === 'procurement' ? '/grant-allocation' : '/dashboard';
     return <Navigate to={defaultHome} replace />;
