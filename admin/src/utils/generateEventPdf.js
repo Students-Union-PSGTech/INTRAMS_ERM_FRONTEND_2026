@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64';
 
 /**
@@ -129,7 +129,7 @@ export async function generateEventPdf(eventData = {}) {
       height: 24,
       borderColor: rgb(0, 0, 0),
       borderWidth: 1.2,
-      color: rgb(0.89, 0.95, 0.98),
+      color: rgb(0.89, 0.95, 0.98), // Light blue header fill
     });
 
     let cellX = startX;
@@ -172,7 +172,7 @@ export async function generateEventPdf(eventData = {}) {
       row.forEach((val, idx) => {
         const w = colWidths[idx];
         const strVal = String(val || '');
-        const font = fontRegular;
+        const font = idx === 0 ? fontRegular : fontRegular;
         const textW = font.widthOfTextAtSize(strVal, 9);
         page.drawText(strVal, {
           x: cellX + (w - textW) / 2,
@@ -672,7 +672,6 @@ export async function generateEventPdf(eventData = {}) {
 
   page5.drawText('ABOUT THE EVENT :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
   p5Y -= 20;
-  page5.drawText(about, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
   page5.drawText(about, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
   p5Y -= 45;
 

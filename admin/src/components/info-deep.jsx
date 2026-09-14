@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { adminAPI, resolveAssetUrl } from '../api';
 import { getApiErrorMessage } from '../utils/apiError';
 import { handlePdfBlob } from '../utils/pdf';
+import { generateEventPdf } from '../utils/generateEventPdf';
 import { getAllocated, getRequested } from '../utils/allocation';
 import { useToast } from '../context/ToastContext';
 import PageHeader from './ui/PageHeader';
@@ -56,16 +57,34 @@ export default function EventDetail() {
     if (!event) return;
     try {
       setPdfLoading(type);
-      const map = {
-        event: () => adminAPI.getEventPDF(event._id),
-        items: () => adminAPI.getEventItemsPDF(event._id),
-        procurement: () => adminAPI.getProcurementPDF(event._id),
-      };
-      const res = await map[type]();
       const filename = type === 'event'
         ? `Event_${event.name || event.event_name || event._id}_DRAFT_ERM.pdf`
         : `${type}_${event.event_id || event._id}.pdf`;
-      await handlePdfBlob(res, { filename });
+
+      if (type === 'event') {
+        let pdfBlob;
+        try {
+          pdfBlob = await generateEventPdf(event);
+        } catch (_) {
+          const res = await adminAPI.getEventPDF(event._id);
+          pdfBlob = new Blob([res.data], { type: 'application/pdf' });
+        }
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        const map = {
+          items: () => adminAPI.getEventItemsPDF(event._id),
+          procurement: () => adminAPI.getProcurementPDF(event._id),
+        };
+        const res = await map[type]();
+        await handlePdfBlob(res, { filename });
+      }
     } catch (err) {
       showToast(getApiErrorMessage(err, 'Unable to generate PDF.'), 'error');
     } finally {

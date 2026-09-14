@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64';
+import { KRIYA_LOGO_BASE64 } from './kriyaLogoBase64';
 
 /**
  * Generates exact high-fidelity LAB CONFIRMATION FORM PDF matching official PSG College of Technology standard.
@@ -49,6 +50,7 @@ export async function generateLabPdf(eventData = {}) {
   };
 
   const psgLogo = await loadPng(PSG_LOGO_BASE64, '/psg_logo.png');
+  const kriyaLogo = await loadPng(KRIYA_LOGO_BASE64, '/kriya_logo.png');
 
   // Extract Event Details
   const associationName =
@@ -163,7 +165,7 @@ export async function generateLabPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  // Center Logo area left blank as requested
+  // Center Logo area left blank as requested for different event logos
   // (Reserved vertical space ~ 115pt left blank)
 
   // INTRAMS 2026 Header
