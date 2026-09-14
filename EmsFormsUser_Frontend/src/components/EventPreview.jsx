@@ -1,7 +1,9 @@
 import React from 'react';
-import { Calendar, Layers, Package } from 'lucide-react';
+import { Calendar, Layers, Package, Building2, Cpu, Wrench } from 'lucide-react';
 
 function EventPreview({ formData }) {
+  const form = formData?.form || {};
+
   return (
     <div className="glass-card rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-800 space-y-6 text-slate-100">
       <div className="border-b border-slate-800 pb-4">
@@ -11,19 +13,53 @@ function EventPreview({ formData }) {
       </div>
 
       {formData.form && (
-        <div>
+        <div className="space-y-4">
           <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2 font-heading">
             <Calendar className="w-4 h-4 text-sky-400" />
-            Schedule & Venue
+            Schedule, Venue &amp; Resource Specifications
           </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
-            <div><span className="font-semibold text-slate-400">Day:</span> {formData.form.day || 'N/A'}</div>
-            <div><span className="font-semibold text-slate-400">Slot:</span> {formData.form.slot || 'N/A'}</div>
-            <div><span className="font-semibold text-slate-400">Duration:</span> {formData.form.duration || 'N/A'}</div>
-            <div><span className="font-semibold text-slate-400">Halls:</span> {formData.form.preferred_halls || 'N/A'}</div>
-            <div><span className="font-semibold text-slate-400">Participant:</span> {formData.form.participant_type || 'Solo'}</div>
-            <div><span className="font-semibold text-slate-400">Team Size:</span> {formData.form.team_min || 1}-{formData.form.team_max || 1}</div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+            <div><span className="font-semibold text-slate-400">Event Day:</span> {form.day || 'N/A'}</div>
+            <div><span className="font-semibold text-slate-400">Slot:</span> {form.slot || 'N/A'}</div>
+            <div><span className="font-semibold text-slate-400">Duration:</span> {form.duration || 'N/A'}</div>
+            <div><span className="font-semibold text-slate-400">Halls Required:</span> {form.halls_required || '2'}</div>
+            <div><span className="font-semibold text-slate-400">Preferred Halls:</span> {form.preferred_halls || 'N/A'}</div>
+            <div><span className="font-semibold text-slate-400">Participant Type:</span> {form.participant_type || 'Solo'}</div>
+            <div><span className="font-semibold text-slate-400">Team Size:</span> {form.team_min || 1} - {form.team_max || 1}</div>
+            <div><span className="font-semibold text-slate-400">Extension Boxes:</span> {form.extension_boxes || '0'}</div>
+            <div><span className="font-semibold text-slate-400">Labs Required:</span> {form.labs_required ? 'Yes' : 'No'}</div>
           </div>
+
+          {form.reason_for_halls && (
+            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-xs">
+              <span className="font-semibold text-slate-400">Reason for Halls:</span>
+              <p className="text-slate-300 mt-1">{form.reason_for_halls}</p>
+            </div>
+          )}
+
+          {form.reason_for_extension_boxes && (
+            <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800 text-xs">
+              <span className="font-semibold text-slate-400">Reason for Extension Boxes:</span>
+              <p className="text-slate-300 mt-1">{form.reason_for_extension_boxes}</p>
+            </div>
+          )}
+
+          {form.labs_required && (
+            <div className="bg-slate-950/80 p-4 rounded-2xl border border-sky-500/30 text-xs space-y-2">
+              <h4 className="font-bold text-sky-400 flex items-center gap-1.5 uppercase tracking-wider">
+                <Cpu className="w-3.5 h-3.5" /> Lab Allotment &amp; Confirmation Details
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-300">
+                <div><span className="text-slate-400">Lab Name:</span> {form.lab_name || 'AI lab'}</div>
+                <div><span className="text-slate-400">Lab Block:</span> {form.lab_block || 'E block'}</div>
+                <div><span className="text-slate-400">Lab Floor:</span> {form.lab_floor || '2'}</div>
+                <div><span className="text-slate-400">Lab No:</span> {form.lab_no || '123'}</div>
+                <div><span className="text-slate-400">Date Allotted:</span> {form.date_allotted || '14-03-2026'}</div>
+                <div><span className="text-slate-400">Duration (hrs):</span> {form.duration_in_hrs || '1'}</div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
