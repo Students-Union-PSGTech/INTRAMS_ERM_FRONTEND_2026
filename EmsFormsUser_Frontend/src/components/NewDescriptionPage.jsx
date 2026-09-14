@@ -28,8 +28,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
             <option value="" className="bg-zinc-900 text-zinc-400">Select Day</option>
             <option value="Day 1" className="bg-zinc-900 text-white">Day 1</option>
             <option value="Day 2" className="bg-zinc-900 text-white">Day 2</option>
-            <option value="Day 3" className="bg-zinc-900 text-white">Day 3</option>
-            <option value="Both Days" className="bg-zinc-900 text-white">Both Days</option>
+            <option value="Both Days" className="bg-zinc-900 text-white">Both Days (Day 1 &amp; Day 2)</option>
           </select>
           {errors.day && <p className="text-rose-400 text-xs mt-1">{errors.day}</p>}
         </div>
