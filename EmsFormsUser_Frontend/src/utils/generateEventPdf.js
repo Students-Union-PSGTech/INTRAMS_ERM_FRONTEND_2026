@@ -42,6 +42,18 @@ export async function generateEventPdf(eventData = {}) {
     });
   };
 
+  // Light INTRAMS 2026 Background Watermark
+  const drawWatermark = (page) => {
+    page.drawText('INTRAMS 2026', {
+      x: 85,
+      y: 250,
+      size: 70,
+      font: fontBold,
+      color: rgb(0.88, 0.88, 0.88),
+      rotate: degrees(45),
+    });
+  };
+
   // Draw Bottom Signature Lines (Secretary & Faculty Advisor)
   const drawFooterSignatures = (page) => {
     page.drawText('Signature of the Secretary', {
@@ -209,6 +221,7 @@ export async function generateEventPdf(eventData = {}) {
   // PAGE 1: COVER PAGE
   // ==========================================
   const page1 = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(page1);
   drawPageBorder(page1);
 
   // Top Left PSG Crest Logo
@@ -283,6 +296,7 @@ export async function generateEventPdf(eventData = {}) {
   // PAGE 2: INSTRUCTIONS & GUIDELINES
   // ==========================================
   const page2 = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(page2);
   drawPageBorder(page2);
 
   let p2Y = pageHeight - margin - 35;
@@ -395,6 +409,7 @@ export async function generateEventPdf(eventData = {}) {
   // PAGE 3: PERSONNEL & CONTACT TABLES
   // ==========================================
   const page3 = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(page3);
   drawPageBorder(page3);
 
   let p3Y = pageHeight - margin - 35;
@@ -453,6 +468,7 @@ export async function generateEventPdf(eventData = {}) {
   // PAGE 4: EVENT DETAILS & RESOURCE MATRIX
   // ==========================================
   const page4 = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(page4);
   drawPageBorder(page4);
 
   let p4Y = pageHeight - margin - 35;
@@ -621,6 +637,7 @@ export async function generateEventPdf(eventData = {}) {
   // PAGE 5: EVENT DESCRIPTION & ROUND RULES
   // ==========================================
   const page5 = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(page5);
   drawPageBorder(page5);
 
   let p5Y = pageHeight - margin - 35;

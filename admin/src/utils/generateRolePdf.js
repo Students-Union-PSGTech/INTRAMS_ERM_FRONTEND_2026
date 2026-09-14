@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 
 function normalizeRole(role) {
   const value = String(role || '').toLowerCase();
@@ -104,7 +104,19 @@ export async function generateRolePdf({ role, data }) {
     });
   };
 
+  const drawWatermark = (page) => {
+    page.drawText('INTRAMS 2026', {
+      x: 200,
+      y: 140,
+      size: 80,
+      font: fontBold,
+      color: rgb(0.88, 0.88, 0.88),
+      rotate: degrees(45),
+    });
+  };
+
   let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(currentPage);
   drawPageBorder(currentPage);
 
   // Title Header
@@ -138,6 +150,7 @@ export async function generateRolePdf({ role, data }) {
   const checkAddPage = (requiredHeight) => {
     if (currentY - requiredHeight < outerMargin + 25) {
       currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      drawWatermark(currentPage);
       drawPageBorder(currentPage);
       currentY = pageHeight - 50;
     }

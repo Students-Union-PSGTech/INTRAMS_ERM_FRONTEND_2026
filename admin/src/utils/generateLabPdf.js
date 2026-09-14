@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64';
 
 /**
@@ -13,6 +13,18 @@ export async function generateLabPdf(eventData = {}) {
   const pageHeight = 841.89; // A4 Portrait height
   const margin = 25;
   const contentWidth = pageWidth - margin * 2; // 545.28
+
+  // Light INTRAMS 2026 Background Watermark
+  const drawWatermark = (page) => {
+    page.drawText('INTRAMS 2026', {
+      x: 85,
+      y: 250,
+      size: 70,
+      font: fontBold,
+      color: rgb(0.88, 0.88, 0.88),
+      rotate: degrees(45),
+    });
+  };
 
   // Helper to load PNG image from base64 or fallback URL
   const loadPng = async (base64Str, fallbackUrl) => {
@@ -100,6 +112,7 @@ export async function generateLabPdf(eventData = {}) {
   // PAGE 1: COVER & FORM DETAILS
   // ==========================================
   const page1 = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(page1);
 
   // Page 1 Border Frame
   page1.drawRectangle({
@@ -240,6 +253,7 @@ export async function generateLabPdf(eventData = {}) {
   // PAGE 2: TABLES, SELECTIONS & STAMPS
   // ==========================================
   const page2 = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(page2);
 
   // Page 2 Border Frame
   page2.drawRectangle({
