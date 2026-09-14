@@ -72,48 +72,48 @@ function HomePage() {
     <UserLayout showSidebar={true}>
       <div className="relative z-10 min-h-full font-sans space-y-6 max-w-5xl mx-auto w-full">
         {/* Top Banner Box */}
-        <div className="relative z-10 p-5 sm:p-6 bg-zinc-950 border border-zinc-800 text-white rounded-none shadow-md w-full">
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight uppercase">
+        <div className="relative z-10 p-6 sm:p-8 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 text-white rounded-2xl shadow-2xl shadow-sky-500/5 w-full">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading">
             DASHBOARD
           </h1>
-          <p className="text-zinc-400 text-xs font-medium mt-1">
-            Centralized Event Management & Control Center
+          <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">
+            Centralized Event Management &amp; Control Center
           </p>
         </div>
 
         {/* YOUR EVENTS Card */}
-        <div className="relative z-10 p-5 sm:p-6 bg-zinc-950 border border-zinc-800 text-white rounded-none shadow-md space-y-4 w-full">
+        <div className="relative z-10 p-6 sm:p-8 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 text-white rounded-2xl shadow-2xl space-y-5 w-full">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-white tracking-wider uppercase">
+            <h2 className="text-sm font-extrabold text-white tracking-wider uppercase">
               YOUR EVENTS
             </h2>
             <button
               onClick={fetchMyEvents}
               disabled={loading}
-              className="px-3.5 py-1.5 bg-white hover:bg-zinc-200 text-black text-xs font-bold tracking-wider uppercase rounded-none transition-all disabled:opacity-50"
+              className="px-4 py-2 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold tracking-wider uppercase rounded-xl transition-all disabled:opacity-50"
             >
               <span>REFRESH</span>
             </button>
           </div>
 
-          <div className="border-b border-zinc-800 w-full my-2" />
+          <div className="border-b border-slate-800/80 w-full my-2" />
 
           {error && (
-            <div className="p-3 bg-rose-950/60 border border-rose-800 text-rose-300 text-xs text-center font-medium">
+            <div className="p-4 bg-rose-950/60 border border-rose-800/80 text-rose-300 text-xs text-center font-medium rounded-xl">
               {error}
             </div>
           )}
 
           {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-sky-400" />
+            <div className="flex justify-center py-10">
+              <Loader2 className="w-7 h-7 animate-spin text-sky-400" />
             </div>
           ) : events.length === 0 ? (
-            <div className="p-8 text-center border border-dashed border-zinc-800 rounded-none bg-zinc-900/40">
-              <p className="text-zinc-400 text-xs font-medium mb-3">No event proposals submitted yet for {user?.username}.</p>
+            <div className="p-8 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-950/40">
+              <p className="text-slate-400 text-xs sm:text-sm font-medium mb-4">No event proposals submitted yet for {user?.username}.</p>
               <button
                 onClick={() => navigate('/create-event')}
-                className="px-4 py-2 bg-white hover:bg-zinc-200 text-black font-bold rounded-none text-xs uppercase transition-all"
+                className="px-5 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold rounded-xl text-xs uppercase shadow-lg shadow-sky-500/20 transition-all"
               >
                 Create First Proposal
               </button>
@@ -123,19 +123,19 @@ function HomePage() {
               {events.map((ev) => (
                 <div
                   key={ev._id}
-                  className="p-4 bg-zinc-900/80 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-none"
+                  className="p-4 sm:p-5 bg-slate-950/60 hover:bg-slate-950/90 border border-slate-800/80 hover:border-sky-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl transition-all shadow-md"
                 >
-                  <div className="space-y-0.5 min-w-0">
-                    <h3 className="text-xs font-bold text-white truncate">
+                  <div className="space-y-1 min-w-0">
+                    <h3 className="text-sm font-bold text-white truncate">
                       {ev.name || 'Untitled Event'}
                     </h3>
-                    {ev.tagline && <p className="text-zinc-400 text-[11px] font-medium truncate">{ev.tagline}</p>}
+                    {ev.tagline && <p className="text-slate-400 text-xs font-medium truncate">{ev.tagline}</p>}
                   </div>
 
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2.5 flex-shrink-0">
                     <button
                       onClick={() => navigate(`/event/${ev._id}`, { state: ev })}
-                      className="px-3.5 py-1.5 bg-white hover:bg-zinc-200 text-black text-xs font-bold tracking-wider uppercase rounded-none transition-all"
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700/80 text-slate-200 hover:text-white text-xs font-bold tracking-wider uppercase rounded-xl transition-all"
                     >
                       VIEW
                     </button>
@@ -143,7 +143,7 @@ function HomePage() {
                     <button
                       onClick={() => handleDownloadPDF(ev._id, ev.name)}
                       disabled={downloadingId === ev._id}
-                      className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold tracking-wider uppercase rounded-none transition-all disabled:opacity-50"
+                      className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white text-xs font-bold tracking-wider uppercase rounded-xl shadow-md shadow-sky-500/20 transition-all disabled:opacity-50"
                     >
                       {downloadingId === ev._id ? 'LOADING' : 'PDF'}
                     </button>
