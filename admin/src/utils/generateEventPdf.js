@@ -248,7 +248,7 @@ export async function generateEventPdf(eventData = {}) {
   // Top Header Titles
   const headersList = [
     { text: 'PSG COLLEGE OF TECHNOLOGY', size: 14, font: fontBold },
-    { text: 'STUDENTS UNION 2026-27', size: 11, font: fontBold },
+    { text: 'STUDENTS UNION 2026-2027', size: 11, font: fontBold },
     { text: 'DRAFT ERM FORM', size: 11.5, font: fontBold },
     { text: 'INTRAMS 2026', size: 11.5, font: fontBold },
   ];
