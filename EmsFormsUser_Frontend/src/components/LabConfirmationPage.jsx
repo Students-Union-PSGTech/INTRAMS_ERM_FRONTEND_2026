@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from './UserLayout';
 import { userAPI } from '../api/api';
-import { generateEventPdf } from '../utils/generateEventPdf';
+import { generateLabPdf } from '../utils/generateLabPdf';
 import { useAuth } from '../context/AuthContext';
 import { RefreshCcw, Loader2, FileCheck, Building2, Calendar, Clock, UserCheck, Download } from 'lucide-react';
 
@@ -50,7 +50,7 @@ function LabConfirmationPage() {
   const handleDownloadPDF = async (eventId, eventName) => {
     setDownloadingId(eventId);
     try {
-      let eventObj = confirmations.find((e) => e._id === eventId || e.id === eventId);
+      let eventObj = events.find((e) => e._id === eventId || e.id === eventId);
       if (!eventObj) {
         try {
           const res = await userAPI.getEventById(eventId);
@@ -61,7 +61,7 @@ function LabConfirmationPage() {
       }
       let pdfBlob;
       try {
-        pdfBlob = await generateEventPdf(eventObj || { name: eventName });
+        pdfBlob = await generateLabPdf(eventObj || { name: eventName });
       } catch (_) {
         const res = await userAPI.getEventPDF(eventId);
         pdfBlob = new Blob([res.data], { type: 'application/pdf' });

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FlaskConical } from 'lucide-react';
+import { FlaskConical, Download } from 'lucide-react';
 import { adminAPI } from '../api';
 import { getApiErrorMessage } from '../utils/apiError';
 import { useToast } from '../context/ToastContext';
+import { generateLabPdf } from '../utils/generateLabPdf';
 import PageHeader from './ui/PageHeader';
 import Button from './ui/Button';
 import Input from './ui/Input';
@@ -19,6 +20,7 @@ export default function LabConfirmation() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [updating, setUpdating] = useState('');
+  const [downloadingId, setDownloadingId] = useState('');
 
   const fetchEvents = async () => {
     try {
@@ -36,6 +38,26 @@ export default function LabConfirmation() {
   useEffect(() => {
     fetchEvents();
   }, []);
+
+  const handleDownloadPDF = async (eventObj) => {
+    try {
+      setDownloadingId(eventObj._id || eventObj.id);
+      const pdfBlob = await generateLabPdf(eventObj);
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `LabConfirmation_${eventObj.name || eventObj.event_name || 'Event'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast('Lab Confirmation PDF downloaded successfully.', 'success');
+    } catch (err) {
+      showToast('Failed to generate Lab Confirmation PDF.', 'error');
+    } finally {
+      setDownloadingId('');
+    }
+  };
 
   const updateStatus = async (eventId, lab_status) => {
     try {
@@ -106,6 +128,14 @@ export default function LabConfirmation() {
                       </Td>
                       <Td>
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="secondary"
+                            loading={downloadingId === event._id}
+                            onClick={() => handleDownloadPDF(event)}
+                          >
+                            <Download className="w-3.5 h-3.5 mr-1" />
+                            PDF
+                          </Button>
                           <Button
                             variant="success"
                             loading={updating === event._id}
