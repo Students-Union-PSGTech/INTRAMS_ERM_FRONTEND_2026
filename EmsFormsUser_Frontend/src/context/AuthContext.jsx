@@ -9,15 +9,21 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const storedUser = localStorage.getItem('userData');
     const token = localStorage.getItem('userToken');
-    if (storedUser && token) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch (e) {
-        localStorage.removeItem('userData');
-        localStorage.removeItem('userToken');
+    const restore = async () => {
+      if (storedUser && token) {
+        try {
+          setUser(JSON.parse(storedUser));
+          await userAPI.getProfile();
+        } catch (_) {
+          localStorage.removeItem('userData');
+          localStorage.removeItem('userToken');
+          localStorage.removeItem('userRefreshToken');
+          setUser(null);
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    restore();
   }, []);
 
   const login = async (username, password) => {

@@ -13,77 +13,23 @@ import NotFound from './components/NotFound';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  if (loading) return null;
-  const token = localStorage.getItem('userToken');
-  if (!user && !token) {
-    return <Navigate to="/login" replace />;
-  }
+  if (loading) return <div className="min-h-screen" aria-busy="true" />;
+  if (!user) return <Navigate to="/login" replace />;
   return children;
 };
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/home" replace />} />
       <Route path="/login" element={<Login />} />
-      <Route
-        path="/home"
-        element={
-          <ProtectedRoute>
-            <HomePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/view-events"
-        element={
-          <ProtectedRoute>
-            <ViewEvents />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/event/:id"
-        element={
-          <ProtectedRoute>
-            <EventDetails />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/create-event"
-        element={
-          <ProtectedRoute>
-            <CreateEventLayout />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/update-event/:id"
-        element={
-          <ProtectedRoute>
-            <UpdateEventController />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/edit"
-        element={
-          <ProtectedRoute>
-            <EditRequestsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/lab-confirmation"
-        element={
-          <ProtectedRoute>
-            <LabConfirmationPage />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Legacy Route Redirects */}
+      <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+      <Route path="/view-events" element={<ProtectedRoute><ViewEvents /></ProtectedRoute>} />
+      <Route path="/event/:id" element={<ProtectedRoute><EventDetails /></ProtectedRoute>} />
+      <Route path="/create-event" element={<ProtectedRoute><CreateEventLayout /></ProtectedRoute>} />
+      <Route path="/update-event/:id" element={<ProtectedRoute><UpdateEventController /></ProtectedRoute>} />
+      <Route path="/edit" element={<ProtectedRoute><EditRequestsPage /></ProtectedRoute>} />
+      <Route path="/lab-confirmation" element={<ProtectedRoute><LabConfirmationPage /></ProtectedRoute>} />
       <Route path="/edit-access" element={<Navigate to="/edit" replace />} />
       <Route path="/edit-requests" element={<Navigate to="/edit" replace />} />
       <Route path="/lab-confirmations" element={<Navigate to="/lab-confirmation" replace />} />
@@ -92,7 +38,6 @@ function AppRoutes() {
       <Route path="/items" element={<Navigate to="/create-event" replace />} />
       <Route path="/rounds" element={<Navigate to="/create-event" replace />} />
       <Route path="/review" element={<Navigate to="/create-event" replace />} />
-
       <Route path="/404" element={<NotFound />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -100,13 +45,7 @@ function AppRoutes() {
 }
 
 function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
-  );
+  return <AuthProvider><Router><AppRoutes /></Router></AuthProvider>;
 }
 
 export default App;
