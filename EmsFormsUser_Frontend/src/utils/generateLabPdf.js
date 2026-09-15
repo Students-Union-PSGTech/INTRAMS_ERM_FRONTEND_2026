@@ -35,7 +35,7 @@ export async function generateLabPdf(eventData = {}) {
         const bytes = Uint8Array.from(atob(cleanBase64), (c) => c.charCodeAt(0));
         return await pdfDoc.embedPng(bytes);
       }
-    } catch (_) {}
+    } catch (_) { /* ignore */ }
 
     try {
       if (fallbackUrl) {
@@ -45,12 +45,11 @@ export async function generateLabPdf(eventData = {}) {
           return await pdfDoc.embedPng(bytes);
         }
       }
-    } catch (_) {}
+    } catch (_) { /* ignore */ }
     return null;
   };
 
   const psgLogo = await loadPng(PSG_LOGO_BASE64, '/psg_logo.png');
-  const kriyaLogo = await loadPng(KRIYA_LOGO_BASE64, '/kriya_logo.png');
 
   // Extract Event Details
   const associationName =
@@ -520,7 +519,6 @@ export async function generateLabPdf(eventData = {}) {
   const specX = 55;
   const specWidth = 485.28;
   const leftColW = 140;
-  const rightColW = specWidth - leftColW; // 345.28
   const specRowH = 26;
 
   const specRows = [

@@ -8,6 +8,7 @@ export async function generateEventPdf(eventData = {}) {
   const pdfDoc = await PDFDocument.create();
   const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
 
   const pageWidth = 595.28; // A4 Portrait width
   const pageHeight = 841.89; // A4 Portrait height
@@ -27,7 +28,7 @@ export async function generateEventPdf(eventData = {}) {
         const bytes = await res.arrayBuffer();
         psgLogo = await pdfDoc.embedPng(bytes);
       }
-    } catch (_) {}
+    } catch (_) { /* ignore */ }
   }
 
   // Draw Page Border Frame
