@@ -83,29 +83,41 @@ export async function generateEventPdf(eventData = {}) {
   const tagline = ev.tagline || formSpecs.tagline || 'Find the time complexity';
   const about = ev.about || ev.description || formSpecs.about || '—';
 
+  const formatYear = (yearStr) => {
+    if (!yearStr) return 'IV YEAR';
+    const y = String(yearStr).trim().toUpperCase();
+    if (y.includes('MSC')) return y;
+    if (y === '1' || y.startsWith('1ST') || y === 'I' || y === 'I YEAR') return 'I YEAR';
+    if (y === '2' || y.startsWith('2ND') || y === 'II' || y === 'II YEAR') return 'II YEAR';
+    if (y === '3' || y.startsWith('3RD') || y === 'III' || y === 'III YEAR') return 'III YEAR';
+    if (y === '4' || y.startsWith('4TH') || y === 'IV' || y === 'IV YEAR') return 'IV YEAR';
+    if (y === '5' || y.startsWith('5TH') || y === 'V' || y === 'V YEAR') return 'V YEAR';
+    return y.includes('YEAR') ? y : `${y} YEAR`;
+  };
+
   const rawSec = ev.contacts?.secretaries || ev.secretaries || ev.contacts?.secretary;
   const secretarialList = rawSec ? (Array.isArray(rawSec) ? rawSec : [rawSec]) : [];
   const secRows = secretarialList.length > 0
-    ? secretarialList.map(s => [s.name || '', s.roll_number || s.rollNo || '', s.mobile || s.phone || '', s.department || '', s.year || ''])
+    ? secretarialList.map(s => [s.name || '', s.roll_number || s.rollNo || '', s.mobile || s.phone || '', s.department || '', formatYear(s.year)])
     : [
-        ['', '', '', '', '']
-      ];
+      ['', '', '', '', '']
+    ];
 
   const rawConv = ev.contacts?.convenors || ev.convenors || ev.contacts?.convenor;
   const convenorList = rawConv ? (Array.isArray(rawConv) ? rawConv : [rawConv]) : [];
   const convRows = convenorList.length > 0
-    ? convenorList.map(c => [c.name || '', c.roll_number || c.rollNo || '', c.mobile || c.phone || '', c.department || '', c.year || ''])
+    ? convenorList.map(c => [c.name || '', c.roll_number || c.rollNo || '', c.mobile || c.phone || '', c.department || '', formatYear(c.year)])
     : [
-        ['', '', '', '', '']
-      ];
+      ['', '', '', '', '']
+    ];
 
   const rawVol = ev.contacts?.volunteers || ev.volunteers || ev.contacts?.volunteer;
   const volunteerList = rawVol ? (Array.isArray(rawVol) ? rawVol : [rawVol]) : [];
   const volRows = volunteerList.length > 0
-    ? volunteerList.map(v => [v.name || '', v.roll_number || v.rollNo || '', v.mobile || v.phone || '', v.department || '', v.year || ''])
+    ? volunteerList.map(v => [v.name || '', v.roll_number || v.rollNo || '', v.mobile || v.phone || '', v.department || '', formatYear(v.year)])
     : [
-        ['', '', '', '', '']
-      ];
+      ['', '', '', '', '']
+    ];
 
   const facultyObj = ev.contacts?.faculty_advisor || ev.facultyAdvisor || {};
   const facRows = facultyObj.name ? [
@@ -178,11 +190,16 @@ export async function generateEventPdf(eventData = {}) {
         const w = colWidths[idx];
         const strVal = String(val || '');
         const font = idx === 0 ? fontRegular : fontRegular;
-        const textW = font.widthOfTextAtSize(strVal, 9);
+        let size = 9;
+        let textW = font.widthOfTextAtSize(strVal, size);
+        while (textW > (w - 6) && size > 4) {
+          size -= 0.5;
+          textW = font.widthOfTextAtSize(strVal, size);
+        }
         page.drawText(strVal, {
           x: cellX + (w - textW) / 2,
           y: currentY - 16,
-          size: 9,
+          size: size,
           font: font,
           color: rgb(0, 0, 0),
         });
@@ -280,20 +297,35 @@ export async function generateEventPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
+  // Helper to shrink text
+  const getShrinkSize = (text, maxW, defaultSize, font) => {
+    let size = defaultSize;
+    let w = font.widthOfTextAtSize(text, size);
+    while (w > maxW && size > 5) {
+      size -= 0.5;
+      w = font.widthOfTextAtSize(text, size);
+    }
+    return size;
+  };
+
   // ASSOCIATION/CLUB NAME
-  page1.drawText(`ASSOCIATION/CLUB NAME : ${clubName}`, {
+  const assocStr = `CLUB NAME : ${clubName}`;
+  const assocSize = getShrinkSize(assocStr, 480, 13.5, fontBold);
+  page1.drawText(assocStr, {
     x: 55,
     y: 380,
-    size: 13.5,
+    size: assocSize,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
 
   // EVENT NAME
-  page1.drawText(`EVENT NAME : ${eventName}`, {
+  const eventStr = `EVENT NAME : ${eventName}`;
+  const eventSize = getShrinkSize(eventStr, 480, 13.5, fontBold);
+  page1.drawText(eventStr, {
     x: 55,
     y: 340,
-    size: 13.5,
+    size: eventSize,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
@@ -557,7 +589,8 @@ export async function generateEventPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  const isTeam = String(formSpecs.participant_type || ev.participant_type || '').toLowerCase().includes('team');
+  const pType = String(formSpecs.participant_type || ev.participant_type || '').toLowerCase();
+  const isTeam = pType.includes('team') || pType.includes('dual');
   page4.drawText('Individual:', { x: gridBoxX + 15, y: p4Y - 30, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   drawRadioCircle(page4, gridBoxX + 85, p4Y - 26, !isTeam);
 
@@ -602,19 +635,24 @@ export async function generateEventPdf(eventData = {}) {
 
   const slotStr = String(formSpecs.slot || ev.slot || '1').toLowerCase();
   let slotIdx = 0;
-  if (slotStr.includes('full') || slotStr.includes('both')) slotIdx = 2;
+  if (slotStr.includes('two') || slotStr.includes('days')) slotIdx = 3;
+  else if (slotStr.includes('full') || slotStr.includes('both')) slotIdx = 2;
   else if (slotStr.includes('2') || slotStr.includes('afternoon')) slotIdx = 1;
   else if (slotStr.includes('1') || slotStr.includes('morning')) slotIdx = 0;
 
-  page4.drawText('Slot Details:', { x: gridBoxX + 15, y: p4Y - 20, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  page4.drawText('Slot 1: 9:30 to 12:30', { x: gridBoxX + 35, y: p4Y - 38, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 175, p4Y - 34, slotIdx === 0);
+  page4.drawText('Slot Details:', { x: gridBoxX + 15, y: p4Y - 18, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  
+  page4.drawText('Slot 1: 9:30 to 12:30', { x: gridBoxX + 35, y: p4Y - 40, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 145, p4Y - 36, slotIdx === 0);
 
-  page4.drawText('Slot 2: 1:30 to 4:30', { x: gridBoxX + 35, y: p4Y - 55, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 175, p4Y - 51, slotIdx === 1);
+  page4.drawText('Slot 2: 1:30 to 4:30', { x: gridBoxX + 185, y: p4Y - 40, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 295, p4Y - 36, slotIdx === 1);
 
-  page4.drawText('Full Day', { x: gridBoxX + 35, y: p4Y - 72, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 175, p4Y - 68, slotIdx === 2);
+  page4.drawText('Full Day', { x: gridBoxX + 35, y: p4Y - 62, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 145, p4Y - 58, slotIdx === 2);
+
+  page4.drawText('Two Days', { x: gridBoxX + 185, y: p4Y - 62, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(page4, gridBoxX + 295, p4Y - 58, slotIdx === 3);
 
   p4Y -= box5H;
 

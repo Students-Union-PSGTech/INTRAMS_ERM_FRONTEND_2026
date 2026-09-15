@@ -180,18 +180,18 @@ function ViewEvents() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-lg">
             <div className="bg-slate-900/90 border border-slate-700/80 rounded-[2rem] p-8 max-w-md w-full shadow-[0_0_40px_rgba(14,165,233,0.15)] space-y-5 relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500"></div>
-              
+
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 rounded-xl bg-sky-500/20 flex items-center justify-center border border-sky-500/30">
                   <Edit className="w-5 h-5 text-sky-400" />
                 </div>
                 <h3 className="text-2xl font-extrabold text-white font-heading">Request Edit Access</h3>
               </div>
-              
+
               <p className="text-slate-300 text-sm leading-relaxed">
                 Provide a clear reason for unlocking <span className="text-white font-bold px-1.5 py-0.5 rounded-md bg-slate-800 border border-slate-700">{editModalEvent.name}</span> for modifications.
               </p>
-              
+
               <div className="relative group">
                 <textarea
                   rows={4}
@@ -201,7 +201,7 @@ function ViewEvents() {
                   className="w-full p-4 bg-slate-950/60 border border-slate-700 rounded-2xl text-white text-sm outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all resize-none placeholder-slate-500"
                 />
               </div>
-              
+
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
                 <button
                   onClick={() => setEditModalEvent(null)}

@@ -150,7 +150,7 @@ function EventPreview({ formData }) {
             {formData.items.map((it, idx) => (
               <div key={idx} className="flex justify-between py-1 border-b last:border-0 border-slate-800">
                 <span className="font-medium text-white">{it.item_name}</span>
-                <span className="text-slate-400">Qty: {it.quantity} | ₹{it.price_per_unit || 0}/unit</span>
+                <span className="text-slate-400">Qty: {it.quantity} | ₹{it.price_per_unit || 0}/unit | Total: ₹{((it.quantity || 0) * (it.price_per_unit || 0) * 1.18).toFixed(2)} (inc 18% tax)</span>
               </div>
             ))}
           </div>

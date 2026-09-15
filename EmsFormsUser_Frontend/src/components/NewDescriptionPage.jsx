@@ -163,11 +163,12 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
           Slot <span className="text-rose-400">*</span>
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { id: 'Slot 1 (9:30 to 12:30)', label: 'Slot 1 (9:30 to 12:30)' },
             { id: 'Slot 2 (1:30 to 4:30)', label: 'Slot 2 (1:30 to 4:30)' },
             { id: 'Full Day', label: 'Full Day' },
+            { id: 'Two Days', label: 'Two Days' },
           ].map((slotOption) => (
             <label
               key={slotOption.id}

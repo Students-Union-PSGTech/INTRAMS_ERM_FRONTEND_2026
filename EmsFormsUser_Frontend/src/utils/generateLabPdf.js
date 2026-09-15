@@ -78,14 +78,14 @@ export async function generateLabPdf(eventData = {}) {
 
   const convenorsList = rawConvenors.length > 0
     ? rawConvenors.map(c => ({
-        name: c.name || '',
-        rollNo: c.roll_number || c.rollNo || '',
-        phone: c.mobile || c.phone || ''
-      }))
+      name: c.name || '',
+      rollNo: c.roll_number || c.rollNo || '',
+      phone: c.mobile || c.phone || ''
+    }))
     : [
-        { name: '', rollNo: '', phone: '' },
-        { name: '', rollNo: '', phone: '' },
-      ];
+      { name: '', rollNo: '', phone: '' },
+      { name: '', rollNo: '', phone: '' },
+    ];
 
   const dateAllotted = eventData?.date_allotted || eventData?.form?.date_allotted || eventData?.date || '';
   const durationInHrs = String(eventData?.duration_in_hrs || eventData?.form?.duration || eventData?.duration || '');
@@ -197,20 +197,35 @@ export async function generateLabPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
+  // Helper to shrink text
+  const getShrinkSize = (text, maxW, defaultSize, font) => {
+    let size = defaultSize;
+    let w = font.widthOfTextAtSize(text, size);
+    while (w > maxW && size > 5) {
+      size -= 0.5;
+      w = font.widthOfTextAtSize(text, size);
+    }
+    return size;
+  };
+
   // ASSOCIATION/CLUB NAME
-  page1.drawText(`ASSOCIATION/CLUB NAME: ${associationName}`, {
+  const assocStr = `CLUB NAME: ${associationName}`;
+  const assocSize = getShrinkSize(assocStr, 480, 13.5, fontBold);
+  page1.drawText(assocStr, {
     x: 55,
     y: 395,
-    size: 13.5,
+    size: assocSize,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
 
   // EVENT NAME
-  page1.drawText(`EVENT NAME: ${eventName}`, {
+  const eventStr = `EVENT NAME: ${eventName}`;
+  const eventSize = getShrinkSize(eventStr, 480, 13.5, fontBold);
+  page1.drawText(eventStr, {
     x: 55,
     y: 355,
-    size: 13.5,
+    size: eventSize,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
@@ -558,10 +573,16 @@ export async function generateLabPdf(eventData = {}) {
     });
 
     // Value Text
+    let valSize = 9.5;
+    let valW = fontRegular.widthOfTextAtSize(row.value, valSize);
+    while (valW > 320 && valSize > 5) {
+      valSize -= 0.5;
+      valW = fontRegular.widthOfTextAtSize(row.value, valSize);
+    }
     page2.drawText(row.value, {
-      x: specX + leftColW + 12,
+      x: specX + leftColW + 15,
       y: currentY - 17,
-      size: 9.5,
+      size: valSize,
       font: fontRegular,
       color: rgb(0, 0, 0),
     });

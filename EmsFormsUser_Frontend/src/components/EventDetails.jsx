@@ -199,6 +199,7 @@ function EventDetails() {
                       <th className="p-3.5">Item Name</th>
                       <th className="p-3.5">Quantity</th>
                       <th className="p-3.5">Price / Unit</th>
+                      <th className="p-3.5">Total (inc. 18% Tax)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
@@ -207,6 +208,9 @@ function EventDetails() {
                         <td className="p-3.5 font-medium text-white">{item.item_name}</td>
                         <td className="p-3.5">{item.quantity}</td>
                         <td className="p-3.5">₹{item.price_per_unit || 0}</td>
+                        <td className="p-3.5 font-bold text-sky-400">
+                          ₹{((item.quantity || 0) * (item.price_per_unit || 0) * 1.18).toFixed(2)}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

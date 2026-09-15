@@ -152,7 +152,10 @@ function ItemsPage({ formData, setFormData }) {
           </div>
         )}
 
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-between items-center pt-2 mt-4 border-t border-slate-800">
+          <div className="text-sm font-medium text-slate-300 bg-slate-900/50 px-4 py-2.5 rounded-xl border border-slate-800">
+            Estimated Total (inc 18% GST): <span className="text-sky-400 font-bold ml-1">₹{((formData.items || []).reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price_per_unit || 0) * 1.18), 0)).toFixed(2)}</span>
+          </div>
           <button
             type="button"
             onClick={addItem}

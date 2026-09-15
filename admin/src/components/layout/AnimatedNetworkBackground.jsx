@@ -33,11 +33,11 @@ export default function AnimatedNetworkBackground() {
         return {
           x: Math.random() * width,
           y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 0.15,
-          vy: (Math.random() - 0.5) * 0.15,
+          vx: (Math.random() - 0.5) * 0.05,
+          vy: (Math.random() - 0.5) * 0.05,
           r: Math.random() * 2.2 + 1.2,
           pulse: Math.random() * Math.PI * 2,
-          pulseSpeed: 0.008 + Math.random() * 0.008,
+          pulseSpeed: 0.003 + Math.random() * 0.003,
           color: isWhite ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0, 174, 239, 0.9)',
           glowColor: isWhite ? 'rgba(255, 255, 255, ' : 'rgba(0, 174, 239, ',
         };
@@ -95,11 +95,11 @@ export default function AnimatedNetworkBackground() {
           if (dist < maxDist) {
             const force = (maxDist - dist) / maxDist;
             // Gentle magnetic attraction
-            p.x += (dx / (dist || 1)) * force * 0.6;
-            p.y += (dy / (dist || 1)) * force * 0.6;
+            p.x += (dx / (dist || 1)) * force * 0.2;
+            p.y += (dy / (dist || 1)) * force * 0.2;
             // Gentle tangential swirl
-            p.vx += (pointer.vx * force * 0.03) - (dy / (dist || 1)) * force * 0.15;
-            p.vy += (pointer.vy * force * 0.03) + (dx / (dist || 1)) * force * 0.15;
+            p.vx += (pointer.vx * force * 0.01) - (dy / (dist || 1)) * force * 0.05;
+            p.vy += (pointer.vy * force * 0.01) + (dx / (dist || 1)) * force * 0.05;
           }
         }
 

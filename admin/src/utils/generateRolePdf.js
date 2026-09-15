@@ -8,6 +8,20 @@ function normalizeRole(role) {
   return 'secretary';
 }
 
+function formatYear(yearStr) {
+  if (!yearStr) return 'IV YEAR';
+  const y = String(yearStr).trim().toUpperCase();
+  if (y.includes('MSC')) return y;
+  
+  if (y === '1' || y.startsWith('1ST') || y === 'I' || y === 'I YEAR') return 'I YEAR';
+  if (y === '2' || y.startsWith('2ND') || y === 'II' || y === 'II YEAR') return 'II YEAR';
+  if (y === '3' || y.startsWith('3RD') || y === 'III' || y === 'III YEAR') return 'III YEAR';
+  if (y === '4' || y.startsWith('4TH') || y === 'IV' || y === 'IV YEAR') return 'IV YEAR';
+  if (y === '5' || y.startsWith('5TH') || y === 'V' || y === 'V YEAR') return 'V YEAR';
+  
+  return y.includes('YEAR') ? y : `${y} YEAR`;
+}
+
 function getRoleLabel(role) {
   const value = normalizeRole(role);
   if (value === 'convenor') return 'Convenor';
@@ -67,7 +81,7 @@ function getAssociationEntries(data, role) {
       map[associationName].push({
         name: member?.name || member?.secretaryName || member?.convenorName || member?.volunteerName || '—',
         rollNo: member?.rollNo || member?.rollNumber || member?.roll_no || member?.roll_number || '—',
-        year: member?.year ? (String(member.year).toUpperCase().includes('YEAR') ? String(member.year).toUpperCase() : `${member.year}TH YEAR`) : '4TH YEAR',
+        year: formatYear(member?.year),
         department: member?.department || member?.dept || member?.specialization || '—',
         phone: member?.phone || member?.phoneNo || member?.phone_no || member?.mobile || '—',
       });

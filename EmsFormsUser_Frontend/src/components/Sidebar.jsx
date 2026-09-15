@@ -16,7 +16,7 @@ function Sidebar({ mobile = false, onClose }) {
   const navItems = [
     { to: '/home', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/create-event', label: 'Create Proposal', icon: PlusCircle },
-    { to: '/view-events', label: 'My Proposals', icon: FileText },
+    { to: '/view-events', label: 'Event Proposals', icon: FileText },
     { to: '/edit', label: 'Edit Access', icon: Edit3 },
     { to: '/lab-confirmation', label: 'Lab Confirmations', icon: ShieldCheck },
   ];
