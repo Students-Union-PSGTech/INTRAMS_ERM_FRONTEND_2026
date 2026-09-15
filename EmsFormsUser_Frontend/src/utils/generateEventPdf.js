@@ -308,6 +308,27 @@ export async function generateEventPdf(eventData = {}) {
     return size;
   };
 
+  // Helper to wrap text
+  const wrapText = (text, maxWidth, font, fontSize) => {
+    if (!text) return [];
+    const words = String(text).split(' ');
+    let lines = [];
+    let currentLine = words[0] || '';
+
+    for (let i = 1; i < words.length; i++) {
+      const word = words[i];
+      const width = font.widthOfTextAtSize(currentLine + ' ' + word, fontSize);
+      if (width < maxWidth) {
+        currentLine += ' ' + word;
+      } else {
+        lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  };
+
   // ASSOCIATION/CLUB NAME
   const assocStr = `CLUB NAME : ${clubName}`;
   const assocSize = getShrinkSize(assocStr, 480, 13.5, fontBold);
@@ -427,18 +448,13 @@ export async function generateEventPdf(eventData = {}) {
   ];
 
   guidelinesList.forEach((guide) => {
-    if (guide.length > 95) {
-      const cut = guide.lastIndexOf(' ', 92);
-      const l1 = guide.substring(0, cut);
-      const l2 = '   ' + guide.substring(cut + 1);
-      page2.drawText(l1, { x: margin + 25, y: p2Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+    const lines = wrapText(guide, 460, fontRegular, 9.5);
+    lines.forEach((line, index) => {
+      const indent = index === 0 ? 0 : 12;
+      page2.drawText(line, { x: margin + 25 + indent, y: p2Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
       p2Y -= 14;
-      page2.drawText(l2, { x: margin + 25, y: p2Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
-      p2Y -= 18;
-    } else {
-      page2.drawText(guide, { x: margin + 25, y: p2Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
-      p2Y -= 18;
-    }
+    });
+    p2Y -= 4;
   });
 
   drawFooterSignatures(page2);
@@ -641,7 +657,7 @@ export async function generateEventPdf(eventData = {}) {
   else if (slotStr.includes('1') || slotStr.includes('morning')) slotIdx = 0;
 
   page4.drawText('Slot Details:', { x: gridBoxX + 15, y: p4Y - 18, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  
+
   page4.drawText('Slot 1: 9:30 to 12:30', { x: gridBoxX + 35, y: p4Y - 40, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
   drawRadioCircle(page4, gridBoxX + 145, p4Y - 36, slotIdx === 0);
 
