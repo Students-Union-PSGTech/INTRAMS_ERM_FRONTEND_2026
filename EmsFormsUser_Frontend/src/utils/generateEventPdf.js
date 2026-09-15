@@ -82,38 +82,42 @@ export async function generateEventPdf(eventData = {}) {
   const tagline = ev.tagline || formSpecs.tagline || 'Find the time complexity';
   const about = ev.about || ev.description || formSpecs.about || '—';
 
-  const secretarialList = ev.contacts?.secretaries || ev.secretaries || ev.contacts?.secretary || [];
-  const secRows = Array.isArray(secretarialList) && secretarialList.length > 0
-    ? secretarialList.map(s => [s.name || 'Sample', s.roll_number || s.rollNo || '23N213', s.mobile || s.phone || '1234567890', s.department || 'B.TECH TEXTILE TECH', s.year || '1ST YEAR'])
+  const rawSec = ev.contacts?.secretaries || ev.secretaries || ev.contacts?.secretary;
+  const secretarialList = rawSec ? (Array.isArray(rawSec) ? rawSec : [rawSec]) : [];
+  const secRows = secretarialList.length > 0
+    ? secretarialList.map(s => [s.name || '', s.roll_number || s.rollNo || '', s.mobile || s.phone || '', s.department || '', s.year || ''])
     : [
-        ['Sample', '23N213', '1234567890', 'B.TECH FASHION TECH', '1ST YEAR'],
-        ['Sample', '23N213', '1234567890', 'B.TECH TEXTILE TECH', '1ST YEAR'],
+        ['', '', '', '', '']
       ];
 
-  const convenorList = ev.contacts?.convenors || ev.convenors || [];
-  const convRows = Array.isArray(convenorList) && convenorList.length > 0
-    ? convenorList.map(c => [c.name || 'Sample', c.roll_number || c.rollNo || '23N213', c.mobile || c.phone || '1234567890', c.department || 'BE EEE (SW)', c.year || '3RD YEAR'])
+  const rawConv = ev.contacts?.convenors || ev.convenors || ev.contacts?.convenor;
+  const convenorList = rawConv ? (Array.isArray(rawConv) ? rawConv : [rawConv]) : [];
+  const convRows = convenorList.length > 0
+    ? convenorList.map(c => [c.name || '', c.roll_number || c.rollNo || '', c.mobile || c.phone || '', c.department || '', c.year || ''])
     : [
-        ['Sample', '23N213', '1234567890', 'BE EEE (SW)', '3RD YEAR'],
-        ['Sample', '23N213', '1234567890', 'BE CIVIL', '3RD YEAR'],
+        ['', '', '', '', '']
       ];
 
-  const volunteerList = ev.contacts?.volunteers || ev.volunteers || [];
-  const volRows = Array.isArray(volunteerList) && volunteerList.length > 0
-    ? volunteerList.map(v => [v.name || 'Sample', v.roll_number || v.rollNo || '23N213', v.mobile || v.phone || '1234567890', v.department || 'B.TECH TEXTILE TECH', v.year || '3RD YEAR'])
+  const rawVol = ev.contacts?.volunteers || ev.volunteers || ev.contacts?.volunteer;
+  const volunteerList = rawVol ? (Array.isArray(rawVol) ? rawVol : [rawVol]) : [];
+  const volRows = volunteerList.length > 0
+    ? volunteerList.map(v => [v.name || '', v.roll_number || v.rollNo || '', v.mobile || v.phone || '', v.department || '', v.year || ''])
     : [
-        ['Sample', '23N213', '1234567890', 'B.TECH TEXTILE TECH', '3RD YEAR'],
-        ['Sample', '23N213', '1234567890', 'BE METLY', '2ND YEAR'],
+        ['', '', '', '', '']
       ];
 
   const facultyObj = ev.contacts?.faculty_advisor || ev.facultyAdvisor || {};
-  const facRows = [
-    [facultyObj.name || 'Sample', facultyObj.designation || facultyObj.department || 'Sample', facultyObj.mobile || facultyObj.phone || '1234567890']
+  const facRows = facultyObj.name ? [
+    [facultyObj.name || '', facultyObj.designation || facultyObj.department || '', facultyObj.mobile || facultyObj.phone || '']
+  ] : [
+    ['', '', '']
   ];
 
   const judgeObj = ev.contacts?.judge || ev.judge || {};
-  const judgeRows = [
-    [judgeObj.name || 'Sample', judgeObj.designation || 'Sample', judgeObj.mobile || judgeObj.phone || '1234567890']
+  const judgeRows = judgeObj.name ? [
+    [judgeObj.name || '', judgeObj.designation || '', judgeObj.mobile || judgeObj.phone || '']
+  ] : [
+    ['', '', '']
   ];
 
   // Helper to draw bordered table for Page 3

@@ -64,7 +64,7 @@ function Stats() {
   const totalValuation = items.reduce((acc, item) => {
     const qty = Number(item.available_quantity) || 0;
     const price = Number(item.price_per_unit) || 0;
-    return acc + (qty * price);
+    return acc + (qty * price * 1.18);
   }, 0);
   const uniqueItemsCount = items.length;
 
@@ -77,7 +77,7 @@ function Stats() {
     items.forEach((item) => {
       const qty = Number(item.available_quantity) || 0;
       const price = Number(item.price_per_unit) || 0;
-      const total = qty * price;
+      const total = qty * price * 1.18;
       const name = `"${(item.item_name || "").replace(/"/g, '""')}"`;
       csvContent += `${name},${qty},${price},${total}\n`;
     });
@@ -204,7 +204,7 @@ function Stats() {
                       {items.map((item) => {
                         const qty = Number(item.available_quantity) || 0;
                         const price = Number(item.price_per_unit) || 0;
-                        const itemTotal = qty * price;
+                        const itemTotal = qty * price * 1.18;
 
                         return (
                           <tr key={item._id} className="hover:bg-zinc-50 transition-colors">

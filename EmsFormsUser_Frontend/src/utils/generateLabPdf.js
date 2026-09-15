@@ -67,25 +67,33 @@ export async function generateLabPdf(eventData = {}) {
     eventData?.form?.eventName ||
     'sample_event';
 
-  const rawConvenors =
+  let rawConvenors =
+    eventData?.contacts?.convenors ||
+    eventData?.contacts?.convenor ||
     eventData?.convenors ||
     eventData?.form?.convenors ||
     eventData?.convenor_details ||
     (eventData?.convenorName ? [{ name: eventData.convenorName, rollNo: eventData.convenorRollNo, phone: eventData.convenorPhone }] : []);
 
-  const convenorsList = Array.isArray(rawConvenors) && rawConvenors.length > 0
-    ? rawConvenors
+  rawConvenors = rawConvenors ? (Array.isArray(rawConvenors) ? rawConvenors : [rawConvenors]) : [];
+
+  const convenorsList = rawConvenors.length > 0
+    ? rawConvenors.map(c => ({
+        name: c.name || '',
+        rollNo: c.roll_number || c.rollNo || '',
+        phone: c.mobile || c.phone || ''
+      }))
     : [
-        { name: eventData?.convenorName || 'Sample', rollNo: eventData?.convenorRollNo || '23N213', phone: eventData?.convenorPhone || '1234567890' },
-        { name: eventData?.convenor2Name || 'Sample', rollNo: eventData?.convenor2RollNo || '23N213', phone: eventData?.convenor2Phone || '1234567890' },
+        { name: '', rollNo: '', phone: '' },
+        { name: '', rollNo: '', phone: '' },
       ];
 
-  const dateAllotted = eventData?.date_allotted || eventData?.form?.date_allotted || eventData?.date || '14-03-2026';
-  const durationInHrs = String(eventData?.duration_in_hrs || eventData?.form?.duration || eventData?.duration || '1');
-  const labName = String(eventData?.lab_name || eventData?.preferred_halls || eventData?.form?.preferred_halls || 'AI lab');
-  const labBlock = String(eventData?.lab_block || eventData?.form?.lab_block || 'E block');
-  const labFloor = String(eventData?.lab_floor || eventData?.form?.lab_floor || '2');
-  const labNo = String(eventData?.lab_no || eventData?.form?.lab_no || '123');
+  const dateAllotted = eventData?.date_allotted || eventData?.form?.date_allotted || eventData?.date || '';
+  const durationInHrs = String(eventData?.duration_in_hrs || eventData?.form?.duration || eventData?.duration || '');
+  const labName = String(eventData?.lab_name || eventData?.preferred_halls || eventData?.form?.preferred_halls || '');
+  const labBlock = String(eventData?.lab_block || eventData?.form?.lab_block || '');
+  const labFloor = String(eventData?.lab_floor || eventData?.form?.lab_floor || '');
+  const labNo = String(eventData?.lab_no || eventData?.form?.lab_no || '');
 
   const selectedDayStr = String(eventData?.event_day || eventData?.form?.event_day || eventData?.day || '1').toLowerCase();
   const selectedSessionStr = String(eventData?.session || eventData?.form?.session || eventData?.session_slot || '1').toLowerCase();
@@ -330,7 +338,7 @@ export async function generateLabPdf(eventData = {}) {
   // Render 2 Convenor Rows
   const renderRowsCount = Math.max(2, Math.min(convenorsList.length, 3));
   for (let r = 0; r < renderRowsCount; r++) {
-    const item = convenorsList[r] || { name: 'Sample', rollNo: '23N213', phone: '1234567890' };
+    const item = convenorsList[r] || { name: '', rollNo: '', phone: '' };
     page2.drawRectangle({
       x: table1X,
       y: currentY - rowHeight,

@@ -73,13 +73,6 @@ function ItemsPage({ formData, setFormData }) {
           </h2>
           <p className="text-sky-300/70 text-sm mt-1">Select items from Students Union inventory catalog or specify custom items</p>
         </div>
-        <button
-          type="button"
-          onClick={addItem}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-sky-500/20 transition-all"
-        >
-          <Plus className="w-4 h-4" /> Add Item
-        </button>
       </div>
 
       <div className="space-y-4">
@@ -103,13 +96,18 @@ function ItemsPage({ formData, setFormData }) {
               </select>
 
               {(item.is_custom || !item.item_id) && (
-                <input
-                  type="text"
-                  placeholder="e.g. Extension Boxes, Projector"
-                  value={item.item_name || ''}
-                  onChange={(e) => updateItem(idx, 'item_name', e.target.value)}
-                  className="w-full p-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none text-white placeholder-slate-500"
-                />
+                <div className="mt-3 relative group animate-in fade-in slide-in-from-top-1 duration-300">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span className="text-sky-500/70 text-xs font-semibold">Custom:</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="e.g. Extension Boxes, Projector"
+                    value={item.item_name || ''}
+                    onChange={(e) => updateItem(idx, 'item_name', e.target.value)}
+                    className="w-full pl-16 pr-4 py-2.5 bg-slate-900 border border-sky-500/30 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none text-white placeholder-slate-500 transition-all shadow-[0_0_15px_rgba(14,165,233,0.05)]"
+                  />
+                </div>
               )}
             </div>
 
@@ -153,6 +151,16 @@ function ItemsPage({ formData, setFormData }) {
             No equipment items added yet. Click "+ Add Item" to specify requirements.
           </div>
         )}
+
+        <div className="flex justify-end pt-2">
+          <button
+            type="button"
+            onClick={addItem}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-sky-500/20 transition-all"
+          >
+            <Plus className="w-4 h-4" /> Add Item
+          </button>
+        </div>
       </div>
     </div>
   );

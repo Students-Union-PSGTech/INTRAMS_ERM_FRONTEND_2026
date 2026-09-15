@@ -85,69 +85,70 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
 
           {/* LAB ALLOTMENT & CONFIRMATION DETAILS */}
           {formData.form?.labs_required && (
-            <div className="mt-4 p-4 bg-zinc-900/90 rounded-lg border border-sky-500/30 space-y-3">
-              <h3 className="text-xs font-bold text-sky-400 uppercase tracking-wider border-b border-zinc-800 pb-2">
+            <div className="mt-5 p-5 bg-gradient-to-br from-sky-950/20 to-slate-900/40 rounded-2xl border border-sky-500/30 shadow-[0_0_15px_rgba(14,165,233,0.1)] relative overflow-hidden transition-all duration-300 ease-in-out">
+              <div className="absolute top-0 left-0 w-1 h-full bg-sky-500"></div>
+              <h3 className="text-xs font-extrabold text-sky-400 uppercase tracking-widest border-b border-sky-500/20 pb-3 mb-4">
                 Lab Allotment &amp; Confirmation Details
               </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Lab Name *</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Lab Name <span className="text-rose-400">*</span></label>
                   <input
                     type="text"
-                    placeholder="e.g. AI lab"
+                    placeholder="e.g. AI Lab"
                     value={formData.form?.lab_name || ''}
                     onChange={(e) => handleLabChange('lab_name', e.target.value)}
-                    className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-white text-xs outline-none focus:border-sky-500"
+                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Lab Block *</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Lab Block <span className="text-rose-400">*</span></label>
                   <input
                     type="text"
-                    placeholder="e.g. E block"
+                    placeholder="e.g. E Block"
                     value={formData.form?.lab_block || ''}
                     onChange={(e) => handleLabChange('lab_block', e.target.value)}
-                    className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-white text-xs outline-none focus:border-sky-500"
+                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Lab Floor *</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Floor <span className="text-rose-400">*</span></label>
                   <input
                     type="text"
-                    placeholder="e.g. 2"
+                    placeholder="e.g. 2nd Floor"
                     value={formData.form?.lab_floor || ''}
                     onChange={(e) => handleLabChange('lab_floor', e.target.value)}
-                    className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-white text-xs outline-none focus:border-sky-500"
+                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Lab No. (if any)</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Lab No.</label>
                   <input
                     type="text"
-                    placeholder="e.g. 123"
+                    placeholder="e.g. 123 (Optional)"
                     value={formData.form?.lab_no || ''}
                     onChange={(e) => handleLabChange('lab_no', e.target.value)}
-                    className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-white text-xs outline-none focus:border-sky-500"
+                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Date (Allotted)</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Date Allotted <span className="text-rose-400">*</span></label>
                   <input
-                    type="text"
-                    placeholder="e.g. 14-03-2026"
+                    type="date"
                     value={formData.form?.date_allotted || ''}
                     onChange={(e) => handleLabChange('date_allotted', e.target.value)}
-                    className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-white text-xs outline-none focus:border-sky-500"
+                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all text-slate-300"
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-zinc-400 mb-1">Duration (in hrs)</label>
+                <div className="space-y-1.5">
+                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Duration (Hrs) <span className="text-rose-400">*</span></label>
                   <input
-                    type="text"
-                    placeholder="e.g. 1"
+                    type="number"
+                    min="1"
+                    placeholder="e.g. 3"
                     value={formData.form?.duration_in_hrs || ''}
                     onChange={(e) => handleLabChange('duration_in_hrs', e.target.value)}
-                    className="w-full p-2 bg-zinc-950 border border-zinc-800 rounded text-white text-xs outline-none focus:border-sky-500"
+                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
                   />
                 </div>
               </div>

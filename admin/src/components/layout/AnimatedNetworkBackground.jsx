@@ -33,8 +33,8 @@ export default function AnimatedNetworkBackground() {
         return {
           x: Math.random() * width,
           y: Math.random() * height,
-          vx: (Math.random() - 0.5) * 0.45,
-          vy: (Math.random() - 0.5) * 0.45,
+          vx: (Math.random() - 0.5) * 0.15,
+          vy: (Math.random() - 0.5) * 0.15,
           r: Math.random() * 2.2 + 1.2,
           pulse: Math.random() * Math.PI * 2,
           pulseSpeed: 0.008 + Math.random() * 0.008,

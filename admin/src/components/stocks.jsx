@@ -42,7 +42,7 @@ export default function Inventory() {
   const totalValuation = stocks.reduce((acc, item) => {
     const available = item.available_quantity ?? item.quantity ?? 0;
     const price = Number(item.price_per_unit) || 0;
-    return acc + (Number(available) * price);
+    return acc + (Number(available) * price * 1.18);
   }, 0);
 
   const uniqueItemsCount = stocks.length;
@@ -57,7 +57,7 @@ export default function Inventory() {
     stocks.forEach((item) => {
       const available = item.available_quantity ?? item.quantity ?? 0;
       const price = Number(item.price_per_unit) || 0;
-      const total = available * price;
+      const total = available * price * 1.18;
       const name = `"${(item.item_name || '').replace(/"/g, '""')}"`;
       csvContent += `${name},${available},${price},${total}\n`;
     });
@@ -168,7 +168,7 @@ export default function Inventory() {
                 {filtered.map((stock) => {
                   const available = stock.available_quantity ?? stock.quantity ?? 0;
                   const price = Number(stock.price_per_unit) || 0;
-                  const totalVal = available * price;
+                  const totalVal = available * price * 1.18;
 
                   return (
                     <tr key={stock._id} className="hover:bg-[#080808] transition-colors">

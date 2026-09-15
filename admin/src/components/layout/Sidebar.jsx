@@ -82,7 +82,7 @@ export default function Sidebar({ onItemClick, onClose, isMobile = false }) {
         <Item to="/dashboard" icon={LayoutDashboard} label="DASHBOARD" onClick={onItemClick} />
 
         <Section title="OPERATIONS">
-          <Item to="/associations" icon={Users} label="ASSOCIATIONS" onClick={onItemClick} />
+          <Item to="/associations" icon={Users} label="CLUBS" onClick={onItemClick} />
           <Item to="/events" icon={Calendar} label="EVENTS" onClick={onItemClick} />
           <Item to="/items" icon={Package} label="ITEMS" onClick={onItemClick} />
           <Item to="/inventory" icon={Warehouse} label="INVENTORY" onClick={onItemClick} />

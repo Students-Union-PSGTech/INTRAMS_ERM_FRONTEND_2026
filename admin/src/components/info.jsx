@@ -97,7 +97,7 @@ export default function Dashboard() {
 
       {/* System Overview Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard title="ASSOCIATIONS" value={stats.totalClubs} subtext="Registered Clubs" icon={Building2} onClick={() => navigate('/associations')} />
+        <StatCard title="CLUBS" value={stats.totalClubs} subtext="Registered Clubs" icon={Building2} onClick={() => navigate('/associations')} />
         <StatCard title="TOTAL EVENTS" value={stats.totalEvents} subtext="Submitted ERM Proposals" icon={Calendar} onClick={() => navigate('/events')} />
         <StatCard title="SUBMITTED ERM" value={stats.submittedEvents} subtext="Awaiting or Under Review" icon={Calendar} onClick={() => navigate('/events')} />
         <StatCard title="PENDING DRAFTS" value={stats.pendingSubmissions} subtext="Draft Submissions" icon={FileWarning} />

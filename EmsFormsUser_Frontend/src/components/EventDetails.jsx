@@ -101,6 +101,62 @@ function EventDetails() {
             </div>
           )}
 
+          {/* Personnel Details */}
+          {event.contacts && (
+            <div className="mb-8">
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 font-heading">
+                <Users className="w-5 h-5 text-sky-400" />
+                Personnel Details
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {/* Secretaries */}
+                {((event.contacts.secretaries && event.contacts.secretaries.length > 0) ? event.contacts.secretaries : (event.contacts.secretary ? [event.contacts.secretary] : []))
+                  .filter(s => s?.name)
+                  .map((sec, idx) => (
+                    <div key={`sec-${idx}`} className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
+                      <span className="font-bold text-sky-400 block mb-2 uppercase tracking-wider">Secretary {idx + 1}</span>
+                      <div><span className="text-slate-400">Name:</span> {sec.name}</div>
+                      <div><span className="text-slate-400">Roll No:</span> {sec.roll_number || 'N/A'}</div>
+                      <div><span className="text-slate-400">Mobile:</span> {sec.mobile || 'N/A'}</div>
+                      {sec.department && <div><span className="text-slate-400">Dept:</span> {sec.department}</div>}
+                    </div>
+                ))}
+
+                {/* Convenors */}
+                {((event.contacts.convenors && event.contacts.convenors.length > 0) ? event.contacts.convenors : [])
+                  .filter(c => c?.name)
+                  .map((conv, idx) => (
+                    <div key={`conv-${idx}`} className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
+                      <span className="font-bold text-sky-400 block mb-2 uppercase tracking-wider">Convenor {idx + 1}</span>
+                      <div><span className="text-slate-400">Name:</span> {conv.name}</div>
+                      <div><span className="text-slate-400">Roll No:</span> {conv.roll_number || 'N/A'}</div>
+                      <div><span className="text-slate-400">Mobile:</span> {conv.mobile || 'N/A'}</div>
+                    </div>
+                ))}
+
+                {/* Faculty Advisor */}
+                {event.contacts.faculty_advisor?.name && (
+                  <div className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
+                    <span className="font-bold text-sky-400 block mb-2 uppercase tracking-wider">Faculty Advisor</span>
+                    <div><span className="text-slate-400">Name:</span> {event.contacts.faculty_advisor.name}</div>
+                    <div><span className="text-slate-400">Designation:</span> {event.contacts.faculty_advisor.designation || 'N/A'}</div>
+                    <div><span className="text-slate-400">Contact:</span> {event.contacts.faculty_advisor.mobile || 'N/A'}</div>
+                  </div>
+                )}
+                
+                {/* Judge */}
+                {event.contacts.judge?.name && (
+                  <div className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
+                    <span className="font-bold text-sky-400 block mb-2 uppercase tracking-wider">Judge</span>
+                    <div><span className="text-slate-400">Name:</span> {event.contacts.judge.name}</div>
+                    <div><span className="text-slate-400">Designation:</span> {event.contacts.judge.designation || 'N/A'}</div>
+                    <div><span className="text-slate-400">Contact:</span> {event.contacts.judge.mobile || 'N/A'}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Rounds */}
           {Array.isArray(event.rounds) && event.rounds.length > 0 && (
             <div className="mb-8">

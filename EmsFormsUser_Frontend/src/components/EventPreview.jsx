@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Layers, Package, Building2, Cpu, Wrench } from 'lucide-react';
+import { Calendar, Layers, Package, Building2, Cpu, Wrench, Users } from 'lucide-react';
 
 function EventPreview({ formData }) {
   const form = formData?.form || {};
@@ -60,6 +60,61 @@ function EventPreview({ formData }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {formData.contacts && (
+        <div>
+          <h3 className="text-base font-bold text-white mb-2 flex items-center gap-2 font-heading">
+            <Users className="w-4 h-4 text-sky-400" />
+            Personnel Details
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Secretaries */}
+            {((formData.contacts.secretaries && formData.contacts.secretaries.length > 0) ? formData.contacts.secretaries : (formData.contacts.secretary ? [formData.contacts.secretary] : []))
+              .filter(s => s?.name)
+              .map((sec, idx) => (
+                <div key={`sec-${idx}`} className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+                  <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Secretary {idx + 1}</span>
+                  <div><span className="text-slate-400">Name:</span> {sec.name}</div>
+                  <div><span className="text-slate-400">Roll No:</span> {sec.roll_number || 'N/A'}</div>
+                  <div><span className="text-slate-400">Mobile:</span> {sec.mobile || 'N/A'}</div>
+                  {sec.department && <div><span className="text-slate-400">Dept:</span> {sec.department}</div>}
+                </div>
+            ))}
+
+            {/* Convenors */}
+            {((formData.contacts.convenors && formData.contacts.convenors.length > 0) ? formData.contacts.convenors : [])
+              .filter(c => c?.name)
+              .map((conv, idx) => (
+                <div key={`conv-${idx}`} className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+                  <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Convenor {idx + 1}</span>
+                  <div><span className="text-slate-400">Name:</span> {conv.name}</div>
+                  <div><span className="text-slate-400">Roll No:</span> {conv.roll_number || 'N/A'}</div>
+                  <div><span className="text-slate-400">Mobile:</span> {conv.mobile || 'N/A'}</div>
+                </div>
+            ))}
+
+            {/* Faculty Advisor */}
+            {formData.contacts.faculty_advisor?.name && (
+              <div className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+                <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Faculty Advisor</span>
+                <div><span className="text-slate-400">Name:</span> {formData.contacts.faculty_advisor.name}</div>
+                <div><span className="text-slate-400">Designation:</span> {formData.contacts.faculty_advisor.designation || 'N/A'}</div>
+                <div><span className="text-slate-400">Contact:</span> {formData.contacts.faculty_advisor.mobile || 'N/A'}</div>
+              </div>
+            )}
+            
+            {/* Judge */}
+            {formData.contacts.judge?.name && (
+              <div className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+                <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Judge</span>
+                <div><span className="text-slate-400">Name:</span> {formData.contacts.judge.name}</div>
+                <div><span className="text-slate-400">Designation:</span> {formData.contacts.judge.designation || 'N/A'}</div>
+                <div><span className="text-slate-400">Contact:</span> {formData.contacts.judge.mobile || 'N/A'}</div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
