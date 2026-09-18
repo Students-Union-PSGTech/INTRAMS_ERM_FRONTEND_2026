@@ -70,13 +70,22 @@ export const validateStep = (step, formData = {}) => {
   if (step === 4) {
     // Venue & Schedule (NewDescriptionPage) & Logistics Items (ItemsPage)
     const form = formData.form || {};
-    const day = form.day || formData.day || '';
-    const slot = form.slot || formData.slot || '';
     const duration = form.duration || formData.duration || '';
     const halls = form.preferred_halls || formData.preferred_halls || formData.venue || '';
+    const isTwoDay = Boolean(form.is_two_day);
 
-    if (!day.trim()) errors.day = 'Event Day selection is required';
-    if (!slot.trim()) errors.slot = 'Time Slot is required';
+    if (isTwoDay) {
+      const day1Slot = form.day1_slot || '';
+      const day2Slot = form.day2_slot || '';
+      if (!day1Slot.trim()) errors.day1_slot = 'Day 1 time slot is required';
+      if (!day2Slot.trim()) errors.day2_slot = 'Day 2 time slot is required';
+    } else {
+      const day = form.day || formData.day || '';
+      const slot = form.slot || formData.slot || '';
+      if (!day.trim()) errors.day = 'Event Day selection is required';
+      if (!slot.trim()) errors.slot = 'Time Slot is required';
+    }
+
     if (!duration.trim()) errors.duration = 'Event Duration is required';
     if (!halls.trim()) errors.preferred_halls = 'Preferred Halls / Venue is required';
 

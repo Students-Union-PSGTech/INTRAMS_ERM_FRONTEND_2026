@@ -20,13 +20,25 @@ function EventPreview({ formData }) {
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
-            <div><span className="font-semibold text-slate-400">Event Day:</span> {form.day || 'N/A'}</div>
-            <div><span className="font-semibold text-slate-400">Slot:</span> {form.slot || 'N/A'}</div>
+            <div><span className="font-semibold text-slate-400">Event Duration:</span> {form.is_two_day ? '2 Days' : '1 Day'}</div>
+            {form.is_two_day ? (
+              <>
+                <div><span className="font-semibold text-slate-400">Day 1 Slot:</span> {form.day1_slot || 'N/A'}</div>
+                <div><span className="font-semibold text-slate-400">Day 2 Slot:</span> {form.day2_slot || 'N/A'}</div>
+              </>
+            ) : (
+              <>
+                <div><span className="font-semibold text-slate-400">Event Day:</span> {form.day || 'N/A'}</div>
+                <div><span className="font-semibold text-slate-400">Slot:</span> {form.slot || 'N/A'}</div>
+              </>
+            )}
             <div><span className="font-semibold text-slate-400">Duration:</span> {form.duration || 'N/A'}</div>
             <div><span className="font-semibold text-slate-400">Halls Required:</span> {form.halls_required || '2'}</div>
             <div><span className="font-semibold text-slate-400">Preferred Halls:</span> {form.preferred_halls || 'N/A'}</div>
             <div><span className="font-semibold text-slate-400">Participant Type:</span> {form.participant_type || 'Solo'}</div>
-            <div><span className="font-semibold text-slate-400">Team Size:</span> {form.team_min || 1} - {form.team_max || 1}</div>
+            {form.participant_type === 'Team' && (
+              <div><span className="font-semibold text-slate-400">Team Size:</span> {form.team_min || 1} - {form.team_max || 1}</div>
+            )}
             <div><span className="font-semibold text-slate-400">Extension Boxes:</span> {form.extension_boxes || '0'}</div>
             <div><span className="font-semibold text-slate-400">Labs Required:</span> {form.labs_required ? 'Yes' : 'No'}</div>
           </div>
@@ -95,6 +107,19 @@ function EventPreview({ formData }) {
                 </div>
             ))}
 
+            {/* Volunteers */}
+            {((formData.contacts.volunteers && formData.contacts.volunteers.length > 0) ? formData.contacts.volunteers : [])
+              .filter(v => v?.name)
+              .map((vol, idx) => (
+                <div key={`vol-${idx}`} className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+                  <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Volunteer {idx + 1}</span>
+                  <div><span className="text-slate-400">Name:</span> {vol.name}</div>
+                  <div><span className="text-slate-400">Roll No:</span> {vol.roll_number || 'N/A'}</div>
+                  <div><span className="text-slate-400">Mobile:</span> {vol.mobile || 'N/A'}</div>
+                  {vol.department && <div><span className="text-slate-400">Dept:</span> {vol.department}</div>}
+                </div>
+            ))}
+
             {/* Faculty Advisor */}
             {formData.contacts.faculty_advisor?.name && (
               <div className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
@@ -127,12 +152,22 @@ function EventPreview({ formData }) {
           <div className="space-y-3">
             {formData.rounds.map((rd, idx) => (
               <div key={idx} className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
-                <span className="font-bold text-white text-sm">{rd.name}</span>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-bold text-white text-sm">{rd.name}</span>
+                  {rd.num_participants && (
+                    <span className="text-slate-400 flex-shrink-0">Participants: <span className="text-white font-semibold">{rd.num_participants}</span></span>
+                  )}
+                </div>
                 <p className="mt-1 text-slate-300">{rd.description}</p>
                 {Array.isArray(rd.rules) && rd.rules.length > 0 && (
                   <ul className="list-disc list-inside mt-2 space-y-0.5 text-slate-400">
                     {rd.rules.map((rule, rIdx) => rule && <li key={rIdx}>{rule}</li>)}
                   </ul>
+                )}
+                {rd.has_tie_breaker && (
+                  <p className="mt-2 pt-2 border-t border-slate-800">
+                    <span className="font-semibold text-slate-400">Tie-Breaker:</span> {rd.tie_breaker || 'Yes'}
+                  </p>
                 )}
               </div>
             ))}

@@ -116,8 +116,12 @@ function ItemsPage({ formData, setFormData }) {
               <input
                 type="number"
                 min="1"
-                value={item.quantity || 1}
-                onChange={(e) => updateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
+                value={item.quantity ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateItem(idx, 'quantity', val === '' ? '' : parseInt(val, 10) || '');
+                }}
+                onBlur={(e) => updateItem(idx, 'quantity', Math.max(1, parseInt(e.target.value, 10) || 1))}
                 className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-white font-medium"
               />
             </div>
@@ -128,8 +132,12 @@ function ItemsPage({ formData, setFormData }) {
                 type="number"
                 min="0"
                 readOnly={!item.is_custom && Boolean(item.item_id)}
-                value={item.price_per_unit || 0}
-                onChange={(e) => updateItem(idx, 'price_per_unit', parseFloat(e.target.value) || 0)}
+                value={item.price_per_unit ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateItem(idx, 'price_per_unit', val === '' ? '' : parseFloat(val) || '');
+                }}
+                onBlur={(e) => updateItem(idx, 'price_per_unit', Math.max(0, parseFloat(e.target.value) || 0))}
                 className={`w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm outline-none text-white font-medium ${
                   !item.is_custom && item.item_id ? 'opacity-75 bg-slate-900 cursor-not-allowed' : 'focus:ring-2 focus:ring-sky-500'
                 }`}

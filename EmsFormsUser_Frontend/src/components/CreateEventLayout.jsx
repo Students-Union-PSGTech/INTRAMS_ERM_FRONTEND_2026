@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserLayout from './UserLayout';
 import StepProgress from './StepProgress';
@@ -10,52 +10,92 @@ import ItemsPage from './ItemsPage';
 import ReviewSubmit from './ReviewSubmit';
 import { userAPI } from '../api/api';
 import { validateStep } from '../utils/stepValidation';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { sessionManager } from '../utils/sessionManager';
+import { ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
+
+const getInitialFormData = () => ({
+  name: '',
+  tagline: '',
+  about: '',
+  form: {
+    day: '',
+    slot: '',
+    duration: '',
+    participant_type: 'Solo',
+    team_min: 1,
+    team_max: 1,
+    preferred_halls: '',
+    num_rounds: 1,
+  },
+  rounds: [
+    { name: 'Round 1', description: '', rules: [''], num_participants: 50, has_tie_breaker: false }
+  ],
+  items: [],
+  contacts: {
+    secretaries: [
+      { name: '', roll_number: '', mobile: '', department: '', year: '' },
+      { name: '', roll_number: '', mobile: '', department: '', year: '' }
+    ],
+    secretary: { name: '', roll_number: '', mobile: '', department: '', year: '' },
+    convenors: [
+      { name: '', roll_number: '', mobile: '', department: '', year: '' },
+      { name: '', roll_number: '', mobile: '', department: '', year: '' }
+    ],
+    volunteers: [
+      { name: '', roll_number: '', mobile: '', department: '', year: '' },
+      { name: '', roll_number: '', mobile: '', department: '', year: '' }
+    ],
+    faculty_advisor: { name: '', designation: '', department: '', mobile: '' },
+    judge: { name: '', designation: '', mobile: '' }
+  }
+});
 
 function CreateEventLayout() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(() => sessionManager.getDraft()?.currentStep || 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const [formData, setFormData] = useState({
-    name: '',
-    tagline: '',
-    about: '',
-    form: {
-      day: '',
-      slot: '',
-      duration: '',
-      participant_type: 'Solo',
-      team_min: 1,
-      team_max: 1,
-      preferred_halls: '',
-      num_rounds: 1,
-    },
-    rounds: [
-      { name: 'Round 1', description: '', rules: [''], num_participants: 50, has_tie_breaker: false }
-    ],
-    items: [],
-    contacts: {
-      secretaries: [
-        { name: '', roll_number: '', mobile: '', department: '', year: '' },
-        { name: '', roll_number: '', mobile: '', department: '', year: '' }
-      ],
-      secretary: { name: '', roll_number: '', mobile: '', department: '', year: '' },
-      convenors: [
-        { name: '', roll_number: '', mobile: '', department: '', year: '' },
-        { name: '', roll_number: '', mobile: '', department: '', year: '' }
-      ],
-      volunteers: [
-        { name: '', roll_number: '', mobile: '', department: '', year: '' },
-        { name: '', roll_number: '', mobile: '', department: '', year: '' }
-      ],
-      faculty_advisor: { name: '', designation: '', department: '', mobile: '' },
-      judge: { name: '', designation: '', mobile: '' }
-    }
-  });
+  const [formData, setFormData] = useState(() => sessionManager.getDraft()?.formData || getInitialFormData());
 
   const navigate = useNavigate();
 
+  const [roundsInput, setRoundsInput] = useState(String(formData.rounds?.length || 1));
+
+  // Persist the in-progress proposal so it survives navigating away and back.
+  useEffect(() => {
+    sessionManager.saveDraft({ formData, currentStep });
+  }, [formData, currentStep]);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentStep]);
+
+  useEffect(() => {
+    setRoundsInput(String(formData.rounds?.length || 1));
+  }, [formData.rounds?.length]);
+
+  const applyRoundsCount = (rawNum) => {
+    const num = Math.max(1, parseInt(rawNum, 10) || 1);
+    setRoundsInput(String(num));
+    setFormData((prev) => {
+      const currentRounds = [...(prev.rounds || [])];
+      while (currentRounds.length < num) {
+        currentRounds.push({
+          name: `Round ${currentRounds.length + 1}`,
+          description: '',
+          rules: [''],
+          num_participants: 50,
+          has_tie_breaker: false,
+        });
+      }
+      const updatedRounds = currentRounds.slice(0, num);
+      return {
+        ...prev,
+        form: { ...prev.form, num_rounds: num },
+        rounds: updatedRounds,
+      };
+    });
+  };
 
   const handleNext = () => {
     const { isValid, errors: stepErrors } = validateStep(currentStep, formData);
@@ -96,6 +136,7 @@ function CreateEventLayout() {
     setIsSubmitting(true);
     try {
       await userAPI.createEvent(dataToSubmit);
+      sessionManager.clearDraft();
       alert('✅ Event Proposal Created Successfully!');
       navigate('/home');
     } catch (err) {
@@ -105,10 +146,30 @@ function CreateEventLayout() {
     }
   };
 
+  const handleClearAll = () => {
+    const confirmed = window.confirm(
+      '⚠️ This will permanently clear everything you have entered for this event proposal. This cannot be undone. Continue?'
+    );
+    if (!confirmed) return;
+    sessionManager.clearDraft();
+    setFormData(getInitialFormData());
+    setCurrentStep(1);
+    setErrors({});
+  };
+
   return (
     <UserLayout showSidebar={true}>
       <div className="relative z-10 min-h-full font-sans text-white space-y-4 max-w-4xl w-full mx-auto">
         <div className="relative z-10 w-full space-y-4">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-rose-950/40 border border-slate-800 hover:border-rose-500/40 text-slate-400 hover:text-rose-400 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Clear All
+            </button>
+          </div>
           <StepProgress currentStep={currentStep} totalSteps={5} onStepClick={handleStepClick} />
 
           {/* STEP 1: Instructions */}
@@ -167,27 +228,11 @@ function CreateEventLayout() {
                       type="number"
                       min="1"
                       placeholder="e.g., 3"
-                      value={formData.form?.num_rounds || formData.rounds?.length || 1}
-                      onChange={(e) => {
-                        const num = Math.max(1, parseInt(e.target.value) || 1);
-                        setFormData((prev) => {
-                          const currentRounds = [...(prev.rounds || [])];
-                          while (currentRounds.length < num) {
-                            currentRounds.push({
-                              name: `Round ${currentRounds.length + 1}`,
-                              description: '',
-                              rules: [''],
-                              num_participants: 50,
-                              has_tie_breaker: false,
-                            });
-                          }
-                          const updatedRounds = currentRounds.slice(0, num);
-                          return {
-                            ...prev,
-                            form: { ...prev.form, num_rounds: num },
-                            rounds: updatedRounds,
-                          };
-                        });
+                      value={roundsInput}
+                      onChange={(e) => setRoundsInput(e.target.value)}
+                      onBlur={() => applyRoundsCount(roundsInput)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') e.currentTarget.blur();
                       }}
                       className="w-full p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm font-medium outline-none focus:ring-2 focus:ring-sky-500"
                     />

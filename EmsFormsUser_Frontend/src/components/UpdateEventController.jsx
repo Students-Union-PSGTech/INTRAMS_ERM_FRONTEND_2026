@@ -9,19 +9,26 @@ import { userAPI } from '../api/api';
 import { validateStep } from '../utils/stepValidation';
 import { ArrowLeft, Loader2, Info, Calendar, Layers, Package, CheckCircle } from 'lucide-react';
 
+// The event list (ViewEvents/HomePage) passes the full event aggregate as
+// location.state, but the Edit Access list only passes a shallow-populated
+// { event_name, event_id, status } object. Only trust state that actually
+// looks like a complete event record; otherwise fetch it from the API.
+const isCompleteEventState = (state) =>
+  Boolean(state && typeof state === 'object' && state.form && state.contacts);
+
 function UpdateEventController() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('basic');
-  const [formData, setFormData] = useState(location.state || null);
-  const [loading, setLoading] = useState(!location.state);
+  const [formData, setFormData] = useState(isCompleteEventState(location.state) ? location.state : null);
+  const [loading, setLoading] = useState(!isCompleteEventState(location.state));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (!formData && id) {
+    if (!isCompleteEventState(formData) && id) {
       fetchEvent();
     }
   }, [id]);

@@ -1,4 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+const SLOT_OPTIONS = [
+  { id: 'Slot 1 (9:30 to 12:30)', label: 'Slot 1 (9:30 to 12:30)' },
+  { id: 'Slot 2 (1:30 to 4:30)', label: 'Slot 2 (1:30 to 4:30)' },
+  { id: 'Full Day', label: 'Full Day' },
+];
 
 function NewDescriptionPage({ formData, setFormData, errors = {} }) {
   const handleChange = (field, value) => {
@@ -19,6 +25,32 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
         [field]: value,
       },
     }));
+  };
+
+  const handleDayCountChange = (isTwoDay) => {
+    setFormData((prev) => ({
+      ...prev,
+      form: {
+        ...prev.form,
+        is_two_day: isTwoDay,
+        day: isTwoDay ? '' : prev.form?.day,
+        slot: isTwoDay ? '' : prev.form?.slot,
+        day1_slot: isTwoDay ? prev.form?.day1_slot : '',
+        day2_slot: isTwoDay ? prev.form?.day2_slot : '',
+      },
+    }));
+  };
+
+  const [extBoxInput, setExtBoxInput] = useState(String(formData.form?.extension_boxes ?? 0));
+
+  useEffect(() => {
+    setExtBoxInput(String(formData.form?.extension_boxes ?? 0));
+  }, [formData.form?.extension_boxes]);
+
+  const applyExtensionBoxes = (rawNum) => {
+    const num = Math.max(0, parseInt(rawNum, 10) || 0);
+    setExtBoxInput(String(num));
+    handleChange('extension_boxes', num);
   };
 
   return (
@@ -85,9 +117,9 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
 
           {/* LAB ALLOTMENT & CONFIRMATION DETAILS */}
           {formData.form?.labs_required && (
-            <div className="mt-5 p-5 bg-gradient-to-br from-sky-950/20 to-slate-900/40 rounded-2xl border border-sky-500/30 shadow-[0_0_15px_rgba(14,165,233,0.1)] relative overflow-hidden transition-all duration-300 ease-in-out">
+            <div className="mt-5 p-5 bg-zinc-950/80 rounded-xl border border-sky-500/30 relative overflow-hidden transition-all duration-300 ease-in-out">
               <div className="absolute top-0 left-0 w-1 h-full bg-sky-500"></div>
-              <h3 className="text-xs font-extrabold text-sky-400 uppercase tracking-widest border-b border-sky-500/20 pb-3 mb-4">
+              <h3 className="text-xs font-extrabold text-sky-400 uppercase tracking-widest border-b border-zinc-800 pb-3 mb-4">
                 Lab Allotment &amp; Confirmation Details
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -98,7 +130,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                     placeholder="e.g. AI Lab"
                     value={formData.form?.lab_name || ''}
                     onChange={(e) => handleLabChange('lab_name', e.target.value)}
-                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
+                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-zinc-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -108,7 +140,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                     placeholder="e.g. E Block"
                     value={formData.form?.lab_block || ''}
                     onChange={(e) => handleLabChange('lab_block', e.target.value)}
-                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
+                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-zinc-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -118,7 +150,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                     placeholder="e.g. 2nd Floor"
                     value={formData.form?.lab_floor || ''}
                     onChange={(e) => handleLabChange('lab_floor', e.target.value)}
-                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
+                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-zinc-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -128,7 +160,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                     placeholder="e.g. 123 (Optional)"
                     value={formData.form?.lab_no || ''}
                     onChange={(e) => handleLabChange('lab_no', e.target.value)}
-                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
+                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-zinc-500"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -137,7 +169,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                     type="date"
                     value={formData.form?.date_allotted || ''}
                     onChange={(e) => handleLabChange('date_allotted', e.target.value)}
-                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all text-slate-300"
+                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -148,7 +180,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                     placeholder="e.g. 3"
                     value={formData.form?.duration_in_hrs || ''}
                     onChange={(e) => handleLabChange('duration_in_hrs', e.target.value)}
-                    className="w-full p-2.5 bg-slate-950/60 border border-slate-700/80 rounded-xl text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-slate-500"
+                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-zinc-500"
                   />
                 </div>
               </div>
@@ -157,40 +189,147 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
         </div>
       </div>
 
-      {/* 2. SLOT SECTION */}
+      {/* 2. EVENT SCHEDULE SECTION */}
       <div className="glass-card rounded-xl p-5 shadow-lg border border-zinc-800 bg-zinc-950/80">
         <h2 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">
-          Slot <span className="text-rose-400">*</span>
+          Event Schedule <span className="text-rose-400">*</span>
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { id: 'Slot 1 (9:30 to 12:30)', label: 'Slot 1 (9:30 to 12:30)' },
-            { id: 'Slot 2 (1:30 to 4:30)', label: 'Slot 2 (1:30 to 4:30)' },
-            { id: 'Full Day', label: 'Full Day' },
-            { id: 'Two Days', label: 'Two Days' },
-          ].map((slotOption) => (
-            <label
-              key={slotOption.id}
-              className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
-                formData.form?.slot === slotOption.id
-                  ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
-                  : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
-              }`}
-            >
-              <input
-                type="radio"
-                name="slot_option"
-                value={slotOption.id}
-                checked={formData.form?.slot === slotOption.id}
-                onChange={() => handleChange('slot', slotOption.id)}
-                className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
-              />
-              <span className="text-xs">{slotOption.label}</span>
-            </label>
-          ))}
+        <div className="mb-5">
+          <label className="block text-xs font-semibold text-zinc-300 mb-2">
+            Is this a 1-day or 2-day event? <span className="text-rose-400">*</span>
+          </label>
+          <div className="grid grid-cols-2 gap-4 max-w-md">
+            {[
+              { id: false, label: '1 Day' },
+              { id: true, label: '2 Days' },
+            ].map((opt) => (
+              <label
+                key={String(opt.id)}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                  Boolean(formData.form?.is_two_day) === opt.id
+                    ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
+                    : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="day_count_option"
+                  checked={Boolean(formData.form?.is_two_day) === opt.id}
+                  onChange={() => handleDayCountChange(opt.id)}
+                  className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
+                />
+                <span className="text-xs">{opt.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
-        {errors.slot && <p className="text-rose-400 text-xs mt-2">{errors.slot}</p>}
+
+        {!formData.form?.is_two_day ? (
+          <div className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                Event Day <span className="text-rose-400">*</span>
+              </label>
+              <select
+                value={formData.form?.day || ''}
+                onChange={(e) => handleChange('day', e.target.value)}
+                className="w-full sm:w-64 p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
+              >
+                <option value="" className="bg-zinc-900 text-zinc-400">Select Day</option>
+                <option value="Day 1" className="bg-zinc-900 text-white">Day 1</option>
+                <option value="Day 2" className="bg-zinc-900 text-white">Day 2</option>
+              </select>
+              {errors.day && <p className="text-rose-400 text-xs mt-1">{errors.day}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-2">
+                Time Slot <span className="text-rose-400">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {SLOT_OPTIONS.map((slotOption) => (
+                  <label
+                    key={slotOption.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                      formData.form?.slot === slotOption.id
+                        ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="slot_option"
+                      checked={formData.form?.slot === slotOption.id}
+                      onChange={() => handleChange('slot', slotOption.id)}
+                      className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
+                    />
+                    <span className="text-xs">{slotOption.label}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.slot && <p className="text-rose-400 text-xs mt-2">{errors.slot}</p>}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-2">
+                Day 1 — Time Slot <span className="text-rose-400">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {SLOT_OPTIONS.map((slotOption) => (
+                  <label
+                    key={slotOption.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                      formData.form?.day1_slot === slotOption.id
+                        ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="day1_slot_option"
+                      checked={formData.form?.day1_slot === slotOption.id}
+                      onChange={() => handleChange('day1_slot', slotOption.id)}
+                      className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
+                    />
+                    <span className="text-xs">{slotOption.label}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.day1_slot && <p className="text-rose-400 text-xs mt-2">{errors.day1_slot}</p>}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-2">
+                Day 2 — Time Slot <span className="text-rose-400">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {SLOT_OPTIONS.map((slotOption) => (
+                  <label
+                    key={slotOption.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                      formData.form?.day2_slot === slotOption.id
+                        ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="day2_slot_option"
+                      checked={formData.form?.day2_slot === slotOption.id}
+                      onChange={() => handleChange('day2_slot', slotOption.id)}
+                      className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
+                    />
+                    <span className="text-xs">{slotOption.label}</span>
+                  </label>
+                ))}
+              </div>
+              {errors.day2_slot && <p className="text-rose-400 text-xs mt-2">{errors.day2_slot}</p>}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. EXTENSION BOX SECTION */}
@@ -208,8 +347,12 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
               type="number"
               min="0"
               placeholder="0"
-              value={formData.form?.extension_boxes ?? '0'}
-              onChange={(e) => handleChange('extension_boxes', e.target.value)}
+              value={extBoxInput}
+              onChange={(e) => setExtBoxInput(e.target.value)}
+              onBlur={() => applyExtensionBoxes(extBoxInput)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur();
+              }}
               className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
             />
           </div>
@@ -229,29 +372,13 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
         </div>
       </div>
 
-      {/* 4. EVENT DAY & TEAM PARAMETERS */}
+      {/* 4. PARTICIPATION DETAILS */}
       <div className="glass-card rounded-xl p-5 shadow-lg border border-zinc-800 bg-zinc-950/80">
         <h2 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">
-          Event Day &amp; Participation Details
+          Participation Details
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Event Day <span className="text-rose-400">*</span>
-            </label>
-            <select
-              value={formData.form?.day || ''}
-              onChange={(e) => handleChange('day', e.target.value)}
-              className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
-            >
-              <option value="" className="bg-zinc-900 text-zinc-400">Select Day</option>
-              <option value="Day 1" className="bg-zinc-900 text-white">Day 1</option>
-              <option value="Day 2" className="bg-zinc-900 text-white">Day 2</option>
-            </select>
-            {errors.day && <p className="text-rose-400 text-xs mt-1">{errors.day}</p>}
-          </div>
-
           <div>
             <label className="block text-xs font-semibold text-zinc-300 mb-1">
               Duration <span className="text-rose-400">*</span>
@@ -279,28 +406,30 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1">Min Team Size</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.form?.team_min || 1}
-                onChange={(e) => handleChange('team_min', parseInt(e.target.value) || 1)}
-                className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
-              />
+          {formData.form?.participant_type === 'Team' && (
+            <div className="grid grid-cols-2 gap-2 sm:col-span-2 sm:max-w-xs">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">Min Team Size</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.form?.team_min || 1}
+                  onChange={(e) => handleChange('team_min', parseInt(e.target.value) || 1)}
+                  className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-zinc-300 mb-1">Max Team Size</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.form?.team_max || 1}
+                  onChange={(e) => handleChange('team_max', parseInt(e.target.value) || 1)}
+                  className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1">Max Team Size</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.form?.team_max || 1}
-                onChange={(e) => handleChange('team_max', parseInt(e.target.value) || 1)}
-                className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
-              />
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -29,7 +29,7 @@ function Sidebar({ mobile = false, onClose }) {
           <div>
             <h2 className="text-xl font-extrabold text-white tracking-tight leading-tight font-heading">
               CONVENOR<br />
-              <span className="bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent">PORTAL</span>
+              <span className="text-white">PORTAL</span>
             </h2>
             {user?.username && (
               <div className="mt-3 px-3 py-1.5 bg-slate-900/90 border border-sky-500/30 rounded-xl inline-flex items-center gap-2 max-w-full overflow-hidden shadow-inner">
