@@ -83,3 +83,15 @@ select {
 .ocean-gradient-bg {
   background: var(--ui-black) !important;
 }
+
+/* Hide native number input spinner arrows for a consistent flat look */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

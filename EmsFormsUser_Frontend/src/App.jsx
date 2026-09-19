@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import HomePage from './components/HomePage';
@@ -17,6 +17,15 @@ const ProtectedRoute = ({ children }) => {
   if (!user) return <Navigate to="/login" replace />;
   return children;
 };
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.querySelector('main')?.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 function AppRoutes() {
   return (
@@ -45,7 +54,7 @@ function AppRoutes() {
 }
 
 function App() {
-  return <AuthProvider><Router><AppRoutes /></Router></AuthProvider>;
+  return <AuthProvider><Router><ScrollToTop /><AppRoutes /></Router></AuthProvider>;
 }
 
 export default App;
