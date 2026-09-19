@@ -87,15 +87,15 @@ export async function generateLabPdf(eventData = {}) {
       { name: '', rollNo: '', phone: '' },
     ];
 
-  const dateAllotted = eventData?.date_allotted || eventData?.form?.date_allotted || eventData?.date || '';
-  const durationInHrs = String(eventData?.duration_in_hrs || eventData?.form?.duration || eventData?.duration || '');
-  const labName = String(eventData?.lab_name || eventData?.preferred_halls || eventData?.form?.preferred_halls || '');
-  const labBlock = String(eventData?.lab_block || eventData?.form?.lab_block || '');
-  const labFloor = String(eventData?.lab_floor || eventData?.form?.lab_floor || '');
-  const labNo = String(eventData?.lab_no || eventData?.form?.lab_no || '');
+  const dateAllotted = eventData?.date_allotted || eventData?.form?.date_allotted || eventData?.form_specs?.date_allotted || eventData?.date || 'N/A';
+  const durationInHrs = String(eventData?.duration_in_hrs || eventData?.form?.duration || eventData?.form_specs?.duration || eventData?.duration || 'N/A');
+  const labName = String(eventData?.lab_name || eventData?.form?.lab_name || eventData?.form_specs?.lab_name || eventData?.preferred_halls || eventData?.form?.preferred_halls || eventData?.form_specs?.preferred_halls || 'N/A');
+  const labBlock = String(eventData?.lab_block || eventData?.form?.lab_block || eventData?.form_specs?.lab_block || 'N/A');
+  const labFloor = String(eventData?.lab_floor || eventData?.form?.lab_floor || eventData?.form_specs?.lab_floor || 'N/A');
+  const labNo = String(eventData?.lab_no || eventData?.form?.lab_no || eventData?.form_specs?.lab_no || 'N/A');
 
-  const selectedDayStr = String(eventData?.event_day || eventData?.form?.event_day || eventData?.day || '1').toLowerCase();
-  const selectedSessionStr = String(eventData?.session || eventData?.form?.session || eventData?.session_slot || '1').toLowerCase();
+  const selectedDayStr = String(eventData?.event_day || eventData?.form?.event_day || eventData?.form_specs?.event_day || eventData?.day || eventData?.form_specs?.day || '1').toLowerCase();
+  const selectedSessionStr = String(eventData?.session || eventData?.form?.session || eventData?.form_specs?.session || eventData?.session_slot || eventData?.form_specs?.session_slot || '1').toLowerCase();
 
   // Helper to draw radio circle (open or filled)
   const drawRadioCircle = (page, cx, cy, isSelected) => {
