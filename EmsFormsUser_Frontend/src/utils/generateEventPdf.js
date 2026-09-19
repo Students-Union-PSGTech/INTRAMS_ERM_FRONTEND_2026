@@ -45,28 +45,26 @@ export async function generateEventPdf(eventData = {}) {
 
   // Light INTRAMS 2026 Background Watermark
   const drawWatermark = (page) => {
-    page.drawText('INTRAMS 2026', {
-      x: 85,
-      y: 250,
-      size: 70,
-      font: fontBold,
-      color: rgb(0.88, 0.88, 0.88),
-      rotate: degrees(45),
-    });
+    // Watermark removed
   };
 
   // Draw Bottom Signature Lines (Secretary & Faculty Advisor)
   const drawFooterSignatures = (page, showColon = false) => {
     const colonStr = showColon ? ':' : '';
-    page.drawText(`Signature of the Secretary${colonStr}`, {
-      x: margin + 20,
+    const secText = `Signature of the Secretary${colonStr}`;
+    const facText = `Signature of the Faculty Advisor${colonStr}`;
+    const secWidth = fontRegular.widthOfTextAtSize(secText, 10.5);
+    const facWidth = fontRegular.widthOfTextAtSize(facText, 10.5);
+
+    page.drawText(secText, {
+      x: (pageWidth / 4) - (secWidth / 2),
       y: margin + 25,
       size: 10.5,
       font: fontRegular,
       color: rgb(0, 0, 0),
     });
-    page.drawText(`Signature of the Faculty Advisor${colonStr}`, {
-      x: pageWidth - margin - 210,
+    page.drawText(facText, {
+      x: (3 * pageWidth / 4) - (facWidth / 2),
       y: margin + 25,
       size: 10.5,
       font: fontRegular,
@@ -121,7 +119,7 @@ export async function generateEventPdf(eventData = {}) {
 
   const facultyObj = ev.contacts?.faculty_advisor || ev.facultyAdvisor || {};
   const facRows = facultyObj.name ? [
-    [facultyObj.name || '', facultyObj.designation || facultyObj.department || '', facultyObj.mobile || facultyObj.phone || '']
+    [facultyObj.name || '', facultyObj.designation || '', facultyObj.mobile || facultyObj.phone || '']
   ] : [
     ['', '', '']
   ];
@@ -404,7 +402,7 @@ export async function generateEventPdf(eventData = {}) {
 
   currentY -= 35;
 
-  currentPage.drawText('* Kindly submit a separate form for each event, in case of multiple events.', {
+  currentPage.drawText('* If two different events are to be conducted then fill the above form for each event separately and submit it.', {
     x: margin + 15,
     y: currentY,
     size: 10,
@@ -413,7 +411,7 @@ export async function generateEventPdf(eventData = {}) {
   });
   currentY -= 18;
 
-  currentPage.drawText('If an event is conducted over two days (for example, a preliminary round on Day 1 and a final round on Day), include', {
+  currentPage.drawText('** If the same event continues on both the days (i.e.) Preliminary round on first day and final round on second day,', {
     x: margin + 15,
     y: currentY,
     size: 10,
@@ -421,7 +419,7 @@ export async function generateEventPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
   currentY -= 15;
-  currentPage.drawText('all requirements in the same form.', {
+  currentPage.drawText('then fill the needed requirement in the same form.', {
     x: margin + 15,
     y: currentY,
     size: 10,
@@ -431,7 +429,7 @@ export async function generateEventPdf(eventData = {}) {
 
   currentY -= 35;
 
-  currentPage.drawText('General Guidelines', {
+  currentPage.drawText('Instructions:', {
     x: margin + 15,
     y: currentY,
     size: 12,
@@ -442,22 +440,22 @@ export async function generateEventPdf(eventData = {}) {
   currentY -= 22;
 
   const guidelinesList = [
-    '1. Not all the events submitted will be approved.',
-    '2. Maximum of two events can be proposed.',
-    '3. Events should be innovative or focus on the trending/new technologies relating to the respective stream.',
-    '4. Judges must be present throughout the duration of the event.',
-    '5. Refreshment, prizes, memento, or any other form of prizes should be given by clubs/associations for the event winners.',
-    '6. Memento for the external chief guest will be provided by the Students Union if mentioned in the forms submitted.',
-    '7. Certificates for the winners, runners, convenors, and volunteers of each event will be provided by the students union.',
-    '8. If any materials are required prior to the day of the event, please mention "Required in advance" near that material in the "From Same" column.',
-    '9. Halls will be allotted based on availability.',
-    '10. The projector will not be provided by the students union; use the projector available in the hall.',
-    '11. Winner and runner details should be submitted within one hour from the end of the event.',
-    '12. HDMI to VGA converter will not be provided.',
-    '13. Take enough copies of the form for your reference.',
-    '14. Further changes are not accepted once approved.',
-    '15. Submit it to the point of contact allotted to your club/association.',
-    '16. For more details, contact your respective point of contact.',
+    '1. "No cash prize / memento" or any other form of prizes should be given by clubs to the event winners.',
+    '2. Memento for the external chief guest will be provided by the Students Union if filled-in the items required table.',
+    '3. Certificates to the winners, runners, convenors & volunteers of each event will be provided by the Students Union.',
+    '4. If any materials are required prior to the day of the event, please mention "Required in advance" near that material in the "Item Name" column.',
+    '5. Printouts required by the clubs must be taken by the clubs themselves.',
+    '6. Any events in the form of "Treasure Hunt" should be avoided.',
+    '7. Events should be conducted only in specified halls.',
+    '8. Materials sourced or purchased directly by the club will not be reimbursed through the Students Union.',
+    '9. The Students Union is not obliged to provide all items requested by the club, only approved items will be provided.',
+    '10. Halls will be allotted on the basis of availability.',
+    '11. Mic will only be provided on the basis of event and number of participants.',
+    '12. The projector will not be provided by the Students Union, use the projector available in the hall.',
+    '13. HDMI cables / VGA converter will not be provided.',
+    '14. Take enough copies of the Form, for your reference.',
+    '15. Send it to the point of contact allotted to your club.',
+    '16. For more details contact your respective point of contact.',
   ];
 
   guidelinesList.forEach((guide) => {
@@ -603,7 +601,7 @@ export async function generateEventPdf(eventData = {}) {
   });
 
   const pType = String(formSpecs.participant_type || ev.participant_type || '').toLowerCase();
-  const isTeam = pType.includes('team') || pType.includes('dual');
+  const isTeam = pType.includes('team');
   currentPage.drawText('Individual:', { x: gridBoxX + 15, y: currentY - 30, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   drawRadioCircle(gridBoxX + 85, currentY - 26, !isTeam);
 

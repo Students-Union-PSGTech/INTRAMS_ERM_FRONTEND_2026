@@ -163,26 +163,137 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                     className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-zinc-500"
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Date Allotted <span className="text-rose-400">*</span></label>
-                  <input
-                    type="date"
-                    value={formData.form?.date_allotted || ''}
-                    onChange={(e) => handleLabChange('date_allotted', e.target.value)}
-                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                  />
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Is the Lab required for 1-day or 2-days? <span className="text-rose-400">*</span></label>
+                  <div className="grid grid-cols-2 gap-4 max-w-md mt-2">
+                    {[
+                      { id: false, label: '1 Day' },
+                      { id: true, label: '2 Days' },
+                    ].map((opt) => (
+                      <label
+                        key={String(opt.id)}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                          Boolean(formData.form?.is_two_day_lab) === opt.id
+                            ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
+                            : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="lab_day_count_option"
+                          checked={Boolean(formData.form?.is_two_day_lab) === opt.id}
+                          onChange={() => handleLabChange('is_two_day_lab', opt.id)}
+                          className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
+                        />
+                        <span className="text-xs">{opt.label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Duration (Hrs) <span className="text-rose-400">*</span></label>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="e.g. 3"
-                    value={formData.form?.duration_in_hrs || ''}
-                    onChange={(e) => handleLabChange('duration_in_hrs', e.target.value)}
-                    className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all placeholder-zinc-500"
-                  />
-                </div>
+
+                {!formData.form?.is_two_day_lab ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Lab Day <span className="text-rose-400">*</span></label>
+                      <select
+                        value={formData.form?.lab_day || ''}
+                        onChange={(e) => handleLabChange('lab_day', e.target.value)}
+                        className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg text-white text-xs outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                      >
+                        <option value="" disabled className="text-zinc-500">Select Day</option>
+                        <option value="Day 1" className="bg-zinc-900 text-white">Day 1</option>
+                        <option value="Day 2" className="bg-zinc-900 text-white">Day 2</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide">Time Slot <span className="text-rose-400">*</span></label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-2">
+                        {[
+                          { id: '1', label: 'Slot 1 (9:30 to 12:30)' },
+                          { id: '2', label: 'Slot 2 (1:30 to 4:30)' },
+                          { id: 'Both', label: 'Full Day' },
+                        ].map((slotOpt) => (
+                          <label
+                            key={slotOpt.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                              formData.form?.lab_session_slot === slotOpt.id
+                                ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
+                                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="lab_session_slot"
+                              checked={formData.form?.lab_session_slot === slotOpt.id}
+                              onChange={() => handleLabChange('lab_session_slot', slotOpt.id)}
+                              className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
+                            />
+                            <span className="text-xs">{slotOpt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-5 md:col-span-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide mb-2">Day 1 — Time Slot <span className="text-rose-400">*</span></label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {[
+                          { id: '1', label: 'Slot 1 (9:30 to 12:30)' },
+                          { id: '2', label: 'Slot 2 (1:30 to 4:30)' },
+                          { id: 'Both', label: 'Full Day' },
+                        ].map((slotOpt) => (
+                          <label
+                            key={slotOpt.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                              formData.form?.lab_session_slot === slotOpt.id
+                                ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
+                                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="lab_session_slot_d1"
+                              checked={formData.form?.lab_session_slot === slotOpt.id}
+                              onChange={() => handleLabChange('lab_session_slot', slotOpt.id)}
+                              className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
+                            />
+                            <span className="text-xs">{slotOpt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-sky-200/70 uppercase tracking-wide mb-2">Day 2 — Time Slot <span className="text-rose-400">*</span></label>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {[
+                          { id: '1', label: 'Slot 1 (9:30 to 12:30)' },
+                          { id: '2', label: 'Slot 2 (1:30 to 4:30)' },
+                          { id: 'Both', label: 'Full Day' },
+                        ].map((slotOpt) => (
+                          <label
+                            key={slotOpt.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer select-none transition-all ${
+                              formData.form?.lab_session_slot_day2 === slotOpt.id
+                                ? 'bg-sky-950/60 border-sky-500 text-white font-medium'
+                                : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="lab_session_slot_d2"
+                              checked={formData.form?.lab_session_slot_day2 === slotOpt.id}
+                              onChange={() => handleLabChange('lab_session_slot_day2', slotOpt.id)}
+                              className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
+                            />
+                            <span className="text-xs">{slotOpt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -402,7 +513,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
             >
               <option value="Solo" className="bg-zinc-900 text-white">Solo</option>
               <option value="Team" className="bg-zinc-900 text-white">Team</option>
-              <option value="Dual" className="bg-zinc-900 text-white">Dual</option>
+
             </select>
           </div>
 

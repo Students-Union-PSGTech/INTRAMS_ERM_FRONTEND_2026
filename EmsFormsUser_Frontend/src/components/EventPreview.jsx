@@ -67,7 +67,17 @@ function EventPreview({ formData }) {
                 <div><span className="text-slate-400">Lab Block:</span> {form.lab_block || 'E block'}</div>
                 <div><span className="text-slate-400">Lab Floor:</span> {form.lab_floor || '2'}</div>
                 <div><span className="text-slate-400">Lab No:</span> {form.lab_no || '123'}</div>
-                <div><span className="text-slate-400">Date Allotted:</span> {form.date_allotted || '14-03-2026'}</div>
+                {form.is_two_day_lab ? (
+                  <>
+                    <div><span className="text-slate-400">Day 1 Slot:</span> {form.lab_session_slot || '1'}</div>
+                    <div><span className="text-slate-400">Day 2 Slot:</span> {form.lab_session_slot_day2 || '1'}</div>
+                  </>
+                ) : (
+                  <>
+                    <div><span className="text-slate-400">Day Allotted:</span> {form.lab_day || 'Day 1'}</div>
+                    <div><span className="text-slate-400">Time Slot:</span> {form.lab_session_slot || '1'}</div>
+                  </>
+                )}
                 <div><span className="text-slate-400">Duration (hrs):</span> {form.duration_in_hrs || '1'}</div>
               </div>
             </div>

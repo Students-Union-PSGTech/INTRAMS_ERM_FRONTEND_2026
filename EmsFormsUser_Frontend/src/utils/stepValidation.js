@@ -29,40 +29,75 @@ export const validateStep = (step, formData = {}) => {
   }
 
   if (step === 3) {
-    // Personnel Details (Secretary, Convenor, Faculty Advisor)
     const contacts = formData.contacts || {};
 
-    // Secretary Validation
-    const sec = contacts.secretary || (Array.isArray(contacts.secretaries) ? contacts.secretaries[0] : null) || {};
-    const secName = sec.name || formData.secretaryName || '';
-    const secRoll = sec.roll_number || sec.rollNo || formData.secretaryRollNo || '';
-    const secMobile = sec.mobile || sec.phone || formData.secretaryPhone || '';
+    const checkStudent = (student, roleName, idx = null) => {
+      if (!student) return;
+      const prefix = idx !== null ? `${roleName}_${idx}` : roleName;
+      const displayRole = idx !== null ? `${roleName} ${idx + 1}` : roleName;
+      
+      const name = (student.name || '').trim();
+      const roll = (student.roll_number || student.rollNo || '').trim();
+      const dept = (student.department || student.dept || '').trim();
+      const mobile = (student.mobile || student.phone || '').trim();
+      // Year is not strictly captured in original validation but it is part of form. If it was not strictly validated before, I will validate it if partially filled.
 
-    if (!secName.trim()) errors.secretary_name = 'Secretary Name is required';
-    if (!secRoll.trim()) errors.secretary_roll = 'Secretary Roll Number is required';
-    if (!secMobile.trim()) errors.secretary_mobile = 'Secretary Mobile Number is required';
+      const hasAnyField = name || roll || dept || mobile;
+      
+      const isRequired = (roleName === 'Secretary' && idx === 0) || (roleName === 'Convenor' && idx === 0);
 
-    // Convenor Validation
-    const conv = (Array.isArray(contacts.convenors) ? contacts.convenors[0] : contacts.convenor) || {};
-    const convName = conv.name || formData.convenorName || '';
-    const convRoll = conv.roll_number || conv.rollNo || formData.convenorRollNo || '';
-    const convDept = conv.department || conv.dept || formData.convenorDept || '';
-    const convMobile = conv.mobile || conv.phone || formData.convenorPhone || '';
+      if (isRequired || hasAnyField) {
+        if (!name) errors[`${prefix}_name`] = `${displayRole}: Name is required`;
+        if (!roll) errors[`${prefix}_roll`] = `${displayRole}: Roll Number is required`;
+        // if (!dept) errors[`${prefix}_dept`] = `${displayRole}: Department is required`;
+        // wait, the previous code required dept for Convenor but not Secretary? Let's require it for all students since it's a standard field, but let's check original.
+        // Original: Sec didn't validate Dept. Conv did. Let's require it generally if it's there.
+        if (roleName === 'Convenor' || dept) {
+             if (!dept && isRequired) errors[`${prefix}_dept`] = `${displayRole}: Department is required`;
+             else if (!dept) errors[`${prefix}_dept`] = `${displayRole}: Department is required`;
+        }
 
-    if (!convName.trim()) errors.convenor_name = 'Convenor Name is required';
-    if (!convRoll.trim()) errors.convenor_roll = 'Convenor Roll Number is required';
-    if (!convDept.trim()) errors.convenor_dept = 'Convenor Department is required';
-    if (!convMobile.trim()) errors.convenor_mobile = 'Convenor Mobile Number is required';
+        if (!mobile) errors[`${prefix}_mobile`] = `${displayRole}: Mobile Number is required`;
+      }
+    };
 
-    // Faculty Advisor Validation
-    const fac = contacts.faculty_advisor || contacts.faculty || {};
-    const facName = fac.name || formData.facultyName || '';
-    const facDept = fac.department || fac.designation || formData.facultyDepartment || '';
-    const facMobile = fac.mobile || fac.phone || formData.facultyPhone || '';
+    const checkFaculty = (faculty) => {
+      if (!faculty) return;
+      const name = (faculty.name || '').trim();
+      const designation = (faculty.designation || '').trim();
+      const mobile = (faculty.mobile || faculty.phone || '').trim();
+      
+      if (!name) errors.faculty_name = 'Faculty Advisor: Name is required';
+      if (!designation) errors.faculty_designation = 'Faculty Advisor: Designation is required';
+      if (!mobile) errors.faculty_mobile = 'Faculty Advisor: Mobile Number is required';
+    };
 
-    if (!facName.trim()) errors.faculty_name = 'Faculty Advisor Name is required';
-    if (!facDept.trim()) errors.faculty_dept = 'Faculty Advisor Department/Designation is required';
-    if (!facMobile.trim()) errors.faculty_mobile = 'Faculty Advisor Mobile Number is required';
+    const checkJudge = (judge) => {
+      if (!judge) return;
+      const name = (judge.name || '').trim();
+      const designation = (judge.designation || '').trim();
+      const mobile = (judge.mobile || judge.phone || '').trim();
+
+      const hasAnyField = name || designation || mobile;
+
+      if (hasAnyField) {
+        if (!name) errors.judge_name = 'Judge: Name is required';
+        if (!designation) errors.judge_designation = 'Judge: Designation is required';
+        if (!mobile) errors.judge_mobile = 'Judge: Mobile Number is required';
+      }
+    };
+
+    const secs = contacts.secretaries || (contacts.secretary ? [contacts.secretary] : []);
+    secs.forEach((s, idx) => checkStudent(s, 'Secretary', idx));
+
+    const convs = contacts.convenors || (contacts.convenor ? [contacts.convenor] : []);
+    convs.forEach((c, idx) => checkStudent(c, 'Convenor', idx));
+
+    const vols = contacts.volunteers || [];
+    vols.forEach((v, idx) => checkStudent(v, 'Volunteer', idx));
+
+    checkFaculty(contacts.faculty_advisor || contacts.faculty);
+    checkJudge(contacts.judge);
 
     return { isValid: Object.keys(errors).length === 0, errors };
   }

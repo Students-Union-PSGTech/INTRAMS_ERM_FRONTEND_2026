@@ -23,10 +23,10 @@ function Instructions({ onNext }) {
         </h2>
         <ol className="list-decimal list-inside space-y-3 text-xs leading-relaxed font-medium text-slate-200">
           <li>
-            If <strong className="text-sky-300 font-bold">TWO DIFFERENT events</strong> are to be conducted, then fill the above form for each event separately and TACTICALLY.
+            If <strong className="text-sky-300 font-bold">TWO DIFFERENT events</strong> are to be conducted then fill the above form for each event separately and submit it.
           </li>
           <li>
-            If the same event continues on both days (i.e. Preliminary round on the first day and final round on the second day), then fill the needed requirements in the <strong className="text-sky-300 font-bold">SAME FORM</strong>.
+            If the same event continues on both the days (i.e. Preliminary round on first day and final round on second day), then fill the needed requirement in the <strong className="text-sky-300 font-bold">SAME FORM</strong>.
           </li>
         </ol>
       </div>
@@ -34,25 +34,25 @@ function Instructions({ onNext }) {
       {/* INSTRUCTIONS Box */}
       <div className="bg-slate-900/90 backdrop-blur-xl p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-4">
         <h2 className="text-sm font-extrabold tracking-wider uppercase text-white border-b border-slate-800 pb-2 font-heading">
-          GENERAL INSTRUCTIONS
+          INSTRUCTIONS
         </h2>
         <ol className="list-decimal list-inside space-y-3 text-xs text-slate-300 leading-relaxed font-medium">
-          <li>Not all the events submitted will be approved.</li>
-          <li>Maximum of two events can be proposed.</li>
-          <li>Events should be innovative or focus on the trending/new technologies relating to the respective stream.</li>
-          <li>Judges must be present throughout the duration of the event.</li>
-          <li>Refreshment, prizes, memento, or any other form of prizes should be given by clubs/associations for the event winners.</li>
-          <li>Memento for the external chief guest will be provided by the Students Union if mentioned in the forms submitted.</li>
-          <li>Certificates for the winners, runners, convenors, and volunteers of each event will be provided by the students union.</li>
-          <li>If any materials are required prior to the day of the event, please mention "Required in advance" near that material in the "From Same" column.</li>
-          <li>Halls will be allotted based on availability.</li>
-          <li>The projector will not be provided by the students union; use the projector available in the hall.</li>
-          <li>Winner and runner details should be submitted within one hour from the end of the event.</li>
-          <li>HDMI to VGA converter will not be provided.</li>
-          <li>Take enough copies of the form for your reference.</li>
-          <li>Further changes are not accepted once approved.</li>
-          <li>Submit it to the point of contact allotted to your club/association.</li>
-          <li>For more details, contact your respective point of contact.</li>
+          <li>"No cash prize / memento" or any other form of prizes should be given by clubs to the event winners.</li>
+          <li>Memento for the external chief guest will be provided by the Students Union if filled-in the items required table.</li>
+          <li>Certificates to the winners, runners, convenors & volunteers of each event will be provided by the Students Union.</li>
+          <li>If any materials are required prior to the day of the event, please mention "Required in advance" near that material in the "Item Name" column.</li>
+          <li>Printouts required by the clubs must be taken by the clubs themselves.</li>
+          <li>Any events in the form of "Treasure Hunt" should be avoided.</li>
+          <li>Events should be conducted only in specified halls.</li>
+          <li>Materials sourced or purchased directly by the club will not be reimbursed through the Students Union.</li>
+          <li>The Students Union is not obliged to provide all items requested by the club, only approved items will be provided.</li>
+          <li>Halls will be allotted on the basis of availability.</li>
+          <li>Mic will only be provided on the basis of event and number of participants.</li>
+          <li>The projector will not be provided by the Students Union, use the projector available in the hall.</li>
+          <li>HDMI cables / VGA converter will not be provided.</li>
+          <li>Take enough copies of the Form, for your reference.</li>
+          <li>Send it to the point of contact allotted to your club.</li>
+          <li>For more details contact your respective point of contact.</li>
         </ol>
       </div>
 
