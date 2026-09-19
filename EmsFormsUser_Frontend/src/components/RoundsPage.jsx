@@ -11,6 +11,10 @@ function RoundsPage({ formData, setFormData, errors = {} }) {
         rules: [''],
         num_participants: 50,
         has_tie_breaker: false,
+        tie_breaker_name: '',
+        tie_breaker_description: '',
+        tie_breaker_rules: [''],
+        tie_breaker_participants: ''
       };
       return {
         ...prev,
@@ -67,6 +71,34 @@ function RoundsPage({ formData, setFormData, errors = {} }) {
     setFormData((prev) => {
       const updated = [...prev.rounds];
       updated[roundIdx].rules = updated[roundIdx].rules.filter((_, i) => i !== ruleIdx);
+      return { ...prev, rounds: updated };
+    });
+  };
+
+  const addTieBreakerRule = (roundIdx) => {
+    setFormData((prev) => {
+      const updated = [...prev.rounds];
+      const rules = updated[roundIdx].tie_breaker_rules || [];
+      updated[roundIdx].tie_breaker_rules = [...rules, ''];
+      return { ...prev, rounds: updated };
+    });
+  };
+
+  const updateTieBreakerRule = (roundIdx, ruleIdx, value) => {
+    setFormData((prev) => {
+      const updated = [...prev.rounds];
+      const rules = [...(updated[roundIdx].tie_breaker_rules || [])];
+      rules[ruleIdx] = value;
+      updated[roundIdx].tie_breaker_rules = rules;
+      return { ...prev, rounds: updated };
+    });
+  };
+
+  const removeTieBreakerRule = (roundIdx, ruleIdx) => {
+    setFormData((prev) => {
+      const updated = [...prev.rounds];
+      const rules = updated[roundIdx].tie_breaker_rules || [];
+      updated[roundIdx].tie_breaker_rules = rules.filter((_, i) => i !== ruleIdx);
       return { ...prev, rounds: updated };
     });
   };
@@ -190,8 +222,11 @@ function RoundsPage({ formData, setFormData, errors = {} }) {
                 />
               </div>
 
-              <div className="space-y-3 sm:pt-2">
-                <label className="flex items-center gap-3 cursor-pointer p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl w-full">
+              <div>
+                <label className="block text-xs font-bold text-transparent mb-1.5 select-none" aria-hidden="true">
+                  Toggle
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl w-full h-[52px]">
                   <input
                     type="checkbox"
                     checked={round.has_tie_breaker || false}
@@ -200,24 +235,91 @@ function RoundsPage({ formData, setFormData, errors = {} }) {
                   />
                   <span className="text-xs font-bold text-slate-200">This round has a Tie-Breaker</span>
                 </label>
+              </div>
+            </div>
 
-                {round.has_tie_breaker && (
+            {round.has_tie_breaker && (
+              <div className="mt-6 p-5 bg-slate-900/50 border border-slate-700/50 rounded-2xl space-y-4">
+                <h4 className="text-xs font-bold text-sky-400 uppercase tracking-wider border-b border-slate-700 pb-2">
+                  Tie-Breaker Configuration
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
-                      Tie-Breaker Criteria <span className="text-rose-400">*</span>
+                    <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">
+                      Tie-Breaker Name <span className="text-rose-400">*</span>
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g., Sudden death round / Highest score in Q3"
-                      value={round.tie_breaker || ''}
-                      onChange={(e) => updateRound(rIdx, 'tie_breaker', e.target.value)}
+                      placeholder="e.g., Sudden Death Round"
+                      value={round.tie_breaker_name || ''}
+                      onChange={(e) => updateRound(rIdx, 'tie_breaker_name', e.target.value)}
                       className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
                     />
                   </div>
-                )}
+                  <div>
+                    <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">
+                      Participants (Optional)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g., 2"
+                      value={round.tie_breaker_participants || ''}
+                      onChange={(e) => updateRound(rIdx, 'tie_breaker_participants', e.target.value)}
+                      className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">
+                    Tie-Breaker Description <span className="text-rose-400">*</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g., A quick round where participants answer rapid fire questions..."
+                    value={round.tie_breaker_description || ''}
+                    onChange={(e) => updateRound(rIdx, 'tie_breaker_description', e.target.value)}
+                    className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-bold text-sky-200/90 uppercase tracking-wider">
+                      Tie-Breaker Rules <span className="text-rose-400">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => addTieBreakerRule(rIdx)}
+                      className="text-[11px] text-sky-400 font-bold hover:underline"
+                    >
+                      + Add Rule
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {(round.tie_breaker_rules || ['']).map((rule, ruleIdx) => (
+                      <div key={ruleIdx} className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          placeholder="e.g., 1. Only top 2 teams will participate"
+                          value={rule}
+                          onChange={(e) => updateTieBreakerRule(rIdx, ruleIdx, e.target.value)}
+                          className="flex-1 p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs focus:ring-2 focus:ring-sky-500 outline-none text-white placeholder-slate-500 font-medium transition-all"
+                        />
+                        {(round.tie_breaker_rules || []).length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeTieBreakerRule(rIdx, ruleIdx)}
+                            className="p-2 text-slate-400 hover:text-rose-400 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-
-            </div>
+            )}
           </div>
         ))}
       </div>

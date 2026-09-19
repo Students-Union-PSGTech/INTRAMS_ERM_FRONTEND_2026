@@ -133,27 +133,49 @@ export async function generateEventPdf(eventData = {}) {
     ['', '', '']
   ];
 
-  // Helper to draw bordered table for Page 3
-  const drawPage3Table = (page, startX, startY, colWidths, headers, rows) => {
-    let currentY = startY;
+  let currentPage;
+  let currentY;
+
+  const createNewPage = () => {
+    if (currentPage) {
+      drawFooterSignatures(currentPage, true);
+    }
+    currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+    drawWatermark(currentPage);
+    drawPageBorder(currentPage);
+    currentY = pageHeight - margin - 35;
+  };
+
+  const ensureSpace = (requiredSpace) => {
+    // 95 is reserved for footer signatures (margin + 25 + some padding)
+    if (currentY - requiredSpace < 95) {
+      createNewPage();
+    }
+  };
+
+  // Helper to draw bordered table supporting dynamic pagination
+  const drawPage3Table = (startX, colWidths, headers, rows) => {
     const tableWidth = colWidths.reduce((a, b) => a + b, 0);
 
-    // Header Row
-    page.drawRectangle({
+    // Header Row (requires 24pt)
+    ensureSpace(24);
+    
+    // Draw Header Background & Box
+    currentPage.drawRectangle({
       x: startX,
       y: currentY - 24,
       width: tableWidth,
       height: 24,
       borderColor: rgb(0, 0, 0),
       borderWidth: 1.2,
-      color: rgb(0.89, 0.95, 0.98), // Light blue header fill
+      color: rgb(0.89, 0.95, 0.98),
     });
 
     let cellX = startX;
     headers.forEach((h, idx) => {
       const w = colWidths[idx];
       const textW = fontBold.widthOfTextAtSize(h, 9.5);
-      page.drawText(h, {
+      currentPage.drawText(h, {
         x: cellX + (w - textW) / 2,
         y: currentY - 16,
         size: 9.5,
@@ -161,7 +183,7 @@ export async function generateEventPdf(eventData = {}) {
         color: rgb(0, 0, 0),
       });
       if (idx < headers.length - 1) {
-        page.drawLine({
+        currentPage.drawLine({
           start: { x: cellX + w, y: currentY },
           end: { x: cellX + w, y: currentY - 24 },
           thickness: 1,
@@ -176,7 +198,9 @@ export async function generateEventPdf(eventData = {}) {
     // Data Rows
     rows.forEach((row) => {
       const rowH = 24;
-      page.drawRectangle({
+      ensureSpace(rowH); // Ensure space for the row!
+
+      currentPage.drawRectangle({
         x: startX,
         y: currentY - rowH,
         width: tableWidth,
@@ -185,7 +209,7 @@ export async function generateEventPdf(eventData = {}) {
         borderWidth: 1.2,
       });
 
-      cellX = startX;
+      let cellXData = startX;
       row.forEach((val, idx) => {
         const w = colWidths[idx];
         const strVal = String(val || '');
@@ -196,33 +220,31 @@ export async function generateEventPdf(eventData = {}) {
           size -= 0.5;
           textW = font.widthOfTextAtSize(strVal, size);
         }
-        page.drawText(strVal, {
-          x: cellX + (w - textW) / 2,
+        currentPage.drawText(strVal, {
+          x: cellXData + (w - textW) / 2,
           y: currentY - 16,
           size: size,
           font: font,
           color: rgb(0, 0, 0),
         });
         if (idx < row.length - 1) {
-          page.drawLine({
-            start: { x: cellX + w, y: currentY },
-            end: { x: cellX + w, y: currentY - rowH },
+          currentPage.drawLine({
+            start: { x: cellXData + w, y: currentY },
+            end: { x: cellXData + w, y: currentY - rowH },
             thickness: 1,
             color: rgb(0, 0, 0),
           });
         }
-        cellX += w;
+        cellXData += w;
       });
 
       currentY -= rowH;
     });
-
-    return currentY;
   };
 
   // Helper to draw radio circle (open or filled)
-  const drawRadioCircle = (page, cx, cy, isSelected) => {
-    page.drawCircle({
+  const drawRadioCircle = (cx, cy, isSelected) => {
+    currentPage.drawCircle({
       x: cx,
       y: cy,
       size: 6,
@@ -231,7 +253,7 @@ export async function generateEventPdf(eventData = {}) {
       color: rgb(1, 1, 1),
     });
     if (isSelected) {
-      page.drawCircle({
+      currentPage.drawCircle({
         x: cx,
         y: cy,
         size: 3.5,
@@ -243,13 +265,11 @@ export async function generateEventPdf(eventData = {}) {
   // ==========================================
   // PAGE 1: COVER PAGE
   // ==========================================
-  const page1 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page1);
-  drawPageBorder(page1);
+  createNewPage();
 
   // Top Left PSG Crest Logo
   if (psgLogo) {
-    page1.drawImage(psgLogo, {
+    currentPage.drawImage(psgLogo, {
       x: 160,
       y: 728,
       width: 48,
@@ -258,13 +278,13 @@ export async function generateEventPdf(eventData = {}) {
   }
 
   // Header College Text
-  page1.drawText('PSG College of', { x: 218, y: 760, size: 17, font: fontRegular, color: rgb(0, 0, 0) });
-  page1.drawText('Technology, Coimbatore', { x: 218, y: 738, size: 17, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText('PSG College of', { x: 218, y: 760, size: 17, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText('Technology, Coimbatore', { x: 218, y: 738, size: 17, font: fontRegular, color: rgb(0, 0, 0) });
 
   // STUDENTS UNION 2026-2027
   const unionText = 'STUDENTS UNION 2026-2027';
   const unionW = fontBold.widthOfTextAtSize(unionText, 20);
-  page1.drawText(unionText, {
+  currentPage.drawText(unionText, {
     x: (pageWidth - unionW) / 2,
     y: 675,
     size: 20,
@@ -272,13 +292,10 @@ export async function generateEventPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  // Center Kriya Logo area LEFT BLANK as requested
-  // (Vertical space reserved ~120pt left blank)
-
   // INTRAMS 2026 Header
   const intramsText = 'INTRAMS 2026';
   const intramsW = fontBold.widthOfTextAtSize(intramsText, 18);
-  page1.drawText(intramsText, {
+  currentPage.drawText(intramsText, {
     x: (pageWidth - intramsW) / 2,
     y: 485,
     size: 18,
@@ -289,7 +306,7 @@ export async function generateEventPdf(eventData = {}) {
   // Event Resource Form Subtitle
   const formSub = 'Event Resource Form';
   const formSubW = fontBold.widthOfTextAtSize(formSub, 16);
-  page1.drawText(formSub, {
+  currentPage.drawText(formSub, {
     x: (pageWidth - formSubW) / 2,
     y: 450,
     size: 16,
@@ -332,7 +349,7 @@ export async function generateEventPdf(eventData = {}) {
   // ASSOCIATION/CLUB NAME
   const assocStr = `CLUB NAME : ${clubName}`;
   const assocSize = getShrinkSize(assocStr, 480, 13.5, fontBold);
-  page1.drawText(assocStr, {
+  currentPage.drawText(assocStr, {
     x: 55,
     y: 380,
     size: assocSize,
@@ -343,7 +360,7 @@ export async function generateEventPdf(eventData = {}) {
   // EVENT NAME
   const eventStr = `EVENT NAME : ${eventName}`;
   const eventSize = getShrinkSize(eventStr, 480, 13.5, fontBold);
-  page1.drawText(eventStr, {
+  currentPage.drawText(eventStr, {
     x: 55,
     y: 340,
     size: eventSize,
@@ -354,222 +371,201 @@ export async function generateEventPdf(eventData = {}) {
   // ==========================================
   // PAGE 2: INSTRUCTIONS & GUIDELINES
   // ==========================================
-  const page2 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page2);
-  drawPageBorder(page2);
-
-  let p2Y = pageHeight - margin - 35;
+  createNewPage();
 
   const instHeader = 'INSTRUCTIONS';
   const instHeaderW = fontBold.widthOfTextAtSize(instHeader, 16);
-  page2.drawText(instHeader, {
+  currentPage.drawText(instHeader, {
     x: (pageWidth - instHeaderW) / 2,
-    y: p2Y,
+    y: currentY,
     size: 16,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
   // Underline
-  page2.drawLine({
-    start: { x: (pageWidth - instHeaderW) / 2, y: p2Y - 3 },
-    end: { x: (pageWidth + instHeaderW) / 2, y: p2Y - 3 },
+  currentPage.drawLine({
+    start: { x: (pageWidth - instHeaderW) / 2, y: currentY - 3 },
+    end: { x: (pageWidth + instHeaderW) / 2, y: currentY - 3 },
     thickness: 1.2,
     color: rgb(0, 0, 0),
   });
 
-  p2Y -= 30;
+  currentY -= 30;
 
   const subTitle = '(TO BE READ BEFORE FILLING THE FORM)';
   const subTitleW = fontBold.widthOfTextAtSize(subTitle, 11);
-  page2.drawText(subTitle, {
+  currentPage.drawText(subTitle, {
     x: (pageWidth - subTitleW) / 2,
-    y: p2Y,
+    y: currentY,
     size: 11,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
 
-  p2Y -= 35;
+  currentY -= 35;
 
-  page2.drawText('* Kindly submit a separate form for each event, in case of multiple events.', {
+  currentPage.drawText('* Kindly submit a separate form for each event, in case of multiple events.', {
     x: margin + 15,
-    y: p2Y,
+    y: currentY,
     size: 10,
     font: fontItalic,
     color: rgb(0, 0, 0),
   });
-  p2Y -= 18;
+  currentY -= 18;
 
-  page2.drawText('If an event is conducted over two days (for example, a preliminary round on Day 1 and a final round on Day), include', {
+  currentPage.drawText('If an event is conducted over two days (for example, a preliminary round on Day 1 and a final round on Day), include', {
     x: margin + 15,
-    y: p2Y,
+    y: currentY,
     size: 10,
     font: fontItalic,
     color: rgb(0, 0, 0),
   });
-  p2Y -= 15;
-  page2.drawText('all requirements in the same form.', {
+  currentY -= 15;
+  currentPage.drawText('all requirements in the same form.', {
     x: margin + 15,
-    y: p2Y,
+    y: currentY,
     size: 10,
     font: fontItalic,
     color: rgb(0, 0, 0),
   });
 
-  p2Y -= 35;
+  currentY -= 35;
 
-  page2.drawText('General Guidelines', {
+  currentPage.drawText('General Guidelines', {
     x: margin + 15,
-    y: p2Y,
+    y: currentY,
     size: 12,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
 
-  p2Y -= 22;
+  currentY -= 22;
 
   const guidelinesList = [
-    '1. All event and workshop proposals will be reviewed and approved based on feasibility and relevance.',
-    '2. Each club or association can propose up to two events, one workshop, and one paper presentation.',
-    '3. Events and workshops should preferably be innovative or aligned with emerging technologies related to the respective stream.',
-    '4. Kindly make sure that the judges are present for the entire duration of the event to ensure smooth evaluation.',
-    '5. As per Students Union guidelines, cash prizes or mementos should not be provided by clubs/associations.',
-    '6. Details of any external guests, as recommended by the Students Union, should be entered in the required items table.',
-    '7. Certificates for winners, runners-up, coordinators, and volunteers will be issued by the Students Union.',
-    '8. If any materials are needed before the event day, clearly mention "Required in advance" near the Items Name column.',
-    '9. Event venues will be allotted based on availability by the Students Union.',
-    '10. Projectors available in the allotted halls may be used, and will not be provided by the Students Union.',
-    '11. Winner and runner-up details should be submitted within one hour after the event concludes along the judges signature.',
-    '12. Participants should arrange their own HDMI cables or VGA converters if required.',
-    '13. Clubs and associations are advised to keep sufficient copies of the submitted form for reference.',
-    '14. Requests for changes after submission may not be entertained, so ensure all details are finalised before submitting.',
-    '15. The completed form must be submitted to the designated point of contact for your club or association.',
-    '16. For any clarifications or additional details, contact your respective point of contact.',
+    '1. Not all the events submitted will be approved.',
+    '2. Maximum of two events can be proposed.',
+    '3. Events should be innovative or focus on the trending/new technologies relating to the respective stream.',
+    '4. Judges must be present throughout the duration of the event.',
+    '5. Refreshment, prizes, memento, or any other form of prizes should be given by clubs/associations for the event winners.',
+    '6. Memento for the external chief guest will be provided by the Students Union if mentioned in the forms submitted.',
+    '7. Certificates for the winners, runners, convenors, and volunteers of each event will be provided by the students union.',
+    '8. If any materials are required prior to the day of the event, please mention "Required in advance" near that material in the "From Same" column.',
+    '9. Halls will be allotted based on availability.',
+    '10. The projector will not be provided by the students union; use the projector available in the hall.',
+    '11. Winner and runner details should be submitted within one hour from the end of the event.',
+    '12. HDMI to VGA converter will not be provided.',
+    '13. Take enough copies of the form for your reference.',
+    '14. Further changes are not accepted once approved.',
+    '15. Submit it to the point of contact allotted to your club/association.',
+    '16. For more details, contact your respective point of contact.',
   ];
 
   guidelinesList.forEach((guide) => {
     const lines = wrapText(guide, 460, fontRegular, 9.5);
     lines.forEach((line, index) => {
       const indent = index === 0 ? 0 : 12;
-      page2.drawText(line, { x: margin + 25 + indent, y: p2Y, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
-      p2Y -= 14;
+      currentPage.drawText(line, { x: margin + 25 + indent, y: currentY, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+      currentY -= 14;
     });
-    p2Y -= 4;
+    currentY -= 4;
   });
-
-  drawFooterSignatures(page2);
 
   // ==========================================
   // PAGE 3: PERSONNEL & CONTACT TABLES
   // ==========================================
-  const page3 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page3);
-  drawPageBorder(page3);
-
-  let p3Y = pageHeight - margin - 35;
+  createNewPage();
 
   const prevTitle = `Event Preview: ${eventId}`;
   const prevTitleW = fontBold.widthOfTextAtSize(prevTitle, 16);
-  page3.drawText(prevTitle, {
+  currentPage.drawText(prevTitle, {
     x: (pageWidth - prevTitleW) / 2,
-    y: p3Y,
+    y: currentY,
     size: 16,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
 
-  p3Y -= 40;
+  currentY -= 40;
 
   const tX = margin + 15;
   const p3ColWidths5 = [100, 85, 95, 125, 80];
 
   // Secretary Details
-  page3.drawText('Secretary Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  p3Y -= 12;
-  p3Y = drawPage3Table(page3, tX, p3Y, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], secRows);
-
-  p3Y -= 30;
+  ensureSpace(45);
+  currentPage.drawText('Secretary Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  currentY -= 12;
+  drawPage3Table(tX, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], secRows);
+  currentY -= 30;
 
   // Convenor Details
-  page3.drawText('Convenor Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  p3Y -= 12;
-  p3Y = drawPage3Table(page3, tX, p3Y, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], convRows);
-
-  p3Y -= 30;
+  ensureSpace(45);
+  currentPage.drawText('Convenor Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  currentY -= 12;
+  drawPage3Table(tX, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], convRows);
+  currentY -= 30;
 
   // Volunteer Details
-  page3.drawText('Volunteer Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  p3Y -= 12;
-  p3Y = drawPage3Table(page3, tX, p3Y, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], volRows);
-
-  p3Y -= 30;
+  ensureSpace(45);
+  currentPage.drawText('Volunteer Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  currentY -= 12;
+  drawPage3Table(tX, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], volRows);
+  currentY -= 30;
 
   // Faculty Advisor Details
-  page3.drawText('Faculty Advisor Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  p3Y -= 12;
-  p3Y = drawPage3Table(page3, tX, p3Y, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], facRows);
-
-  p3Y -= 30;
+  ensureSpace(45);
+  currentPage.drawText('Faculty Advisor Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  currentY -= 12;
+  drawPage3Table(tX, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], facRows);
+  currentY -= 30;
 
   // Judge Details
-  page3.drawText('Judge Details', { x: tX, y: p3Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  p3Y -= 12;
-  p3Y = drawPage3Table(page3, tX, p3Y, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], judgeRows);
-
-  drawFooterSignatures(page3, true);
+  ensureSpace(45);
+  currentPage.drawText('Judge Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+  currentY -= 12;
+  drawPage3Table(tX, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], judgeRows);
 
   // ==========================================
   // PAGE 4: EVENT DETAILS & RESOURCE MATRIX
   // ==========================================
-  const page4 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page4);
-  drawPageBorder(page4);
-
-  let p4Y = pageHeight - margin - 35;
+  createNewPage();
 
   const detTitle = 'Event Details';
   const detTitleW = fontBold.widthOfTextAtSize(detTitle, 16);
-  page4.drawText(detTitle, {
+  currentPage.drawText(detTitle, {
     x: (pageWidth - detTitleW) / 2,
-    y: p4Y,
+    y: currentY,
     size: 16,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
 
-  p4Y -= 35;
+  currentY -= 35;
 
   const gridBoxX = margin + 15;
   const gridBoxWidth = 495.28;
 
-  // Box 1: Day Selection Row
   const box1H = 38;
-  page4.drawRectangle({
+  ensureSpace(box1H + 10);
+  currentPage.drawRectangle({
     x: gridBoxX,
-    y: p4Y - box1H,
+    y: currentY - box1H,
     width: gridBoxWidth,
     height: box1H,
     borderColor: rgb(0, 0, 0),
     borderWidth: 1.2,
   });
 
-  const selectedDayStr = String(formSpecs.day || ev.day || '1').toLowerCase();
-  let daySelIdx = selectedDayStr.includes('2') ? 1 : 0;
+  const eventDayText = formSpecs.is_two_day ? '2 Days Event' : (formSpecs.day || 'N/A');
+  currentPage.drawText(`Event Day: ${eventDayText}`, { x: gridBoxX + 15, y: currentY - 24, size: 11, font: fontBold, color: rgb(0, 0, 0) });
 
-  const dayLabels = ['Day 1', 'Day 2'];
-  dayLabels.forEach((dl, idx) => {
-    const lx = gridBoxX + 60 + idx * 200;
-    page4.drawText(dl, { x: lx, y: p4Y - 24, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
-    drawRadioCircle(page4, lx + 45, p4Y - 20, idx === daySelIdx);
-  });
-
-  p4Y -= box1H;
+  currentY -= box1H;
 
   // Box 2: Parameters
   const box2H = 75;
-  page4.drawRectangle({
+  ensureSpace(box2H + 10);
+  currentPage.drawRectangle({
     x: gridBoxX,
-    y: p4Y - box2H,
+    y: currentY - box2H,
     width: gridBoxWidth,
     height: box2H,
     borderColor: rgb(0, 0, 0),
@@ -580,17 +576,18 @@ export async function generateEventPdf(eventData = {}) {
   const expectedParticipants = ev.expectedParticipants || formSpecs.expectedParticipants || 7;
   const durationText = formSpecs.duration || ev.duration || '11';
 
-  page4.drawText(`No. of Rounds: ${roundsCount}`, { x: gridBoxX + 15, y: p4Y - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  page4.drawText(`Expected no of Participants: ${expectedParticipants}`, { x: gridBoxX + 15, y: p4Y - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  page4.drawText(`Duration of the event: ${durationText}`, { x: gridBoxX + 15, y: p4Y - 62, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`No. of Rounds: ${roundsCount}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Expected no of Participants: ${expectedParticipants}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Duration of the event: ${durationText}`, { x: gridBoxX + 15, y: currentY - 62, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
 
-  p4Y -= box2H;
+  currentY -= box2H;
 
   // Box 3: Individual vs Team
   const box3H = 50;
-  page4.drawRectangle({
+  ensureSpace(box3H + 10);
+  currentPage.drawRectangle({
     x: gridBoxX,
-    y: p4Y - box3H,
+    y: currentY - box3H,
     width: gridBoxWidth,
     height: box3H,
     borderColor: rgb(0, 0, 0),
@@ -598,30 +595,31 @@ export async function generateEventPdf(eventData = {}) {
   });
 
   // Vertical Divider in Box 3
-  page4.drawLine({
-    start: { x: gridBoxX + 240, y: p4Y },
-    end: { x: gridBoxX + 240, y: p4Y - box3H },
+  currentPage.drawLine({
+    start: { x: gridBoxX + 240, y: currentY },
+    end: { x: gridBoxX + 240, y: currentY - box3H },
     thickness: 1.2,
     color: rgb(0, 0, 0),
   });
 
   const pType = String(formSpecs.participant_type || ev.participant_type || '').toLowerCase();
   const isTeam = pType.includes('team') || pType.includes('dual');
-  page4.drawText('Individual:', { x: gridBoxX + 15, y: p4Y - 30, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 85, p4Y - 26, !isTeam);
+  currentPage.drawText('Individual:', { x: gridBoxX + 15, y: currentY - 30, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(gridBoxX + 85, currentY - 26, !isTeam);
 
-  page4.drawText('Team:', { x: gridBoxX + 255, y: p4Y - 20, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 310, p4Y - 16, isTeam);
-  page4.drawText(`Min Size: ${formSpecs.team_min || 1}`, { x: gridBoxX + 255, y: p4Y - 35, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
-  page4.drawText(`Max Size: ${formSpecs.team_max || 1}`, { x: gridBoxX + 255, y: p4Y - 47, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText('Team:', { x: gridBoxX + 255, y: currentY - 20, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  drawRadioCircle(gridBoxX + 310, currentY - 16, isTeam);
+  currentPage.drawText(`Min Size: ${formSpecs.team_min || 1}`, { x: gridBoxX + 255, y: currentY - 35, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Max Size: ${formSpecs.team_max || 1}`, { x: gridBoxX + 255, y: currentY - 47, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
 
-  p4Y -= box3H;
+  currentY -= box3H;
 
   // Box 4: Halls Required
   const box4H = 75;
-  page4.drawRectangle({
+  ensureSpace(box4H + 10);
+  currentPage.drawRectangle({
     x: gridBoxX,
-    y: p4Y - box4H,
+    y: currentY - box4H,
     width: gridBoxWidth,
     height: box4H,
     borderColor: rgb(0, 0, 0),
@@ -632,51 +630,40 @@ export async function generateEventPdf(eventData = {}) {
   const preferredHalls = formSpecs.preferred_halls || ev.preferred_halls || '1123';
   const reasonForHalls = formSpecs.reason_for_halls || ',n, ,';
 
-  page4.drawText(`No of Halls Required: ${hallsCount}`, { x: gridBoxX + 15, y: p4Y - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  page4.drawText(`Preferred Halls: ${preferredHalls}`, { x: gridBoxX + 15, y: p4Y - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  page4.drawText(`Reason: ${reasonForHalls}`, { x: gridBoxX + 15, y: p4Y - 62, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`No of Halls Required: ${hallsCount}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Preferred Halls: ${preferredHalls}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Reason: ${reasonForHalls}`, { x: gridBoxX + 15, y: currentY - 62, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
 
-  p4Y -= box4H;
+  currentY -= box4H;
 
-  // Box 5: Slot Details
-  const box5H = 85;
-  page4.drawRectangle({
+  const box5H = 65;
+  ensureSpace(box5H + 10);
+  currentPage.drawRectangle({
     x: gridBoxX,
-    y: p4Y - box5H,
+    y: currentY - box5H,
     width: gridBoxWidth,
     height: box5H,
     borderColor: rgb(0, 0, 0),
     borderWidth: 1.2,
   });
 
-  const slotStr = String(formSpecs.slot || ev.slot || '1').toLowerCase();
-  let slotIdx = 0;
-  if (slotStr.includes('two') || slotStr.includes('days')) slotIdx = 3;
-  else if (slotStr.includes('full') || slotStr.includes('both')) slotIdx = 2;
-  else if (slotStr.includes('2') || slotStr.includes('afternoon')) slotIdx = 1;
-  else if (slotStr.includes('1') || slotStr.includes('morning')) slotIdx = 0;
+  currentPage.drawText('Slot Details:', { x: gridBoxX + 15, y: currentY - 20, size: 11, font: fontBold, color: rgb(0, 0, 0) });
 
-  page4.drawText('Slot Details:', { x: gridBoxX + 15, y: p4Y - 18, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  if (formSpecs.is_two_day) {
+    currentPage.drawText(`Day 1 Slot: ${formSpecs.day1_slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentPage.drawText(`Day 2 Slot: ${formSpecs.day2_slot || 'N/A'}`, { x: gridBoxX + 250, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  } else {
+    currentPage.drawText(`Time Slot: ${formSpecs.slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  }
 
-  page4.drawText('Slot 1: 9:30 to 12:30', { x: gridBoxX + 35, y: p4Y - 40, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 145, p4Y - 36, slotIdx === 0);
-
-  page4.drawText('Slot 2: 1:30 to 4:30', { x: gridBoxX + 185, y: p4Y - 40, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 295, p4Y - 36, slotIdx === 1);
-
-  page4.drawText('Full Day', { x: gridBoxX + 35, y: p4Y - 62, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 145, p4Y - 58, slotIdx === 2);
-
-  page4.drawText('Two Days', { x: gridBoxX + 185, y: p4Y - 62, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-  drawRadioCircle(page4, gridBoxX + 295, p4Y - 58, slotIdx === 3);
-
-  p4Y -= box5H;
+  currentY -= box5H;
 
   // Box 6: Extension Boxes
   const box6H = 55;
-  page4.drawRectangle({
+  ensureSpace(box6H + 10);
+  currentPage.drawRectangle({
     x: gridBoxX,
-    y: p4Y - box6H,
+    y: currentY - box6H,
     width: gridBoxWidth,
     height: box6H,
     borderColor: rgb(0, 0, 0),
@@ -686,82 +673,200 @@ export async function generateEventPdf(eventData = {}) {
   const extBoxesCount = formSpecs.extension_boxes || 0;
   const reasonExt = formSpecs.reason_for_extension_boxes || 'bhk';
 
-  page4.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : ''}`, { x: gridBoxX + 15, y: p4Y - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  page4.drawText(`Reason: ${reasonExt}`, { x: gridBoxX + 15, y: p4Y - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-
-  drawFooterSignatures(page4);
+  currentPage.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : ''}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Reason: ${reasonExt}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
 
   // ==========================================
   // PAGE 5: EVENT DESCRIPTION & ROUND RULES
   // ==========================================
-  const page5 = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(page5);
-  drawPageBorder(page5);
-
-  let p5Y = pageHeight - margin - 35;
+  createNewPage();
 
   const descHeader = 'EVENT DESCRIPTION';
   const descHeaderW = fontBold.widthOfTextAtSize(descHeader, 16);
-  page5.drawText(descHeader, {
+  currentPage.drawText(descHeader, {
     x: (pageWidth - descHeaderW) / 2,
-    y: p5Y,
+    y: currentY,
     size: 16,
     font: fontBold,
     color: rgb(0, 0, 0),
   });
   // Underline
-  page5.drawLine({
-    start: { x: (pageWidth - descHeaderW) / 2, y: p5Y - 3 },
-    end: { x: (pageWidth + descHeaderW) / 2, y: p5Y - 3 },
+  currentPage.drawLine({
+    start: { x: (pageWidth - descHeaderW) / 2, y: currentY - 3 },
+    end: { x: (pageWidth + descHeaderW) / 2, y: currentY - 3 },
     thickness: 1.2,
     color: rgb(0, 0, 0),
   });
 
-  p5Y -= 45;
+  currentY -= 35;
 
-  page5.drawText(`EVENT NAME : ${eventName.toUpperCase()}`, { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  p5Y -= 30;
+  const drawSectionHeader = (pageObj, text, yPos) => {
+    const boxH = 24;
+    pageObj.drawRectangle({
+      x: 50,
+      y: yPos - boxH + 6,
+      width: 495.28,
+      height: boxH,
+      color: rgb(0.15, 0.22, 0.32),
+    });
+    pageObj.drawText(text.toUpperCase(), {
+      x: 60,
+      y: yPos - 8,
+      size: 12,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+    return yPos - boxH - 10;
+  };
 
-  page5.drawText('ONE LINE DESCRIPTION (TAG LINE) :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  p5Y -= 20;
-  page5.drawText(tagline, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
-  p5Y -= 35;
+  const drawSubHeader = (pageObj, text, yPos) => {
+    pageObj.drawText(text.toUpperCase(), {
+      x: 55,
+      y: yPos,
+      size: 11,
+      font: fontBold,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    return yPos - 16;
+  };
 
-  page5.drawText('ABOUT THE EVENT :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  p5Y -= 20;
-  page5.drawText(about, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
-  p5Y -= 45;
+  ensureSpace(40);
+  currentY = drawSectionHeader(currentPage, 'EVENT PROFILE', currentY);
 
-  // Rounds List on Page 5
+  ensureSpace(40);
+  currentY = drawSubHeader(currentPage, 'Event Name', currentY);
+  const evNameLines = wrapText(eventName, 480, fontBold, 14);
+  evNameLines.forEach(line => {
+    ensureSpace(20);
+    currentPage.drawText(line, { x: 55, y: currentY, size: 14, font: fontBold, color: rgb(0, 0, 0) });
+    currentY -= 18;
+  });
+  currentY -= 10;
+
+  ensureSpace(40);
+  currentY = drawSubHeader(currentPage, 'Tagline', currentY);
+  const tagLines = wrapText(tagline, 480, fontRegular, 12);
+  tagLines.forEach(line => {
+    ensureSpace(20);
+    currentPage.drawText(line, { x: 55, y: currentY, size: 12, font: fontRegular, color: rgb(0, 0, 0) });
+    currentY -= 16;
+  });
+  currentY -= 10;
+
+  ensureSpace(40);
+  currentY = drawSubHeader(currentPage, 'Event Description', currentY);
+  const aboutLines = wrapText(about, 480, fontRegular, 12);
+  aboutLines.forEach(line => {
+    ensureSpace(20);
+    currentPage.drawText(line, { x: 55, y: currentY, size: 12, font: fontRegular, color: rgb(0, 0, 0) });
+    currentY -= 16;
+  });
+  currentY -= 20;
+
   const roundsList = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds : [
     { name: 'dfbngf', description: 'iokj', rules: ['njjnj'] }
   ];
 
   roundsList.forEach((rd, rIdx) => {
-    page5.drawText(`ROUND - ${rIdx + 1}`, { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-    p5Y -= 25;
+    ensureSpace(120); // ensure space for round header + some content
+    
+    currentY -= 10;
+    currentY = drawSectionHeader(currentPage, `ROUND ${rIdx + 1} : ${rd.name || `Round ${rIdx + 1}`}`, currentY);
 
-    page5.drawText(`NAME : ${rd.name || `Round ${rIdx + 1}`}`, { x: 55, y: p5Y, size: 11.5, font: fontBold, color: rgb(0, 0, 0) });
-    p5Y -= 25;
+    if (rd.description) {
+      ensureSpace(40);
+      currentY = drawSubHeader(currentPage, 'Description', currentY);
+      const descLines = wrapText(rd.description, 480, fontRegular, 12);
+      descLines.forEach(line => {
+        ensureSpace(20);
+        currentPage.drawText(line, { x: 55, y: currentY, size: 12, font: fontRegular, color: rgb(0, 0, 0) });
+        currentY -= 16;
+      });
+      currentY -= 10;
+    }
 
-    page5.drawText('DESCRIPTION :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-    p5Y -= 20;
-    page5.drawText(rd.description || '—', { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
-    p5Y -= 30;
-
-    page5.drawText('ROUND RULES :', { x: 55, y: p5Y, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-    p5Y -= 20;
-
-    const rules = Array.isArray(rd.rules) && rd.rules.length > 0 ? rd.rules : ['njjnj'];
+    ensureSpace(40);
+    currentY = drawSubHeader(currentPage, 'Round Rules', currentY);
+    const rules = Array.isArray(rd.rules) && rd.rules.length > 0 ? rd.rules : ['None'];
     rules.forEach((rl) => {
-      page5.drawText(`• ${rl}`, { x: 55, y: p5Y, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
-      p5Y -= 20;
+      const rlLines = wrapText(`• ${rl}`, 480, fontRegular, 12);
+      rlLines.forEach((line) => {
+        ensureSpace(20);
+        currentPage.drawText(line, { x: 55, y: currentY, size: 12, font: fontRegular, color: rgb(0, 0, 0) });
+        currentY -= 16;
+      });
     });
+    currentY -= 15;
 
-    p5Y -= 25;
+    if (rd.has_tie_breaker) {
+      ensureSpace(60);
+      
+      currentPage.drawRectangle({
+        x: 50,
+        y: currentY - 18,
+        width: 495.28,
+        height: 20,
+        color: rgb(0.92, 0.94, 0.96), // Very light grey banner
+      });
+      currentPage.drawText(`TIE-BREAKER : ${rd.tie_breaker_name || 'Sudden Death'}`, { x: 60, y: currentY - 12, size: 11, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+      if (rd.tie_breaker_participants) {
+        currentPage.drawText(`(Participants: ${rd.tie_breaker_participants})`, { x: 300, y: currentY - 12, size: 10, font: fontItalic, color: rgb(0.3, 0.3, 0.3) });
+      }
+      currentY -= 30;
+      
+      if (rd.tie_breaker_description) {
+        const tbDescLines = wrapText(rd.tie_breaker_description, 480, fontRegular, 11);
+        tbDescLines.forEach(line => {
+          ensureSpace(20);
+          currentPage.drawText(line, { x: 55, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+          currentY -= 16;
+        });
+        currentY -= 10;
+      }
+      
+      const tbRules = Array.isArray(rd.tie_breaker_rules) && rd.tie_breaker_rules.length > 0 ? rd.tie_breaker_rules : [];
+      if (tbRules.length > 0) {
+        ensureSpace(40);
+        currentY = drawSubHeader(currentPage, 'Tie-Breaker Rules', currentY);
+        tbRules.forEach((rl) => {
+          const tbrLines = wrapText(`• ${rl}`, 480, fontRegular, 11);
+          tbrLines.forEach(line => {
+            ensureSpace(20);
+            currentPage.drawText(line, { x: 55, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+            currentY -= 16;
+          });
+        });
+      }
+    }
+    currentY -= 15;
   });
 
-  drawFooterSignatures(page5, true);
+  if (Array.isArray(ev.items) && ev.items.length > 0) {
+    createNewPage(); // Items always get a clean new page as requested
+
+    const reqText = 'REQUESTED LOGISTICS & ITEMS';
+    const reqW = fontBold.widthOfTextAtSize(reqText, 16);
+    currentPage.drawText(reqText, { x: (pageWidth - reqW) / 2, y: currentY, size: 16, font: fontBold, color: rgb(0, 0, 0) });
+    
+    currentY -= 40;
+
+    const tX = margin + 30;
+    const itemColWidths = [45, 220.28, 70, 130]; 
+    const itemHeaders = ['S.No', 'Item Name', 'Quantity', 'Amount (GST Incl.)'];
+    
+    const itemRows = ev.items.map((it, iIdx) => [
+      String(iIdx + 1),
+      it.item_name || it.name || 'Unknown Item',
+      String(it.quantity || it.requested_quantity || 1),
+      `Rs. ${it.total_price || (it.price_per_unit ? it.price_per_unit * (it.quantity || 1) : 0)}`
+    ]);
+    
+    drawPage3Table(tX, itemColWidths, itemHeaders, itemRows);
+  }
+
+  // Ensure signatures fit on the final page
+  ensureSpace(80);
+  drawFooterSignatures(currentPage, true);
 
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });

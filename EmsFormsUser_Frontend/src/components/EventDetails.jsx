@@ -91,8 +91,17 @@ function EventDetails() {
                 Schedule & Venue Specifications
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
-                <div><span className="font-semibold text-slate-400">Event Day:</span> {event.form.day || 'N/A'}</div>
-                <div><span className="font-semibold text-slate-400">Slot:</span> {event.form.slot || 'N/A'}</div>
+                {event.form.is_two_day ? (
+                  <>
+                    <div><span className="font-semibold text-slate-400">Day 1 Slot:</span> {event.form.day1_slot || 'N/A'}</div>
+                    <div><span className="font-semibold text-slate-400">Day 2 Slot:</span> {event.form.day2_slot || 'N/A'}</div>
+                  </>
+                ) : (
+                  <>
+                    <div><span className="font-semibold text-slate-400">Event Day:</span> {event.form.day || 'N/A'}</div>
+                    <div><span className="font-semibold text-slate-400">Slot:</span> {event.form.slot || 'N/A'}</div>
+                  </>
+                )}
                 <div><span className="font-semibold text-slate-400">Duration:</span> {event.form.duration || 'N/A'}</div>
                 <div><span className="font-semibold text-slate-400">Participant Type:</span> {event.form.participant_type || 'N/A'}</div>
                 <div><span className="font-semibold text-slate-400">Team Size:</span> {event.form.team_min || 1} - {event.form.team_max || 1}</div>
@@ -177,6 +186,29 @@ function EventDetails() {
                             <li key={rIdx}>{rule}</li>
                           ))}
                         </ul>
+                      </div>
+                    )}
+                    {round.has_tie_breaker && (
+                      <div className="mt-4 pt-4 border-t border-slate-800">
+                        <h5 className="font-bold text-sky-400 text-sm mb-2 uppercase tracking-wider">
+                          Tie-Breaker: {round.tie_breaker_name || 'Sudden Death'}
+                        </h5>
+                        {round.tie_breaker_participants ? (
+                          <p className="text-xs text-slate-400 mb-2">Participants: <span className="text-white font-semibold">{round.tie_breaker_participants}</span></p>
+                        ) : null}
+                        {round.tie_breaker_description && (
+                          <p className="text-slate-300 text-sm mb-3">{round.tie_breaker_description}</p>
+                        )}
+                        {Array.isArray(round.tie_breaker_rules) && round.tie_breaker_rules.length > 0 && (
+                          <div>
+                            <span className="text-[11px] font-mono text-cyan-400 uppercase tracking-wider">Tie-Breaker Rules:</span>
+                            <ul className="list-disc list-inside text-sm text-slate-300 mt-1 space-y-1">
+                              {round.tie_breaker_rules.map((rule, rIdx) => (
+                                <li key={rIdx}>{rule}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

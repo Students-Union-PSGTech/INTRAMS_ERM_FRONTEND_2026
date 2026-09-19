@@ -86,6 +86,10 @@ function CreateEventLayout() {
           rules: [''],
           num_participants: 50,
           has_tie_breaker: false,
+          tie_breaker_name: '',
+          tie_breaker_description: '',
+          tie_breaker_rules: [''],
+          tie_breaker_participants: ''
         });
       }
       const updatedRounds = currentRounds.slice(0, num);

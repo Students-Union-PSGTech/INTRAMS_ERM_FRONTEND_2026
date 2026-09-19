@@ -165,9 +165,20 @@ function EventPreview({ formData }) {
                   </ul>
                 )}
                 {rd.has_tie_breaker && (
-                  <p className="mt-2 pt-2 border-t border-slate-800">
-                    <span className="font-semibold text-slate-400">Tie-Breaker:</span> {rd.tie_breaker || 'Yes'}
-                  </p>
+                  <div className="mt-2 pt-2 border-t border-slate-800 space-y-1">
+                    <p>
+                      <span className="font-semibold text-sky-400">Tie-Breaker:</span> <span className="text-white font-semibold">{rd.tie_breaker_name || 'Yes'}</span>
+                      {rd.tie_breaker_participants && (
+                        <span className="text-slate-400 ml-3">Participants: <span className="text-white font-semibold">{rd.tie_breaker_participants}</span></span>
+                      )}
+                    </p>
+                    {rd.tie_breaker_description && <p className="text-slate-300">{rd.tie_breaker_description}</p>}
+                    {Array.isArray(rd.tie_breaker_rules) && rd.tie_breaker_rules.length > 0 && (
+                      <ul className="list-disc list-inside mt-1 text-slate-400">
+                        {rd.tie_breaker_rules.map((rule, rIdx) => rule && <li key={rIdx}>{rule}</li>)}
+                      </ul>
+                    )}
+                  </div>
                 )}
               </div>
             ))}
