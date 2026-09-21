@@ -144,6 +144,13 @@ function ItemsPage({ formData, setFormData }) {
               />
             </div>
 
+            <div className="w-full lg:w-32">
+              <label className="block text-xs font-semibold text-zinc-400 mb-1">Total (₹)</label>
+              <div className="w-full p-2.5 bg-slate-900/50 border border-transparent rounded-xl text-sm text-sky-300 font-bold flex items-center h-[42px]">
+                ₹ {((item.quantity || 0) * (item.price_per_unit || 0)).toFixed(2)}
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={() => removeItem(idx)}

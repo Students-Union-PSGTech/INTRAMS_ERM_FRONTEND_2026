@@ -131,6 +131,7 @@ function EditRequestsPage() {
                 const status = reqItem.status || ev.edit_req_status || (ev.status === 'draft' ? 'approved' : 'pending');
                 const isApproved = status === 'approved' || ev.status === 'draft';
                 const isPending = status === 'pending' || status === 'requested' || ev.status === 'edit_requested';
+                const isConsumed = status === 'consumed';
                 const isLabReq = reqItem.request_type === 'lab_edit';
 
                 return (
@@ -145,7 +146,11 @@ function EditRequestsPage() {
                         }`}>
                           {isLabReq ? 'LAB FORM' : 'EVENT'}
                         </span>
-                        {isApproved ? (
+                        {isConsumed ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-sky-950 border border-sky-500/30 text-sky-400 font-bold uppercase">
+                            <CheckCircle2 className="w-3 h-3" /> EDITED
+                          </span>
+                        ) : isApproved ? (
                           <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded bg-emerald-950 border border-emerald-500/30 text-emerald-400 font-bold uppercase">
                             <CheckCircle2 className="w-3 h-3" /> APPROVED
                           </span>
@@ -242,7 +247,7 @@ function EditRequestsPage() {
                 <option value="">-- Select an event --</option>
                 {events.map((ev) => (
                   <option key={ev._id} value={ev._id}>
-                    {ev.name} ({ev.event_id || 'ID N/A'})
+                    {ev.name}
                   </option>
                 ))}
               </select>

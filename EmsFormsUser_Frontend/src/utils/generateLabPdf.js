@@ -91,8 +91,8 @@ export async function generateLabPdf(eventData = {}) {
   const labFloor = String(eventData?.lab_floor || eventData?.form?.lab_floor || eventData?.form_specs?.lab_floor || 'N/A');
   const labNo = String(eventData?.lab_no || eventData?.form?.lab_no || eventData?.form_specs?.lab_no || 'N/A');
 
-  const selectedDayStr = isTwoDayLab ? 'both' : String(labDayRaw).toLowerCase();
-  const selectedSessionStr = isTwoDayLab ? 'both' : String(labSlotRaw).toLowerCase();
+  const selectedDayStr = String(labDayRaw).toLowerCase();
+  const selectedSessionStr = String(labSlotRaw).toLowerCase();
 
   // Helper to draw radio circle (open or filled)
   const drawRadioCircle = (page, cx, cy, isSelected) => {
@@ -437,15 +437,23 @@ export async function generateLabPdf(eventData = {}) {
   });
 
   // Determine selected day
-  let selectedDayIdx = 0; // default Day 1
-  if (selectedDayStr.includes('both') || selectedDayStr.includes('2 day') || selectedDayStr.includes('all')) selectedDayIdx = 2;
-  else if (selectedDayStr.includes('2')) selectedDayIdx = 1;
-  else if (selectedDayStr.includes('1')) selectedDayIdx = 0;
+  const selectedDayIdxs = [];
+  if (isTwoDayLab) {
+    selectedDayIdxs.push(2); // Select 2 DAYS
+  } else {
+    if (selectedDayStr.includes('both') || selectedDayStr.includes('2 day') || selectedDayStr.includes('all')) {
+      selectedDayIdxs.push(2);
+    } else if (selectedDayStr.includes('2')) {
+      selectedDayIdxs.push(1);
+    } else {
+      selectedDayIdxs.push(0);
+    }
+  }
 
   for (let d = 0; d < 3; d++) {
     const cx = gridX + d * gridColW + gridColW / 2;
     const cy = currentY - gridRadioH / 2;
-    drawRadioCircle(page2, cx, cy, d === selectedDayIdx);
+    drawRadioCircle(page2, cx, cy, selectedDayIdxs.includes(d));
 
     if (d < 2) {
       page2.drawLine({
@@ -491,40 +499,63 @@ export async function generateLabPdf(eventData = {}) {
 
   currentY -= gridHeaderH;
 
-  // Session Radio Circles Row
-  page2.drawRectangle({
-    x: gridX,
-    y: currentY - gridRadioH,
-    width: gridWidth,
-    height: gridRadioH,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 1.2,
-  });
-
   // Determine selected session
-  let selectedSessionIdx = 1; // default I (9.30-12.30)
-  if (selectedSessionStr.includes('both') || selectedSessionStr.includes('full')) selectedSessionIdx = 3;
-  else if (selectedSessionStr.includes('ii') || selectedSessionStr.includes('afternoon') || selectedSessionStr.includes('2')) selectedSessionIdx = 2;
-  else if (selectedSessionStr.includes('i') || selectedSessionStr.includes('morning') || selectedSessionStr.includes('1')) selectedSessionIdx = 1;
+  const getSessionIdxs = (str) => {
+    if (str.includes('both') || str.includes('full')) return [1, 2, 3]; // Check I, II, and BOTH
+    if (str.includes('ii') || str.includes('afternoon') || str.includes('2')) return [2];
+    if (str.includes('i') || str.includes('morning') || str.includes('1')) return [1];
+    return [1];
+  };
 
-  for (let s = 0; s < 4; s++) {
-    if (s > 0) {
-      const cx = gridX + s * gridColW + gridColW / 2;
-      const cy = currentY - gridRadioH / 2;
-      drawRadioCircle(page2, cx, cy, s === selectedSessionIdx);
-    }
+  const drawSessionRow = (label, selectedIdxs) => {
+    page2.drawRectangle({
+      x: gridX,
+      y: currentY - gridRadioH,
+      width: gridWidth,
+      height: gridRadioH,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+    });
 
-    if (s < 3) {
-      page2.drawLine({
-        start: { x: gridX + (s + 1) * gridColW, y: currentY },
-        end: { x: gridX + (s + 1) * gridColW, y: currentY - gridRadioH },
-        thickness: 1,
+    if (label) {
+      const textW = fontBold.widthOfTextAtSize(label, 9);
+      page2.drawText(label, {
+        x: gridX + (gridColW - textW) / 2,
+        y: currentY - 18,
+        size: 9,
+        font: fontBold,
         color: rgb(0, 0, 0),
       });
     }
-  }
 
-  currentY -= gridRadioH;
+    for (let s = 0; s < 4; s++) {
+      if (s > 0) {
+        const cx = gridX + s * gridColW + gridColW / 2;
+        const cy = currentY - gridRadioH / 2;
+        drawRadioCircle(page2, cx, cy, selectedIdxs.includes(s));
+      }
+
+      if (s < 3) {
+        page2.drawLine({
+          start: { x: gridX + (s + 1) * gridColW, y: currentY },
+          end: { x: gridX + (s + 1) * gridColW, y: currentY - gridRadioH },
+          thickness: 1,
+          color: rgb(0, 0, 0),
+        });
+      }
+    }
+    currentY -= gridRadioH;
+  };
+
+  if (isTwoDayLab) {
+    const session1 = String(eventData?.lab_session_slot || eventData?.form?.lab_session_slot || eventData?.form_specs?.lab_session_slot || '1').toLowerCase();
+    const session2 = String(eventData?.lab_session_slot_day2 || eventData?.form?.lab_session_slot_day2 || eventData?.form_specs?.lab_session_slot_day2 || session1).toLowerCase();
+    
+    drawSessionRow('DAY 1', getSessionIdxs(session1));
+    drawSessionRow('DAY 2', getSessionIdxs(session2));
+  } else {
+    drawSessionRow('', getSessionIdxs(selectedSessionStr));
+  }
 
   // Section 3: LAB SPECIFICATION TABLE
   currentY -= 20;

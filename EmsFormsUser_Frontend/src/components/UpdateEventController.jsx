@@ -16,29 +16,50 @@ import { ArrowLeft, Loader2, Info, Calendar, Layers, Package, CheckCircle } from
 const isCompleteEventState = (state) =>
   Boolean(state && typeof state === 'object' && state.form && state.contacts);
 
+const formatEventForEdit = (data) => {
+  if (!data) return null;
+  const newData = { ...data };
+  
+  if (newData.form) {
+    newData.form = {
+      ...newData.form,
+      labs_required: Boolean(newData.form.lab_name || newData.form.lab_block)
+    };
+  }
+  
+  if (Array.isArray(newData.rounds)) {
+    newData.rounds = newData.rounds.map(r => ({
+      ...r,
+      has_tie_breaker: Boolean(r.has_tie_breaker || r.tie_breaker_name || r.tie_breaker_description || (Array.isArray(r.tie_breaker_rules) && r.tie_breaker_rules[0]))
+    }));
+  }
+  
+  return newData;
+};
+
 function UpdateEventController() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('basic');
-  const [formData, setFormData] = useState(isCompleteEventState(location.state) ? location.state : null);
+  const [formData, setFormData] = useState(isCompleteEventState(location.state) ? formatEventForEdit(location.state) : null);
   const [loading, setLoading] = useState(!isCompleteEventState(location.state));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    if (!isCompleteEventState(formData) && id) {
+    if (!isCompleteEventState(location.state) && id) {
       fetchEvent();
     }
-  }, [id]);
+  }, [id, location.state]);
 
   const fetchEvent = async () => {
     try {
       const res = await userAPI.getEventById(id);
       const data = res.data?.data || res.data;
       if (data) {
-        setFormData({
+        setFormData(formatEventForEdit({
           name: data.name || data.event_name || '',
           tagline: data.tagline || '',
           about: data.about || data.description || '',
@@ -58,7 +79,7 @@ function UpdateEventController() {
             convenors: [{ name: '', roll_number: '', mobile: '' }],
             faculty_advisor: { name: '', designation: '', department: '', mobile: '' }
           }
-        });
+        }));
       }
     } catch (err) {
       alert('Failed to load event data');

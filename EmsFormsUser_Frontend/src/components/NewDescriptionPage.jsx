@@ -41,6 +41,19 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
     }));
   };
 
+  const handleLabDayCountChange = (isTwoDay) => {
+    setFormData((prev) => ({
+      ...prev,
+      form: {
+        ...prev.form,
+        is_two_day_lab: isTwoDay,
+        lab_day: isTwoDay ? '' : prev.form?.lab_day,
+        lab_session_slot: isTwoDay ? '' : prev.form?.lab_session_slot,
+        lab_session_slot_day2: isTwoDay ? prev.form?.lab_session_slot_day2 : '',
+      },
+    }));
+  };
+
   const [extBoxInput, setExtBoxInput] = useState(String(formData.form?.extension_boxes ?? 0));
 
   useEffect(() => {
@@ -182,7 +195,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                           type="radio"
                           name="lab_day_count_option"
                           checked={Boolean(formData.form?.is_two_day_lab) === opt.id}
-                          onChange={() => handleLabChange('is_two_day_lab', opt.id)}
+                          onChange={() => handleLabDayCountChange(opt.id)}
                           className="w-4 h-4 text-sky-500 bg-zinc-950 border-zinc-700 focus:ring-sky-500"
                         />
                         <span className="text-xs">{opt.label}</span>
