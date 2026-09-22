@@ -78,6 +78,7 @@ export const adminAPI = {
 
   // Items & Stocks
   getItems: () => api.get('/admin/items'),
+  getConsolidatedItems: () => api.get('/admin/items/consolidated'),
   createItem: (data) => api.post('/admin/items', data),
   updateItem: (id, data) => api.put(`/admin/items/${id}`, data),
   deleteItem: (id) => api.delete(`/admin/items/${id}`),
