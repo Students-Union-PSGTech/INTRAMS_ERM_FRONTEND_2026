@@ -16,7 +16,7 @@ function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user || localStorage.getItem('userToken')) {
+    if (user || sessionStorage.getItem('userToken')) {
       navigate('/home', { replace: true });
     }
   }, [user, navigate]);

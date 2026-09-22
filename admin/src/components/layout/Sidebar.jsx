@@ -49,7 +49,7 @@ function Item({ to, icon: Icon, label, onClick }) {
 export default function Sidebar({ onItemClick, onClose, isMobile = false }) {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
-  const role = user?.role || localStorage.getItem('role') || 'admin';
+  const role = user?.role || sessionStorage.getItem('role') || 'admin';
 
   const handleLogout = async () => {
     if (onItemClick) onItemClick();

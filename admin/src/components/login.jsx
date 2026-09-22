@@ -16,7 +16,7 @@ export default function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user || localStorage.getItem('token')) {
+    if (user || sessionStorage.getItem('token')) {
       navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);

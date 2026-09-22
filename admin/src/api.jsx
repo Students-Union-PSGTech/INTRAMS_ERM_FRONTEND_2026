@@ -16,7 +16,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -27,13 +27,13 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    const refreshToken = localStorage.getItem('refreshToken');
+    const refreshToken = sessionStorage.getItem('refreshToken');
     if (error.response?.status === 401 && refreshToken && !originalRequest._retried && !originalRequest.url.includes('/refresh')) {
       originalRequest._retried = true;
       try {
         const { data } = await axios.post(`${API_BASE_URL}/admin/refresh`, { refreshToken });
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        sessionStorage.setItem('token', data.token);
+        sessionStorage.setItem('refreshToken', data.refreshToken);
         originalRequest.headers.Authorization = `Bearer ${data.token}`;
         return api(originalRequest);
       } catch (_) {
@@ -41,7 +41,11 @@ api.interceptors.response.use(
       }
     }
     if (error.response?.status === 401) {
-      localStorage.clear();
+      sessionStorage.clear();
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('role');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }

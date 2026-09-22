@@ -7,17 +7,22 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    const storedUser = localStorage.getItem('userData');
-    const token = localStorage.getItem('userToken');
+    // Clear any persistent legacy localStorage tokens to ensure session resets on browser close
+    localStorage.removeItem('userData');
+    localStorage.removeItem('userToken');
+    localStorage.removeItem('userRefreshToken');
+
+    const storedUser = sessionStorage.getItem('userData');
+    const token = sessionStorage.getItem('userToken');
     const restore = async () => {
       if (storedUser && token) {
         try {
           setUser(JSON.parse(storedUser));
           await userAPI.getProfile();
         } catch (_) {
-          localStorage.removeItem('userData');
-          localStorage.removeItem('userToken');
-          localStorage.removeItem('userRefreshToken');
+          sessionStorage.removeItem('userData');
+          sessionStorage.removeItem('userToken');
+          sessionStorage.removeItem('userRefreshToken');
           setUser(null);
         }
       }
@@ -31,9 +36,9 @@ export const AuthProvider = ({ children }) => {
       const response = await userAPI.login({ username, password });
       const data = response.data;
       if (data.token) {
-        localStorage.setItem('userToken', data.token);
-        localStorage.setItem('userRefreshToken', data.refreshToken);
-        localStorage.setItem('userData', JSON.stringify(data.user || { username }));
+        sessionStorage.setItem('userToken', data.token);
+        sessionStorage.setItem('userRefreshToken', data.refreshToken);
+        sessionStorage.setItem('userData', JSON.stringify(data.user || { username }));
         setUser(data.user || { username });
         return { success: true };
       }
@@ -52,6 +57,9 @@ export const AuthProvider = ({ children }) => {
     } catch (_) {
       // Clearing local credentials is still required if the network is unavailable.
     }
+    sessionStorage.removeItem('userToken');
+    sessionStorage.removeItem('userRefreshToken');
+    sessionStorage.removeItem('userData');
     localStorage.removeItem('userToken');
     localStorage.removeItem('userRefreshToken');
     localStorage.removeItem('userData');

@@ -8,16 +8,22 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
+    // Clear any persistent legacy localStorage tokens to ensure session resets on browser close
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+
+    const storedUser = sessionStorage.getItem('user');
+    const token = sessionStorage.getItem('token');
+    const role = sessionStorage.getItem('role');
 
     if (storedUser && token) {
       try {
         const parsed = JSON.parse(storedUser);
         setUser({ ...parsed, role: role || parsed.role || 'admin' });
       } catch (e) {
-        localStorage.clear();
+        sessionStorage.clear();
       }
     }
     setIsLoading(false);
@@ -29,10 +35,10 @@ export const AuthProvider = ({ children }) => {
       const data = res.data;
       if (data.token) {
         const userData = data.user || data.admin || { username, role: data.role || 'admin' };
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-        localStorage.setItem('role', userData.role || 'admin');
+        sessionStorage.setItem('token', data.token);
+        sessionStorage.setItem('refreshToken', data.refreshToken);
+        sessionStorage.setItem('user', JSON.stringify(userData));
+        sessionStorage.setItem('role', userData.role || 'admin');
         setUser(userData);
         return { success: true };
       }
@@ -51,7 +57,11 @@ export const AuthProvider = ({ children }) => {
     } catch (_) {
       // Clear local credentials even if the API is unavailable.
     }
-    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
     setUser(null);
   };
 
