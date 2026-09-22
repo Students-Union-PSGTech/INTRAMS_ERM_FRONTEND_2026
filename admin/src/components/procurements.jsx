@@ -103,7 +103,7 @@ export default function Procurements() {
             <Card key={proc._id} className="p-5 border border-[#252525] bg-[#050505]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <p className="font-heading font-bold text-[#FFFFFF] text-base">{proc.submission_id?.event_name || 'EVENT'}</p>
+                  <p className="font-heading font-bold text-[#FFFFFF] text-base">{`${proc.submission_id?.event_name || 'EVENT'} ${proc.submission_id?.event_id ? `(${proc.submission_id.event_id})` : ''}`.trim()}</p>
                   <p className="text-[12px] text-[#00AEEF] font-bold mt-0.5">{proc.requested_by?.club_name || 'ASSOCIATION'}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">

@@ -76,8 +76,9 @@ export async function generateEventPdf(eventData = {}) {
   const ev = eventData || {};
   const formSpecs = ev.form || {};
   const clubName = ev.associationName || ev.club_name || ev.clubName || ev.association || formSpecs.associationName || 'Students Union';
-  const eventName = ev.name || ev.event_name || ev.eventName || formSpecs.eventName || 'sample_event';
   const eventId = ev.event_id || ev.id || ev._id || 'EVNT47';
+  const rawEventName = ev.name || ev.event_name || ev.eventName || formSpecs.eventName || 'sample_event';
+  const eventName = `${rawEventName} ${eventId ? `(${eventId})` : ''}`.trim();
   const tagline = ev.tagline || formSpecs.tagline || 'Find the time complexity';
   const about = ev.about || ev.description || formSpecs.about || '—';
 
@@ -125,11 +126,9 @@ export async function generateEventPdf(eventData = {}) {
   ];
 
   const judgeObj = ev.contacts?.judge || ev.judge || {};
-  const judgeRows = judgeObj.name ? [
+  const judgeRows = judgeObj.name && judgeObj.name.trim() ? [
     [judgeObj.name || '', judgeObj.designation || '', judgeObj.mobile || judgeObj.phone || '']
-  ] : [
-    ['', '', '']
-  ];
+  ] : [];
 
   let currentPage;
   let currentY;
@@ -157,7 +156,7 @@ export async function generateEventPdf(eventData = {}) {
 
     // Header Row (requires 24pt)
     ensureSpace(24);
-    
+
     // Draw Header Background & Box
     currentPage.drawRectangle({
       x: startX,
@@ -366,6 +365,40 @@ export async function generateEventPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
+  // EVENT ID
+  const eventIdStr = `EVENT ID : ${eventId}`;
+  const eventIdSize = getShrinkSize(eventIdStr, 480, 13.5, fontBold);
+  currentPage.drawText(eventIdStr, {
+    x: 55,
+    y: 300,
+    size: eventIdSize,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
+
+  // UPDATED TIME
+  const updatedTime = ev.updatedAt || ev.updated_at ? new Date(ev.updatedAt || ev.updated_at).toLocaleString('en-IN') : 'N/A';
+  const updatedTimeStr = `UPDATED TIME : ${updatedTime}`;
+  const updatedTimeSize = getShrinkSize(updatedTimeStr, 480, 13.5, fontBold);
+  currentPage.drawText(updatedTimeStr, {
+    x: 55,
+    y: 260,
+    size: updatedTimeSize,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
+
+  // GENERATED TIME
+  const generatedTimeStr = `PDF GENERATED TIME : ${new Date().toLocaleString('en-IN')}`;
+  const generatedTimeSize = getShrinkSize(generatedTimeStr, 480, 13.5, fontBold);
+  currentPage.drawText(generatedTimeStr, {
+    x: 55,
+    y: 220,
+    size: generatedTimeSize,
+    font: fontBold,
+    color: rgb(0, 0, 0),
+  });
+
   // ==========================================
   // PAGE 2: INSTRUCTIONS & GUIDELINES
   // ==========================================
@@ -517,10 +550,12 @@ export async function generateEventPdf(eventData = {}) {
   currentY -= 30;
 
   // Judge Details
-  ensureSpace(45);
-  currentPage.drawText('Judge Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  currentY -= 12;
-  drawPage3Table(tX, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], judgeRows);
+  if (judgeRows.length > 0) {
+    ensureSpace(45);
+    currentPage.drawText('Judge Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+    currentY -= 12;
+    drawPage3Table(tX, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], judgeRows);
+  }
 
   // ==========================================
   // PAGE 4: EVENT DETAILS & RESOURCE MATRIX
@@ -651,7 +686,7 @@ export async function generateEventPdf(eventData = {}) {
     currentPage.drawText(`Day 1 Slot: ${formSpecs.day1_slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
     currentPage.drawText(`Day 2 Slot: ${formSpecs.day2_slot || 'N/A'}`, { x: gridBoxX + 250, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   } else {
-    currentPage.drawText(`Time Slot: ${formSpecs.slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentPage.drawText(`Time Slot: ${formSpecs.day ? formSpecs.day + ' - ' : ''}${formSpecs.slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   }
 
   currentY -= box5H;
@@ -767,7 +802,7 @@ export async function generateEventPdf(eventData = {}) {
 
   roundsList.forEach((rd, rIdx) => {
     ensureSpace(120); // ensure space for round header + some content
-    
+
     currentY -= 10;
     currentY = drawSectionHeader(currentPage, `ROUND ${rIdx + 1} : ${rd.name || `Round ${rIdx + 1}`}`, currentY);
 
@@ -798,7 +833,7 @@ export async function generateEventPdf(eventData = {}) {
 
     if (rd.has_tie_breaker) {
       ensureSpace(60);
-      
+
       currentPage.drawRectangle({
         x: 50,
         y: currentY - 18,
@@ -811,7 +846,7 @@ export async function generateEventPdf(eventData = {}) {
         currentPage.drawText(`(Participants: ${rd.tie_breaker_participants})`, { x: 300, y: currentY - 12, size: 10, font: fontItalic, color: rgb(0.3, 0.3, 0.3) });
       }
       currentY -= 30;
-      
+
       if (rd.tie_breaker_description) {
         const tbDescLines = wrapText(rd.tie_breaker_description, 480, fontRegular, 11);
         tbDescLines.forEach(line => {
@@ -821,7 +856,7 @@ export async function generateEventPdf(eventData = {}) {
         });
         currentY -= 10;
       }
-      
+
       const tbRules = Array.isArray(rd.tie_breaker_rules) && rd.tie_breaker_rules.length > 0 ? rd.tie_breaker_rules : [];
       if (tbRules.length > 0) {
         ensureSpace(40);
@@ -842,24 +877,87 @@ export async function generateEventPdf(eventData = {}) {
   if (Array.isArray(ev.items) && ev.items.length > 0) {
     createNewPage(); // Items always get a clean new page as requested
 
-    const reqText = 'REQUESTED LOGISTICS & ITEMS';
+    const reqText = 'INVOICE / REQUESTED LOGISTICS';
     const reqW = fontBold.widthOfTextAtSize(reqText, 16);
-    currentPage.drawText(reqText, { x: (pageWidth - reqW) / 2, y: currentY, size: 16, font: fontBold, color: rgb(0, 0, 0) });
-    
+    currentPage.drawText(reqText, { x: (pageWidth - reqW) / 2, y: currentY, size: 16, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+
     currentY -= 40;
 
     const tX = margin + 30;
-    const itemColWidths = [45, 220.28, 70, 130]; 
-    const itemHeaders = ['S.No', 'Item Name', 'Quantity', 'Amount (GST Incl.)'];
-    
-    const itemRows = ev.items.map((it, iIdx) => [
-      String(iIdx + 1),
-      it.item_name || it.name || 'Unknown Item',
-      String(it.quantity || it.requested_quantity || 1),
-      `Rs. ${it.total_price || (it.price_per_unit ? it.price_per_unit * (it.quantity || 1) : 0)}`
-    ]);
-    
-    drawPage3Table(tX, itemColWidths, itemHeaders, itemRows);
+    const itemColWidths = [40, 200, 50, 80, 95.28];
+    const itemHeaders = ['S.No', 'Item Name', 'Qty', 'Unit Price', 'Amount'];
+
+    let subTotal = 0;
+    const itemRows = ev.items.map((it, iIdx) => {
+      const qty = it.quantity || it.requested_quantity || 1;
+      const unitPrice = it.price_per_unit || 0;
+      const total = qty * unitPrice;
+      subTotal += total;
+      return [
+        String(iIdx + 1),
+        it.item_name || it.name || 'Unknown Item',
+        String(qty),
+        `Rs. ${unitPrice.toFixed(2)}`,
+        `Rs. ${total.toFixed(2)}`
+      ];
+    });
+
+    const gstAmount = subTotal * 0.18;
+    const grandTotal = subTotal + gstAmount;
+
+    itemRows.push(['', '', '', 'Subtotal:', `Rs. ${subTotal.toFixed(2)}`]);
+    itemRows.push(['', '', '', 'GST (18%):', `Rs. ${gstAmount.toFixed(2)}`]);
+    itemRows.push(['', '', '', 'Grand Total:', `Rs. ${grandTotal.toFixed(2)}`]);
+
+    // Draw Invoice Style Table
+    let tableY = currentY;
+    const tableWidth = itemColWidths.reduce((a, b) => a + b, 0);
+
+    currentPage.drawRectangle({
+      x: tX, y: tableY - 24, width: tableWidth, height: 24,
+      color: rgb(0.95, 0.95, 0.95),
+    });
+
+    let cellX = tX;
+    itemHeaders.forEach((h, idx) => {
+      const w = itemColWidths[idx];
+      const textW = fontBold.widthOfTextAtSize(h, 9.5);
+      const xPos = idx === itemHeaders.length - 1 ? cellX + w - textW - 10 : (idx === 0 ? cellX + 10 : cellX + (w - textW) / 2);
+      currentPage.drawText(h, { x: xPos, y: tableY - 16, size: 9.5, font: fontBold, color: rgb(0.2, 0.2, 0.2) });
+      cellX += w;
+    });
+
+    currentPage.drawLine({
+      start: { x: tX, y: tableY - 24 }, end: { x: tX + tableWidth, y: tableY - 24 },
+      thickness: 1, color: rgb(0.8, 0.8, 0.8),
+    });
+    tableY -= 24;
+
+    itemRows.forEach((row, rIdx) => {
+      const isSummary = rIdx >= itemRows.length - 3;
+      const rowH = isSummary ? 20 : 24;
+      const fontToUse = isSummary ? fontBold : fontRegular;
+
+      let cellXData = tX;
+      row.forEach((val, idx) => {
+        const w = itemColWidths[idx];
+        const strVal = String(val || '');
+        if (strVal) {
+          let size = isSummary ? 10 : 9;
+          let textW = fontToUse.widthOfTextAtSize(strVal, size);
+          let xPos = idx === itemHeaders.length - 1 ? cellXData + w - textW - 10 : (idx === itemHeaders.length - 2 && isSummary ? cellXData + w - textW - 5 : (idx === 0 ? cellXData + 10 : cellXData + (w - textW) / 2));
+          currentPage.drawText(strVal, { x: xPos, y: tableY - 16, size: size, font: fontToUse, color: isSummary && idx === itemHeaders.length - 1 && rIdx === itemRows.length - 1 ? rgb(0.1, 0.5, 0.8) : rgb(0.1, 0.1, 0.1) });
+        }
+        cellXData += w;
+      });
+
+      if (!isSummary) {
+        currentPage.drawLine({ start: { x: tX, y: tableY - rowH }, end: { x: tX + tableWidth, y: tableY - rowH }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) });
+      } else if (rIdx === itemRows.length - 2) {
+        currentPage.drawLine({ start: { x: tX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2], y: tableY - rowH }, end: { x: tX + tableWidth, y: tableY - rowH }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+      }
+      tableY -= rowH;
+    });
   }
 
   // Ensure signatures fit on the final page

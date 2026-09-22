@@ -58,7 +58,7 @@ export default function EventDetail() {
     try {
       setPdfLoading(type);
       const filename = type === 'event'
-        ? `Event_${event.name || event.event_name || event._id}_DRAFT_ERM.pdf`
+        ? `Event_${event.name || event.event_name || event._id}${event.event_id ? `_${event.event_id}` : ''}_DRAFT_ERM.pdf`
         : `${type}_${event.event_id || event._id}.pdf`;
 
       if (type === 'event') {
@@ -115,7 +115,7 @@ export default function EventDetail() {
         ← BACK TO EVENTS
       </Button>
       <PageHeader
-        title={(event.name || event.event_name || 'EVENT').toUpperCase()}
+        title={`${(event.name || event.event_name || 'EVENT').toUpperCase()} ${event.event_id ? `(${event.event_id})` : ''}`.trim()}
         subtitle={`${(event.club_name || 'ASSOCIATION').toUpperCase()} · ${event.event_id || ''}`}
         actions={
           <>

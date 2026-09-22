@@ -131,7 +131,7 @@ export default function Dashboard() {
               <tbody>
                 {events.slice(0, 8).map((ev) => (
                   <Tr key={ev._id || ev.id} onClick={() => navigate(`/events/${ev._id || ev.id}`)}>
-                    <Td className="text-[#FFFFFF] font-bold">{ev.name || ev.event_name || 'UNTITLED'}</Td>
+                    <Td className="text-[#FFFFFF] font-bold">{`${ev.name || ev.event_name || 'UNTITLED'} ${ev.event_id ? `(${ev.event_id})` : ''}`.trim()}</Td>
                     <Td>{ev.club_name || '—'}</Td>
                     <Td>
                       <Badge status={ev.status} />

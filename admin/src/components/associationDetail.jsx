@@ -106,7 +106,7 @@ export default function AssociationDetail() {
                 );
                 return (
                   <Tr key={eventId}>
-                    <Td className="text-[#FFFFFF] font-bold">{ev.event_name || ev.name || 'UNTITLED'}</Td>
+                    <Td className="text-[#FFFFFF] font-bold">{`${ev.event_name || ev.name || 'UNTITLED'} ${ev.event_id ? `(${ev.event_id})` : ''}`.trim()}</Td>
                     <Td className="font-mono text-[#A0A0A0]">{ev.event_id || '—'}</Td>
                     <Td>
                       <Badge status={ev.status} />

@@ -28,6 +28,8 @@ const DEPARTMENTS = [
 const YEARS = ['Select Year', 'I Year', 'II Year', 'III Year', 'IV Year', 'M.Sc 5-yr'];
 
 function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
+  const [hasJudge, setHasJudge] = React.useState(!!formData.contacts?.judge?.name);
+
   const updateSecretary = (index, field, value) => {
     setFormData((prev) => {
       const currentSecs = [...(prev.contacts?.secretaries || [
@@ -283,11 +285,32 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
 
       {/* Judge Details */}
       <div className="space-y-4 pt-2">
-        <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5 font-heading">
-          Judge Details <span className="text-rose-400">*</span>
-        </h3>
-        <div className="glass-card border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5 font-heading">
+            Judge Details
+          </h3>
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-sky-200">
+            <input 
+              type="checkbox" 
+              className="accent-sky-500 w-4 h-4"
+              checked={hasJudge}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setHasJudge(checked);
+                if (!checked) {
+                  updateJudge('name', '');
+                  updateJudge('designation', '');
+                  updateJudge('mobile', '');
+                }
+              }}
+            />
+            Include Judge Details
+          </label>
+        </div>
+
+        {hasJudge && (
+          <div className="glass-card border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
                 Name <span className="text-rose-400">*</span>
@@ -324,8 +347,9 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
                 className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
               />
             </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

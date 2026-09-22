@@ -110,7 +110,7 @@ function CreateEventLayout() {
       return;
     }
     setErrors({});
-    setCurrentStep((prev) => Math.min(prev + 1, 5));
+    setCurrentStep((prev) => Math.min(prev + 1, 6));
   };
 
   const handleStepClick = (targetStep) => {
@@ -174,7 +174,7 @@ function CreateEventLayout() {
               <Trash2 className="w-3.5 h-3.5" /> Clear All
             </button>
           </div>
-          <StepProgress currentStep={currentStep} totalSteps={5} onStepClick={handleStepClick} />
+          <StepProgress currentStep={currentStep} totalSteps={6} onStepClick={handleStepClick} />
 
           {/* STEP 1: Instructions */}
           {currentStep === 1 && <Instructions onNext={handleNext} />}
@@ -253,21 +253,23 @@ function CreateEventLayout() {
             <PersonnelDetailsPage formData={formData} setFormData={setFormData} errors={errors} />
           )}
 
-          {/* STEP 4: Venue, Schedule & Items */}
+          {/* STEP 4: Venue & Schedule */}
           {currentStep === 4 && (
-            <div className="space-y-6">
-              <NewDescriptionPage formData={formData} setFormData={setFormData} errors={errors} />
-              <ItemsPage formData={formData} setFormData={setFormData} errors={errors} />
-            </div>
+            <NewDescriptionPage formData={formData} setFormData={setFormData} errors={errors} />
           )}
 
-          {/* STEP 5: Review & Final Submit */}
+          {/* STEP 5: Requirements & Logistics */}
           {currentStep === 5 && (
+            <ItemsPage formData={formData} setFormData={setFormData} errors={errors} />
+          )}
+
+          {/* STEP 6: Review & Final Submit */}
+          {currentStep === 6 && (
             <ReviewSubmit formData={formData} onSubmit={handleSubmit} isSubmitting={isSubmitting} />
           )}
 
           {/* Navigation Controls */}
-          {currentStep > 1 && currentStep < 5 && (
+          {currentStep > 1 && currentStep < 6 && (
             <div className="flex justify-between items-center mt-8 pt-4 border-t border-slate-800">
               <button
                 type="button"

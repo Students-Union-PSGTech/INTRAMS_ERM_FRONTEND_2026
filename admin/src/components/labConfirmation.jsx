@@ -46,7 +46,7 @@ export default function LabConfirmation() {
       const url = URL.createObjectURL(pdfBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `LabConfirmation_${eventObj.name || eventObj.event_name || 'Event'}.pdf`;
+      link.download = `LabConfirmation_${eventObj.name || eventObj.event_name || 'Event'}${eventObj.event_id ? `_${eventObj.event_id}` : ''}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -120,7 +120,7 @@ export default function LabConfirmation() {
                   const halls = event.form?.preferred_halls || event.preferred_halls || 'Not specified';
                   return (
                     <Tr key={event._id}>
-                      <Td className="text-[#FFFFFF] font-bold">{event.name || event.event_name}</Td>
+                      <Td className="text-[#FFFFFF] font-bold">{`${event.name || event.event_name || 'UNTITLED'} ${event.event_id ? `(${event.event_id})` : ''}`.trim()}</Td>
                       <Td>{event.club_name || '—'}</Td>
                       <Td className="text-[#00AEEF] font-bold">{Array.isArray(halls) ? halls.join(', ') : halls}</Td>
                       <Td>

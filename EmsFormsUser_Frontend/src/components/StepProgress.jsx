@@ -1,13 +1,14 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 
-function StepProgress({ currentStep, totalSteps = 5, onStepClick }) {
+function StepProgress({ currentStep, totalSteps = 6, onStepClick }) {
   const steps = [
     { number: 1, label: 'Instructions' },
     { number: 2, label: 'Event & Rounds' },
     { number: 3, label: 'Personnel Details' },
-    { number: 4, label: 'Venue & Items' },
-    { number: 5, label: 'Review & Submit' },
+    { number: 4, label: 'Venue' },
+    { number: 5, label: 'Items' },
+    { number: 6, label: 'Review & Submit' },
   ];
 
   const currentLabel = steps[currentStep - 1]?.label || '';

@@ -155,7 +155,7 @@ function LabConfirmationPage() {
 
                       <div>
                         <h3 className="text-base font-bold text-white leading-tight uppercase tracking-tight" style={{ color: '#ffffff' }}>
-                          {ev.name || ev.event_name || 'Untitled Event'}
+                          {`${ev.name || ev.event_name || 'Untitled Event'} ${ev.event_id ? `(${ev.event_id})` : ''}`.trim()}
                         </h3>
                         <p className="text-xs text-zinc-400 font-medium mt-1" style={{ color: '#a1a1aa' }}>
                           {user?.username ? `${user.username.toUpperCase()} • Students Union` : 'Students Union'}

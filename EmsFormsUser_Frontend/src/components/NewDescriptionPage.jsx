@@ -458,42 +458,67 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
 
       {/* 3. EXTENSION BOX SECTION */}
       <div className="glass-card rounded-xl p-5 shadow-lg border border-zinc-800 bg-zinc-950/80">
-        <h2 className="text-sm font-bold text-white mb-4 uppercase tracking-wider">
-          Extension Box
-        </h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Extension Box <span className="text-rose-400">*</span>
-            </label>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+            Extension Box
+          </h2>
+          <label className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-200 cursor-pointer select-none">
             <input
-              type="number"
-              min="0"
-              placeholder="0"
-              value={extBoxInput}
-              onChange={(e) => setExtBoxInput(e.target.value)}
-              onBlur={() => applyExtensionBoxes(extBoxInput)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') e.currentTarget.blur();
+              type="checkbox"
+              checked={!!formData.form?.needs_extension_boxes}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setFormData((prev) => ({
+                  ...prev,
+                  form: {
+                    ...prev.form,
+                    needs_extension_boxes: checked,
+                    extension_boxes: checked ? prev.form?.extension_boxes : 0,
+                    reason_for_extension_boxes: checked ? prev.form?.reason_for_extension_boxes : '',
+                  },
+                }));
+                if (!checked) setExtBoxInput('0');
               }}
-              className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
+              className="w-4 h-4 rounded bg-zinc-900 border-zinc-700 text-sky-500 focus:ring-sky-500 focus:ring-offset-zinc-950"
             />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-300 mb-1">
-              Reason for Extension Boxes <span className="text-rose-400">*</span>
-            </label>
-            <textarea
-              rows={2}
-              placeholder="e.g., Required for laptops and equipment, power supply for multiple stations"
-              value={formData.form?.reason_for_extension_boxes || ''}
-              onChange={(e) => handleChange('reason_for_extension_boxes', e.target.value)}
-              className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs placeholder-zinc-500 transition-all resize-none"
-            />
-          </div>
+            <span>Required?</span>
+          </label>
         </div>
+
+        {formData.form?.needs_extension_boxes && (
+          <div className="space-y-4 pt-2 border-t border-zinc-800/50">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                Number of Extension Boxes <span className="text-rose-400">*</span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                placeholder="1"
+                value={extBoxInput}
+                onChange={(e) => setExtBoxInput(e.target.value)}
+                onBlur={() => applyExtensionBoxes(extBoxInput)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur();
+                }}
+                className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                Reason for Extension Boxes <span className="text-rose-400">*</span>
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g., Required for laptops and equipment, power supply for multiple stations"
+                value={formData.form?.reason_for_extension_boxes || ''}
+                onChange={(e) => handleChange('reason_for_extension_boxes', e.target.value)}
+                className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs placeholder-zinc-500 transition-all resize-none"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 4. PARTICIPATION DETAILS */}

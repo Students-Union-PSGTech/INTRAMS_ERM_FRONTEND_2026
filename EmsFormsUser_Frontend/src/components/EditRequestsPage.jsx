@@ -165,7 +165,7 @@ function EditRequestsPage() {
                         )}
                       </div>
 
-                      <h3 className="text-xs font-semibold text-white">{ev.event_name || ev.name || 'Untitled Event'}</h3>
+                      <h3 className="text-xs font-semibold text-white">{`${ev.event_name || ev.name || 'Untitled Event'} ${ev.event_id ? `(${ev.event_id})` : ''}`.trim()}</h3>
 
                       <div className="text-[11px] text-zinc-400">
                         <span className="font-semibold text-zinc-300 uppercase">REASON: </span>
@@ -247,7 +247,7 @@ function EditRequestsPage() {
                 <option value="">-- Select an event --</option>
                 {events.map((ev) => (
                   <option key={ev._id} value={ev._id}>
-                    {ev.name}
+                    {`${ev.name || ev.event_name || 'Untitled'} ${ev.event_id ? `(${ev.event_id})` : ''}`.trim()}
                   </option>
                 ))}
               </select>

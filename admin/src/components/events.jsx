@@ -128,7 +128,7 @@ export default function EventsList() {
                   return (
                     <Tr key={eventId}>
                       <Td className="font-mono text-[#00AEEF] font-bold">{ev.event_id || '—'}</Td>
-                      <Td className="text-[#FFFFFF] font-bold">{ev.name || ev.event_name || 'UNTITLED'}</Td>
+                      <Td className="text-[#FFFFFF] font-bold">{`${ev.name || ev.event_name || 'UNTITLED'} ${ev.event_id ? `(${ev.event_id})` : ''}`.trim()}</Td>
                       <Td>{ev.club_name || '—'}</Td>
                       <Td>
                         <Badge status={ev.status} />

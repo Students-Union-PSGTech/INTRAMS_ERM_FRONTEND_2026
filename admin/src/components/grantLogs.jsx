@@ -106,7 +106,7 @@ export default function GrantLogs() {
                   <Tr key={g._id}>
                     <Td>{new Date(g.createdAt || g.created_at || g.granted_at).toLocaleString('en-IN')}</Td>
                     <Td className="text-[#FFFFFF] font-bold">{g.item_name}</Td>
-                    <Td>{g.granted_to || g.event_name || '—'}</Td>
+                    <Td>{g.granted_to || `${g.event_name || ''} ${g.event_id ? `(${g.event_id})` : ''}`.trim() || '—'}</Td>
                     <Td numeric className="text-[#00AEEF] font-bold">{g.quantity ?? g.allocated_quantity ?? 0}</Td>
                     <Td>{g.granted_by?.username || g.granted_by || 'Admin'}</Td>
                     <Td>

@@ -78,7 +78,7 @@ function EventDetails() {
             <span className="text-xs px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-400 font-mono font-bold border border-cyan-500/30 uppercase tracking-wider">
               {event.event_id || 'ID N/A'}
             </span>
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-3 font-heading">{event.name}</h1>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-white mt-3 font-heading">{`${event.name || event.event_name || 'Untitled Event'} ${event.event_id ? `(${event.event_id})` : ''}`.trim()}</h1>
             {event.tagline && <p className="text-lg text-sky-300/80 font-medium mt-1">{event.tagline}</p>}
             <p className="text-slate-300 mt-4 leading-relaxed text-sm sm:text-base">{event.about}</p>
           </div>

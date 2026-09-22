@@ -52,12 +52,14 @@ export async function generateLabPdf(eventData = {}) {
     eventData?.form?.associationName ||
     'Students Union';
 
-  const eventName =
+  const eventId = eventData?.event_id || eventData?.id || eventData?._id || '';
+  const rawEventName =
     eventData?.name ||
     eventData?.event_name ||
     eventData?.title ||
     eventData?.form?.eventName ||
     'sample_event';
+  const eventName = `${rawEventName} ${eventId ? `(${eventId})` : ''}`.trim();
 
   let rawConvenors =
     eventData?.contacts?.convenors ||

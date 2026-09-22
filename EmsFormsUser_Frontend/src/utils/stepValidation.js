@@ -103,7 +103,7 @@ export const validateStep = (step, formData = {}) => {
   }
 
   if (step === 4) {
-    // Venue & Schedule (NewDescriptionPage) & Logistics Items (ItemsPage)
+    // Venue & Schedule (NewDescriptionPage)
     const form = formData.form || {};
     const duration = form.duration || formData.duration || '';
     const halls = form.preferred_halls || formData.preferred_halls || formData.venue || '';
@@ -124,6 +124,10 @@ export const validateStep = (step, formData = {}) => {
     if (!duration.trim()) errors.duration = 'Event Duration is required';
     if (!halls.trim()) errors.preferred_halls = 'Preferred Halls / Venue is required';
 
+    return { isValid: Object.keys(errors).length === 0, errors };
+  }
+
+  if (step === 5) {
     // Logistics Items Validation
     if (Array.isArray(formData.items) && formData.items.length > 0) {
       const itemNames = new Set();

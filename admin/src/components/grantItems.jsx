@@ -103,7 +103,7 @@ export default function GrantItems() {
             return (
               <div key={eventId} className="flex items-center justify-between gap-3 border border-[#252525] bg-[#000000] p-4">
                 <div>
-                  <p className="text-[#FFFFFF] text-[14px] font-bold">{ev.event_name || ev.name}</p>
+                  <p className="text-[#FFFFFF] text-[14px] font-bold">{`${ev.event_name || ev.name || 'UNTITLED'} ${ev.event_id ? `(${ev.event_id})` : ''}`.trim()}</p>
                   <div className="mt-1">
                     <Badge status={ev.status} />
                   </div>
