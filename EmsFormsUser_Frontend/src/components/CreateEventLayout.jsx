@@ -81,7 +81,7 @@ function CreateEventLayout() {
       const currentRounds = [...(prev.rounds || [])];
       while (currentRounds.length < num) {
         currentRounds.push({
-          name: `Round ${currentRounds.length + 1}`,
+          name: '',
           description: '',
           rules: [''],
           num_participants: 50,

@@ -16,11 +16,12 @@ export const validateStep = (step, formData = {}) => {
       errors.rounds = 'At least 1 event round is required';
     } else {
       formData.rounds.forEach((round, idx) => {
-        if (!round.name?.trim()) {
-          errors[`round_${idx}_name`] = `Round ${idx + 1}: Name is required`;
-        }
         if (!round.description?.trim()) {
           errors[`round_${idx}_desc`] = `Round ${idx + 1}: Description is required`;
+        }
+        const partCount = Number(round.num_participants ?? round.participant_count ?? 1);
+        if (!Number.isFinite(partCount) || partCount < 1) {
+          errors[`round_${idx}_participants`] = `Round ${idx + 1}: Number of participants must be at least 1`;
         }
       });
     }
@@ -44,7 +45,7 @@ export const validateStep = (step, formData = {}) => {
 
       const hasAnyField = name || roll || dept || mobile;
       
-      const isRequired = (roleName === 'Secretary' && idx === 0) || (roleName === 'Convenor' && idx === 0);
+      const isRequired = (roleName === 'Secretary' && (idx === 0 || idx === 1)) || (roleName === 'Convenor' && idx === 0);
 
       if (isRequired || hasAnyField) {
         if (!name) errors[`${prefix}_name`] = `${displayRole}: Name is required`;
@@ -88,6 +89,9 @@ export const validateStep = (step, formData = {}) => {
     };
 
     const secs = contacts.secretaries || (contacts.secretary ? [contacts.secretary] : []);
+    if (secs.length < 2) {
+      errors.secretaries_required = 'At least 2 secretaries are required';
+    }
     secs.forEach((s, idx) => checkStudent(s, 'Secretary', idx));
 
     const convs = contacts.convenors || (contacts.convenor ? [contacts.convenor] : []);

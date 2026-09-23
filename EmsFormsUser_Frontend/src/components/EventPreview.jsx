@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, Layers, Package, Building2, Cpu, Wrench, Users } from 'lucide-react';
+import { calculateGrandTotal, calculateItemTotal } from '../utils/proposalHelpers';
 
 function EventPreview({ formData }) {
   const form = formData?.form || {};
@@ -204,11 +205,15 @@ function EventPreview({ formData }) {
           </h3>
           <div className="bg-slate-950/70 rounded-2xl p-3 border border-slate-800 text-xs">
             {formData.items.map((it, idx) => (
-              <div key={idx} className="flex justify-between py-1 border-b last:border-0 border-slate-800">
+              <div key={idx} className="flex justify-between gap-2 py-1 border-b last:border-0 border-slate-800">
                 <span className="font-medium text-white">{it.item_name}</span>
-                <span className="text-slate-400">Qty: {it.quantity} | ₹{it.price_per_unit || 0}/unit | Total: ₹{((it.quantity || 0) * (it.price_per_unit || 0) * 1.18).toFixed(2)} (inc 18% tax)</span>
+                <span className="text-slate-400 text-right">Qty: {it.quantity} | ₹{it.price_per_unit || 0}/unit | Total: ₹{calculateItemTotal(it).toFixed(2)} | Inc GST: ₹{(calculateItemTotal(it) * 1.18).toFixed(2)}</span>
               </div>
             ))}
+            <div className="mt-3 pt-3 border-t border-slate-800 flex justify-between items-center text-sm">
+              <span className="font-semibold text-slate-300">Total Amount</span>
+              <span className="font-bold text-sky-400">₹{calculateGrandTotal(formData.items).toFixed(2)}</span>
+            </div>
           </div>
         </div>
       )}

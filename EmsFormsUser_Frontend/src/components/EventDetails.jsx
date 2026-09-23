@@ -13,6 +13,14 @@ function EventDetails() {
   const [fetching, setFetching] = useState(!location.state);
   const [showAnnexureModal, setShowAnnexureModal] = useState(false);
 
+  const grandTotal = Array.isArray(event?.items)
+    ? event.items.reduce((sum, item) => {
+        const quantity = Number(item.quantity ?? item.requested_quantity ?? 0);
+        const unitPrice = Number(item.price_per_unit ?? 0);
+        return sum + quantity * unitPrice * 1.18;
+      }, 0)
+    : 0;
+
   useEffect(() => {
     if (!event && id) {
       setFetching(true);
@@ -245,6 +253,10 @@ function EventDetails() {
                         </td>
                       </tr>
                     ))}
+                    <tr className="bg-slate-900/80">
+                      <td colSpan="3" className="p-3.5 text-right font-semibold text-slate-300">Total Amount</td>
+                      <td className="p-3.5 font-bold text-cyan-400">₹{grandTotal.toFixed(2)}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>

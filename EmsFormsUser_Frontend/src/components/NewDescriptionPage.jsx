@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { sanitizeTeamSizeInput } from '../utils/proposalHelpers';
 
 const SLOT_OPTIONS = [
   { id: 'Slot 1 (9:30 to 12:30)', label: 'Slot 1 (9:30 to 12:30)' },
@@ -25,6 +26,82 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
         [field]: value,
       },
     }));
+  };
+
+  const handleTeamSizeChange = (field, rawValue) => {
+    const stringValue = String(rawValue ?? '').trim();
+
+    if (stringValue === '') {
+      setFormData((prev) => ({
+        ...prev,
+        form: {
+          ...prev.form,
+          [field]: '',
+        },
+      }));
+      return;
+    }
+
+    const nextValue = sanitizeTeamSizeInput(rawValue, 1);
+
+    setFormData((prev) => {
+      const currentMin = Number(prev.form?.team_min ?? 1);
+      const currentMax = Number(prev.form?.team_max ?? 1);
+
+      if (field === 'team_min') {
+        const safeMin = Math.min(nextValue, currentMax || nextValue);
+        return {
+          ...prev,
+          form: {
+            ...prev.form,
+            team_min: safeMin,
+            team_max: Math.max(currentMax || safeMin, safeMin),
+          },
+        };
+      }
+
+      const safeMax = Math.max(nextValue, currentMin || 1);
+      return {
+        ...prev,
+        form: {
+          ...prev.form,
+          team_min: Math.min(currentMin || 1, safeMax),
+          team_max: safeMax,
+        },
+      };
+    });
+  };
+
+  const adjustTeamSize = (field, direction) => {
+    const currentValue = Number(formData.form?.[field] ?? 1);
+    const nextValue = Math.max(1, currentValue + direction);
+
+    setFormData((prev) => {
+      const currentMin = Number(prev.form?.team_min ?? 1);
+      const currentMax = Number(prev.form?.team_max ?? 1);
+
+      if (field === 'team_min') {
+        const safeMin = Math.min(nextValue, currentMax || nextValue);
+        return {
+          ...prev,
+          form: {
+            ...prev.form,
+            team_min: safeMin,
+            team_max: Math.max(currentMax || safeMin, safeMin),
+          },
+        };
+      }
+
+      const safeMax = Math.max(nextValue, currentMin || 1);
+      return {
+        ...prev,
+        form: {
+          ...prev.form,
+          team_min: Math.min(currentMin || 1, safeMax),
+          team_max: safeMax,
+        },
+      };
+    });
   };
 
   const handleDayCountChange = (isTwoDay) => {
@@ -559,23 +636,65 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
             <div className="grid grid-cols-2 gap-2 sm:col-span-2 sm:max-w-xs">
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1">Min Team Size</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.form?.team_min || 1}
-                  onChange={(e) => handleChange('team_min', parseInt(e.target.value) || 1)}
-                  className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.form?.team_min ?? ''}
+                    onChange={(e) => handleTeamSizeChange('team_min', e.target.value)}
+                    onBlur={(e) => handleTeamSizeChange('team_min', e.target.value === '' ? 1 : e.target.value)}
+                    className="w-full h-[54px] p-2.5 pr-9 bg-zinc-900/95 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none text-white text-base font-medium transition-all"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex flex-col w-6 border-l border-zinc-700 overflow-hidden rounded-r-xl bg-zinc-800/90">
+                    <button
+                      type="button"
+                      onClick={() => adjustTeamSize('team_min', 1)}
+                      className="flex-1 flex items-center justify-center text-[8px] leading-none text-zinc-400 bg-zinc-800/95 hover:bg-zinc-700 hover:text-sky-300 transition-colors rounded-tr-xl"
+                      aria-label="Increase minimum team size"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => adjustTeamSize('team_min', -1)}
+                      className="flex-1 flex items-center justify-center text-[8px] leading-none text-zinc-400 bg-zinc-800/95 hover:bg-zinc-700 hover:text-sky-300 transition-colors border-t border-zinc-700 rounded-br-xl"
+                      aria-label="Decrease minimum team size"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-zinc-300 mb-1">Max Team Size</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.form?.team_max || 1}
-                  onChange={(e) => handleChange('team_max', parseInt(e.target.value) || 1)}
-                  className="w-full p-2.5 bg-zinc-900 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-sky-500 outline-none text-white text-xs transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.form?.team_max ?? ''}
+                    onChange={(e) => handleTeamSizeChange('team_max', e.target.value)}
+                    onBlur={(e) => handleTeamSizeChange('team_max', e.target.value === '' ? 1 : e.target.value)}
+                    className="w-full h-[54px] p-2.5 pr-9 bg-zinc-900/95 border border-zinc-700 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none text-white text-base font-medium transition-all"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex flex-col w-6 border-l border-zinc-700 overflow-hidden rounded-r-xl bg-zinc-800/90">
+                    <button
+                      type="button"
+                      onClick={() => adjustTeamSize('team_max', 1)}
+                      className="flex-1 flex items-center justify-center text-[8px] leading-none text-zinc-400 bg-zinc-800/95 hover:bg-zinc-700 hover:text-sky-300 transition-colors rounded-tr-xl"
+                      aria-label="Increase maximum team size"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => adjustTeamSize('team_max', -1)}
+                      className="flex-1 flex items-center justify-center text-[8px] leading-none text-zinc-400 bg-zinc-800/95 hover:bg-zinc-700 hover:text-sky-300 transition-colors border-t border-zinc-700 rounded-br-xl"
+                      aria-label="Decrease maximum team size"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

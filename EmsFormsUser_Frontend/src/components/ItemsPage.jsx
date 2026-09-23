@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Trash2, Package } from 'lucide-react';
 import { userAPI } from '../api/api';
+import { calculateGrandTotal, calculateItemTotal } from '../utils/proposalHelpers';
 
 function ItemsPage({ formData, setFormData }) {
   const [masterItems, setMasterItems] = useState([]);
@@ -154,7 +155,7 @@ function ItemsPage({ formData, setFormData }) {
                       </div>
                       <div className="text-right min-w-[60px]">
                         <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</span>
-                        <span className="text-sm font-bold text-sky-400">₹{((selectedItem.quantity || 0) * (m.price_per_unit || 0)).toFixed(2)}</span>
+                        <span className="text-sm font-bold text-sky-400">₹{calculateItemTotal({ quantity: selectedItem.quantity, price_per_unit: m.price_per_unit }).toFixed(2)}</span>
                       </div>
                     </div>
                   )}
@@ -204,7 +205,7 @@ function ItemsPage({ formData, setFormData }) {
               <div className="w-full lg:w-32">
                 <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total (₹)</label>
                 <div className="w-full p-2.5 bg-slate-900/50 border border-transparent rounded-xl text-sm text-sky-300 font-bold flex items-center h-[42px]">
-                  ₹ {((item.quantity || 0) * (item.price_per_unit || 0)).toFixed(2)}
+                  ₹ {calculateItemTotal(item).toFixed(2)}
                 </div>
               </div>
               <button
@@ -228,7 +229,7 @@ function ItemsPage({ formData, setFormData }) {
 
         <div className="flex justify-between items-center pt-6 mt-6 border-t border-slate-800">
           <div className="text-sm font-medium text-slate-300 bg-slate-900/50 px-4 py-2.5 rounded-xl border border-slate-800">
-            Grand Total (inc 18% GST): <span className="text-sky-400 font-bold ml-1 text-lg">₹{((formData.items || []).reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price_per_unit || 0) * 1.18), 0)).toFixed(2)}</span>
+            Grand Total (inc 18% GST): <span className="text-sky-400 font-bold ml-1 text-lg">₹{calculateGrandTotal(formData.items || []).toFixed(2)}</span>
           </div>
         </div>
       </div>
