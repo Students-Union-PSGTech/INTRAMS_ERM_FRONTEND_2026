@@ -388,16 +388,7 @@ export async function generateEventPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  // GENERATED TIME
-  const generatedTimeStr = `PDF GENERATED TIME : ${new Date().toLocaleString('en-IN')}`;
-  const generatedTimeSize = getShrinkSize(generatedTimeStr, 480, 13.5, fontBold);
-  currentPage.drawText(generatedTimeStr, {
-    x: 55,
-    y: 220,
-    size: generatedTimeSize,
-    font: fontBold,
-    color: rgb(0, 0, 0),
-  });
+
 
   // ==========================================
   // PAGE 2: INSTRUCTIONS & GUIDELINES
@@ -963,6 +954,26 @@ export async function generateEventPdf(eventData = {}) {
   // Ensure signatures fit on the final page
   ensureSpace(80);
   drawFooterSignatures(currentPage, true);
+
+  const pages = pdfDoc.getPages();
+  const genTime = new Date().toLocaleString('en-IN');
+  for (const page of pages) {
+    page.drawText(eventId, {
+      x: 35,
+      y: 20,
+      size: 8,
+      font: fontRegular,
+      color: rgb(0, 0, 0)
+    });
+    const timeWidth = fontRegular.widthOfTextAtSize(genTime, 8);
+    page.drawText(genTime, {
+      x: pageWidth - 35 - timeWidth,
+      y: 20,
+      size: 8,
+      font: fontRegular,
+      color: rgb(0, 0, 0)
+    });
+  }
 
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });

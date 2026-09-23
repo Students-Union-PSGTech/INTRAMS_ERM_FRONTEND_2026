@@ -68,7 +68,7 @@ export default function EventsList() {
     <div>
       <PageHeader
         title="EVENTS DIRECTORY"
-        subtitle="Search, filter, and review ERM proposals across all associations"
+        subtitle="Search, filter, and review ERM proposals across all clubs"
         actions={
           <Button variant="secondary" onClick={fetchEvents}>
             REFRESH
@@ -77,7 +77,7 @@ export default function EventsList() {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-5">
-        <Input placeholder="SEARCH EVENT OR ASSOCIATION..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <Input placeholder="SEARCH EVENT OR CLUB..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           {statuses.map((s) => (
             <option key={s} value={s}>
@@ -86,7 +86,7 @@ export default function EventsList() {
           ))}
         </Select>
         <Select value={associationFilter} onChange={(e) => setAssociationFilter(e.target.value)}>
-          <option value="all">ALL ASSOCIATIONS</option>
+          <option value="all">ALL CLUBS</option>
           {associations.map((name) => (
             <option key={name} value={name}>
               {name.toUpperCase()}
@@ -113,7 +113,8 @@ export default function EventsList() {
                 <tr>
                   <Th>EVENT ID</Th>
                   <Th>EVENT NAME</Th>
-                  <Th>ASSOCIATION</Th>
+                  <Th>CLUB</Th>
+                  <Th>LAST UPDATED</Th>
                   <Th>ERM STATUS</Th>
                   <Th numeric>REQUESTED ITEMS</Th>
                   <Th></Th>
@@ -130,6 +131,7 @@ export default function EventsList() {
                       <Td className="font-mono text-[#00AEEF] font-bold">{ev.event_id || '—'}</Td>
                       <Td className="text-[#FFFFFF] font-bold">{`${ev.name || ev.event_name || 'UNTITLED'} ${ev.event_id ? `(${ev.event_id})` : ''}`.trim()}</Td>
                       <Td>{ev.club_name || '—'}</Td>
+                      <Td>{ev.updatedAt || ev.updated_at ? new Date(ev.updatedAt || ev.updated_at).toLocaleString('en-IN') : '—'}</Td>
                       <Td>
                         <Badge status={ev.status} />
                       </Td>

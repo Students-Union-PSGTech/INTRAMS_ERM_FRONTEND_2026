@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://intrams-erm-backend-2026.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 export const ASSET_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
 export const resolveAssetUrl = (fileUrl) => {
   if (!fileUrl) return '';
