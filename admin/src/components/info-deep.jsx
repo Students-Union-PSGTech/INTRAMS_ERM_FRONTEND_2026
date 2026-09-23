@@ -21,7 +21,6 @@ export default function EventDetail() {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState('');
-  const [statusLoading, setStatusLoading] = useState(false);
 
   const fetchEvent = async () => {
     try {
@@ -38,20 +37,6 @@ export default function EventDetail() {
   useEffect(() => {
     if (id) fetchEvent();
   }, [id]);
-
-  const handleStatus = async (status) => {
-    if (!event) return;
-    try {
-      setStatusLoading(true);
-      await adminAPI.updateEventStatus(event._id, status);
-      showToast(`Event marked as ${status}.`, 'success');
-      await fetchEvent();
-    } catch (err) {
-      showToast(getApiErrorMessage(err, 'Unable to update event status.'), 'error');
-    } finally {
-      setStatusLoading(false);
-    }
-  };
 
   const handlePdf = async (type) => {
     if (!event) return;
@@ -89,17 +74,6 @@ export default function EventDetail() {
       showToast(getApiErrorMessage(err, 'Unable to generate PDF.'), 'error');
     } finally {
       setPdfLoading('');
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!event || !window.confirm('Delete this event proposal?')) return;
-    try {
-      await adminAPI.deleteEvent(event._id);
-      showToast('Event deleted.', 'success');
-      navigate('/events');
-    } catch (err) {
-      showToast(getApiErrorMessage(err, 'Unable to delete event.'), 'error');
     }
   };
 
@@ -222,18 +196,7 @@ export default function EventDetail() {
             </Card>
           )}
 
-          <Card className="p-5 space-y-2">
-            <h3 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF] mb-3">ADMINISTRATIVE ACTIONS</h3>
-            <Button className="w-full" variant="success" loading={statusLoading} disabled={event.status === 'approved'} onClick={() => handleStatus('approved')}>
-              APPROVE PROPOSAL
-            </Button>
-            <Button className="w-full" variant="danger" loading={statusLoading} disabled={event.status === 'rejected'} onClick={() => handleStatus('rejected')}>
-              REJECT PROPOSAL
-            </Button>
-            <Button className="w-full" variant="ghost" onClick={handleDelete}>
-              DELETE PROPOSAL
-            </Button>
-          </Card>
+
         </div>
       </div>
     </div>
