@@ -6,7 +6,7 @@ function RoundsPage({ formData, setFormData, errors = {} }) {
     setFormData((prev) => {
       const currentRounds = prev.rounds || [];
       const newRound = {
-        name: `Round ${currentRounds.length + 1}`,
+        name: '',
         description: '',
         rules: [''],
         num_participants: 50,
@@ -47,6 +47,25 @@ function RoundsPage({ formData, setFormData, errors = {} }) {
       updated[index] = { ...updated[index], [field]: value };
       return { ...prev, rounds: updated };
     });
+  };
+
+  const handleParticipantCountChange = (roundIdx, rawValue) => {
+    const stringValue = String(rawValue ?? '').trim();
+
+    if (stringValue === '') {
+      updateRound(roundIdx, 'num_participants', '');
+      return;
+    }
+
+    const parsed = Number.parseInt(String(rawValue), 10);
+    const safeValue = Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
+    updateRound(roundIdx, 'num_participants', safeValue);
+  };
+
+  const adjustParticipantCount = (roundIdx, direction) => {
+    const currentValue = Number(formData.rounds?.[roundIdx]?.num_participants ?? 1);
+    const nextValue = Math.max(1, currentValue + direction);
+    updateRound(roundIdx, 'num_participants', nextValue);
   };
 
   const addRule = (roundIdx) => {
@@ -150,7 +169,7 @@ function RoundsPage({ formData, setFormData, errors = {} }) {
               </label>
               <input
                 type="text"
-                placeholder="e.g., Preliminary Round, Semi-Finals, Grand Finale"
+                placeholder={`Round ${rIdx + 1}`}
                 value={round.name || ''}
                 onChange={(e) => updateRound(rIdx, 'name', e.target.value)}
                 className="w-full p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none text-white text-sm placeholder-slate-500 font-medium transition-all"
@@ -212,14 +231,35 @@ function RoundsPage({ formData, setFormData, errors = {} }) {
                 <label className="block text-xs font-bold text-sky-200/90 uppercase tracking-wider mb-1.5">
                   Number of Participants <span className="text-rose-400">*</span>
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="e.g., 50"
-                  value={round.num_participants || 50}
-                  onChange={(e) => updateRound(rIdx, 'num_participants', parseInt(e.target.value) || 1)}
-                  className="w-full p-3.5 bg-slate-950/80 border border-slate-800 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none text-white text-sm font-medium transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="e.g., 50"
+                    value={round.num_participants ?? ''}
+                    onChange={(e) => handleParticipantCountChange(rIdx, e.target.value)}
+                    onBlur={(e) => handleParticipantCountChange(rIdx, e.target.value === '' ? 1 : e.target.value)}
+                    className="w-full h-[52px] p-3.5 pr-9 bg-slate-950/80 border border-slate-800 rounded-xl focus:ring-2 focus:ring-sky-500 outline-none text-white text-sm font-medium transition-all"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex flex-col w-6 border-l border-slate-700 overflow-hidden rounded-r-xl bg-slate-800/90">
+                    <button
+                      type="button"
+                      onClick={() => adjustParticipantCount(rIdx, 1)}
+                      className="flex-1 flex items-center justify-center text-[8px] leading-none text-slate-300 bg-slate-800/95 hover:bg-slate-700 hover:text-sky-300 transition-colors rounded-tr-xl"
+                      aria-label="Increase participant count"
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => adjustParticipantCount(rIdx, -1)}
+                      className="flex-1 flex items-center justify-center text-[8px] leading-none text-slate-300 bg-slate-800/95 hover:bg-slate-700 hover:text-sky-300 transition-colors border-t border-slate-700 rounded-br-xl"
+                      aria-label="Decrease participant count"
+                    >
+                      ▼
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div>

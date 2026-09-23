@@ -217,7 +217,7 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
       <div className="space-y-4">
         <h3 className="text-sm font-extrabold text-white uppercase tracking-wider font-heading">Secretary Details</h3>
         {renderStudentForm('Secretary 1', secs[0] || {}, (f, v) => updateSecretary(0, f, v), true)}
-        {renderStudentForm('Secretary 2', secs[1] || {}, (f, v) => updateSecretary(1, f, v), false)}
+        {renderStudentForm('Secretary 2', secs[1] || {}, (f, v) => updateSecretary(1, f, v), true)}
       </div>
 
       {/* Convenor Details */}
