@@ -130,6 +130,18 @@ export async function generateEventPdf(eventData = {}) {
     [judgeObj.name || '', judgeObj.designation || '', judgeObj.mobile || judgeObj.phone || '']
   ] : [];
 
+  const chiefGuestObj = ev.contacts?.chief_guest || ev.chief_guest || {};
+  const chiefGuestRows = chiefGuestObj.name && chiefGuestObj.name.trim() ? [
+    [
+      chiefGuestObj.name || '',
+      chiefGuestObj.designation || '',
+      String(chiefGuestObj.remuneration || ''),
+      chiefGuestObj.accommodation_required ? 'Yes' : 'No',
+      chiefGuestObj.travel_required ? 'Yes' : 'No',
+      chiefGuestObj.short_note || ''
+    ]
+  ] : [];
+
   let currentPage;
   let currentY;
 
@@ -546,6 +558,14 @@ export async function generateEventPdf(eventData = {}) {
     currentPage.drawText('Judge Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
     currentY -= 12;
     drawPage3Table(tX, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], judgeRows);
+  }
+
+  // Chief Guest Details
+  if (chiefGuestRows.length > 0) {
+    ensureSpace(45);
+    currentPage.drawText('Chief Guest Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+    currentY -= 12;
+    drawPage3Table(tX, [80, 90, 80, 50, 50, 135.28], ['Name', 'Designation', 'Remuneration', 'Accomm.', 'Travel', 'Note'], chiefGuestRows);
   }
 
   // ==========================================

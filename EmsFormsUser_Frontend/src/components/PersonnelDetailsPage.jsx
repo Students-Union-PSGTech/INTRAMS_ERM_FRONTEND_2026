@@ -29,6 +29,20 @@ const YEARS = ['Select Year', 'I Year', 'II Year', 'III Year', 'IV Year', 'M.Sc 
 
 function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
   const [hasJudge, setHasJudge] = React.useState(!!formData.contacts?.judge?.name);
+  const [hasChiefGuest, setHasChiefGuest] = React.useState(!!formData.contacts?.chief_guest?.name);
+
+  const updateChiefGuest = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      contacts: {
+        ...(prev.contacts || {}),
+        chief_guest: {
+          ...(prev.contacts?.chief_guest || {}),
+          [field]: value
+        }
+      }
+    }));
+  };
 
   const updateSecretary = (index, field, value) => {
     setFormData((prev) => {
@@ -122,6 +136,7 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
   ];
   const faculty = formData.contacts?.faculty_advisor || { name: '', designation: '', mobile: '' };
   const judge = formData.contacts?.judge || { name: '', designation: '', mobile: '' };
+  const chief_guest = formData.contacts?.chief_guest || { name: '', designation: '', remuneration: '', accommodation_required: false, travel_required: false, short_note: '' };
 
   const renderStudentForm = (title, data, onUpdate, isRequired = true) => (
     <div className="glass-card border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
@@ -347,6 +362,111 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
                 className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
               />
             </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Chief Guest Details */}
+      <div className="space-y-4 pt-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-1.5 font-heading">
+            Chief Guest Details
+          </h3>
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-sky-200">
+            <input 
+              type="checkbox" 
+              className="accent-sky-500 w-4 h-4"
+              checked={hasChiefGuest}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setHasChiefGuest(checked);
+                if (!checked) {
+                  updateChiefGuest('name', '');
+                  updateChiefGuest('designation', '');
+                  updateChiefGuest('remuneration', '');
+                  updateChiefGuest('accommodation_required', false);
+                  updateChiefGuest('travel_required', false);
+                  updateChiefGuest('short_note', '');
+                }
+              }}
+            />
+            Include Chief Guest Details
+          </label>
+        </div>
+
+        {hasChiefGuest && (
+          <div className="glass-card border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
+                  Name <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Chief Guest Name"
+                  value={chief_guest.name || ''}
+                  onChange={(e) => updateChiefGuest('name', e.target.value)}
+                  className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
+                  Designation <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. CEO / Director"
+                  value={chief_guest.designation || ''}
+                  onChange={(e) => updateChiefGuest('designation', e.target.value)}
+                  className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
+                  Remuneration <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 5000 or None"
+                  value={chief_guest.remuneration || ''}
+                  onChange={(e) => updateChiefGuest('remuneration', e.target.value)}
+                  className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
+                />
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-[11px] font-bold text-sky-200/90 uppercase cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="accent-sky-500 w-4 h-4"
+                    checked={chief_guest.accommodation_required || false}
+                    onChange={(e) => updateChiefGuest('accommodation_required', e.target.checked)}
+                  />
+                  Accommodation required
+                </label>
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-[11px] font-bold text-sky-200/90 uppercase cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="accent-sky-500 w-4 h-4"
+                    checked={chief_guest.travel_required || false}
+                    onChange={(e) => updateChiefGuest('travel_required', e.target.checked)}
+                  />
+                  Travel required
+                </label>
+              </div>
+              <div className="col-span-1 sm:col-span-2 lg:col-span-3">
+                <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
+                  Short note on the Chief guest
+                </label>
+                <textarea
+                  placeholder="Brief note about the chief guest..."
+                  value={chief_guest.short_note || ''}
+                  onChange={(e) => updateChiefGuest('short_note', e.target.value)}
+                  className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500 resize-none h-20"
+                />
+              </div>
             </div>
           </div>
         )}
