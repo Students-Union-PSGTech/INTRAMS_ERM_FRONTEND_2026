@@ -62,10 +62,17 @@ export default function Sidebar({ onItemClick, onClose, isMobile = false }) {
 
   return (
     <div className="flex h-full flex-col bg-[#050505] border-r border-[#252525] text-[#FFFFFF]">
-      <div className="border-b border-[#252525] px-5 py-4 bg-[#000000] flex items-center justify-between">
-        <div>
-          <div className="font-heading text-[18px] font-bold tracking-[0.16em] text-[#FFFFFF]">INTRAMS</div>
-          <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.25em] text-[#00AEEF]">ADMIN PORTAL</div>
+      <div className="border-b border-[#252525] px-4 py-3.5 bg-[#000000] flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <img
+            src="/intrams_logo.png"
+            alt="INTRAMS 2026"
+            className="h-10 w-auto object-contain drop-shadow-[0_0_10px_rgba(0,174,239,0.35)]"
+          />
+          <div>
+            <div className="font-heading text-[16px] font-bold tracking-[0.16em] text-[#FFFFFF]">INTRAMS</div>
+            <div className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.25em] text-[#00AEEF]">ADMIN PORTAL</div>
+          </div>
         </div>
         {isMobile && (
           <button

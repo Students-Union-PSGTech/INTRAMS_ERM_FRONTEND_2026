@@ -15,9 +15,11 @@ function Navbar() {
   return (
     <header className="bg-slate-950/85 backdrop-blur-xl border-b border-cyan-500/20 px-6 py-4 text-white shadow-xl flex items-center justify-between sticky top-0 z-40">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
-          <ShieldCheck className="w-5 h-5 text-white" />
-        </div>
+        <img
+          src="/intrams_logo.png"
+          alt="INTRAMS 2026"
+          className="h-10 w-auto object-contain drop-shadow-[0_0_10px_rgba(56,189,248,0.35)]"
+        />
         <div>
           <h1 className="text-lg font-bold text-white font-heading leading-tight">INTRAMS Admin Portal</h1>
           <p className="text-xs text-sky-300/70">{user?.username || 'Administrator'}</p>

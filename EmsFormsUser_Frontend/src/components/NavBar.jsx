@@ -32,9 +32,11 @@ function NavBar({ showSidebarToggle = false, onToggleMobileMenu, mobileMenuOpen 
             )}
 
             <div className="flex items-center gap-2 sm:gap-3 cursor-pointer group min-w-0" onClick={() => navigate('/home')}>
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-black flex items-center justify-center shadow-lg shadow-sky-500/20 group-hover:scale-105 transition-transform text-xs sm:text-sm flex-shrink-0">
-                <span>INT</span>
-              </div>
+              <img
+                src="/intrams_logo.png"
+                alt="INTRAMS 2026"
+                className="h-9 sm:h-11 w-auto object-contain group-hover:scale-105 transition-transform drop-shadow-[0_0_12px_rgba(56,189,248,0.35)] flex-shrink-0"
+              />
               <div className="min-w-0 truncate">
                 <div className="flex items-center gap-2 truncate">
                   <h1 className="font-extrabold text-white leading-tight font-heading text-xs sm:text-base truncate">INTRAMS ERM</h1>

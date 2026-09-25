@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64';
-import { KRIYA_LOGO_BASE64 } from './kriyaLogoBase64';
+import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64';
 
 /**
  * Generates exact high-fidelity LAB CONFIRMATION FORM PDF matching official PSG College of Technology standard.
@@ -20,13 +20,17 @@ export async function generateLabPdf(eventData = {}) {
     // Watermark removed
   };
 
-  // Helper to load PNG image from base64 or fallback URL
-  const loadPng = async (base64Str, fallbackUrl) => {
+  // Helper to load image from base64 or fallback URL
+  const loadImg = async (base64Str, fallbackUrl, fallbackUrl2) => {
     try {
       if (base64Str) {
-        const cleanBase64 = base64Str.replace(/^data:image\/png;base64,/, '');
+        const cleanBase64 = base64Str.replace(/^data:image\/[a-z]+;base64,/, '');
         const bytes = Uint8Array.from(atob(cleanBase64), (c) => c.charCodeAt(0));
-        return await pdfDoc.embedPng(bytes);
+        try {
+          return await pdfDoc.embedJpg(bytes);
+        } catch (_) {
+          return await pdfDoc.embedPng(bytes);
+        }
       }
     } catch (_) { /* ignore */ }
 
@@ -35,14 +39,33 @@ export async function generateLabPdf(eventData = {}) {
         const res = await fetch(fallbackUrl);
         if (res.ok) {
           const bytes = await res.arrayBuffer();
-          return await pdfDoc.embedPng(bytes);
+          try {
+            return await pdfDoc.embedJpg(bytes);
+          } catch (_) {
+            return await pdfDoc.embedPng(bytes);
+          }
+        }
+      }
+    } catch (_) { /* ignore */ }
+
+    try {
+      if (fallbackUrl2) {
+        const res = await fetch(fallbackUrl2);
+        if (res.ok) {
+          const bytes = await res.arrayBuffer();
+          try {
+            return await pdfDoc.embedPng(bytes);
+          } catch (_) {
+            return await pdfDoc.embedJpg(bytes);
+          }
         }
       }
     } catch (_) { /* ignore */ }
     return null;
   };
 
-  const psgLogo = await loadPng(PSG_LOGO_BASE64, '/psg_logo.png');
+  const psgLogo = await loadImg(PSG_LOGO_BASE64, '/psg_logo.png');
+  const intramsLogo = await loadImg(INTRAMS_LOGO_BASE64, '/intrams_logo.jpg', '/intrams_logo.png');
 
   // Extract Event Details
   const associationName =
@@ -171,8 +194,17 @@ export async function generateLabPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  // Center Logo area left blank as requested for different event logos
-  // (Reserved vertical space ~ 115pt left blank)
+  // Center INTRAMS 2K26 Festival Logo
+  if (intramsLogo) {
+    const logoW = 210;
+    const logoH = 140;
+    page1.drawImage(intramsLogo, {
+      x: (pageWidth - logoW) / 2,
+      y: 530,
+      width: logoW,
+      height: logoH,
+    });
+  }
 
   // INTRAMS 2026 Header
   const kriyaText = 'INTRAMS 2026';

@@ -25,30 +25,39 @@ function Sidebar({ mobile = false, onClose }) {
     <aside className="w-full h-full bg-slate-950/90 border-r border-slate-800/80 text-white flex flex-col justify-between p-5 font-sans backdrop-blur-2xl shadow-2xl overflow-y-auto">
       <div>
         {/* Header */}
-        <div className="pb-5 mb-5 border-b border-slate-800/80 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-extrabold text-white tracking-tight leading-tight font-heading">
-              CONVENOR<br />
-              <span className="text-white">PORTAL</span>
-            </h2>
-            {user?.username && (
-              <div className="mt-3 px-3 py-1.5 bg-slate-900/90 border border-sky-500/30 rounded-xl inline-flex items-center gap-2 max-w-full overflow-hidden shadow-inner">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse" />
-                <span className="text-xs font-mono font-bold text-sky-400 truncate uppercase tracking-wider">
-                  {user.username}
-                </span>
+        <div className="pb-5 mb-5 border-b border-slate-800/80">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img
+                src="/intrams_logo.png"
+                alt="INTRAMS 2026"
+                className="h-11 w-auto object-contain drop-shadow-[0_0_12px_rgba(56,189,248,0.35)]"
+              />
+              <div>
+                <h2 className="text-base font-extrabold text-white tracking-tight leading-tight font-heading">
+                  CONVENOR <span className="text-sky-400">PORTAL</span>
+                </h2>
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest font-semibold">INTRAMS 2026</span>
               </div>
+            </div>
+            {mobile && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
             )}
           </div>
-          {mobile && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white border border-slate-800 transition-colors"
-              aria-label="Close menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          {user?.username && (
+            <div className="mt-3 px-3 py-1.5 bg-slate-900/90 border border-sky-500/30 rounded-xl inline-flex items-center gap-2 max-w-full overflow-hidden shadow-inner">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 animate-pulse" />
+              <span className="text-xs font-mono font-bold text-sky-400 truncate uppercase tracking-wider">
+                {user.username}
+              </span>
+            </div>
           )}
         </div>
 

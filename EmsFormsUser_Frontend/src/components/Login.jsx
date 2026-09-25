@@ -77,11 +77,15 @@ function Login() {
 
       <div className="relative z-10 w-full max-w-sm bg-zinc-950/90 backdrop-blur-xl rounded-xl shadow-lg border border-zinc-800 p-6">
         <div className="text-center mb-5">
-          <div className="w-12 h-12 bg-white text-black rounded-lg mx-auto mb-3 flex items-center justify-center shadow-md">
-            <LogIn className="w-6 h-6 text-black" />
+          <div className="mx-auto mb-3 flex items-center justify-center">
+            <img
+              src="/intrams_logo.png"
+              alt="INTRAMS 2026"
+              className="h-20 sm:h-24 w-auto object-contain drop-shadow-[0_0_20px_rgba(56,189,248,0.45)] hover:scale-105 transition-transform"
+            />
           </div>
-          <h2 className="text-lg font-bold text-white tracking-tight">INTRAMS Login</h2>
-          <p className="text-zinc-400 text-xs mt-1">Login to manage and submit event proposals</p>
+          <h2 className="text-lg font-bold text-white tracking-tight">Convenor Portal Login</h2>
+          <p className="text-zinc-400 text-xs mt-1">Students' Union INTRAMS 2026 - Event Resource Management</p>
         </div>
 
         {error && (

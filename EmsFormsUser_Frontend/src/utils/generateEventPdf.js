@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64';
+import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64';
 
 /**
  * Generates exact high-fidelity 5-Page EVENT RESOURCE FORM PDF matching official PSG College of Technology INTRAMS standard.
@@ -29,6 +30,34 @@ export async function generateEventPdf(eventData = {}) {
         psgLogo = await pdfDoc.embedPng(bytes);
       }
     } catch (_) { /* ignore */ }
+  }
+
+  // Load INTRAMS Festival Logo
+  let intramsLogo = null;
+  try {
+    const cleanBase64 = INTRAMS_LOGO_BASE64.replace(/^data:image\/[a-z]+;base64,/, '');
+    const bytes = Uint8Array.from(atob(cleanBase64), (c) => c.charCodeAt(0));
+    try {
+      intramsLogo = await pdfDoc.embedJpg(bytes);
+    } catch (_) {
+      intramsLogo = await pdfDoc.embedPng(bytes);
+    }
+  } catch (_) {
+    try {
+      const res = await fetch('/intrams_logo.jpg');
+      if (res.ok) {
+        const bytes = await res.arrayBuffer();
+        intramsLogo = await pdfDoc.embedJpg(bytes);
+      }
+    } catch (_) {
+      try {
+        const resPng = await fetch('/intrams_logo.png');
+        if (resPng.ok) {
+          const bytes = await resPng.arrayBuffer();
+          intramsLogo = await pdfDoc.embedPng(bytes);
+        }
+      } catch (_) { /* ignore */ }
+    }
   }
 
   // Draw Page Border Frame
@@ -305,6 +334,18 @@ export async function generateEventPdf(eventData = {}) {
     font: fontBold,
     color: rgb(0, 0, 0),
   });
+
+  // INTRAMS 2K26 Festival Logo
+  if (intramsLogo) {
+    const logoW = 210;
+    const logoH = 140;
+    currentPage.drawImage(intramsLogo, {
+      x: (pageWidth - logoW) / 2,
+      y: 518,
+      width: logoW,
+      height: logoH,
+    });
+  }
 
   // INTRAMS 2026 Header
   const intramsText = 'INTRAMS 2026';

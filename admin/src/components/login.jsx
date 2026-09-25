@@ -48,7 +48,14 @@ export default function Login() {
 
       <div className="relative z-10 w-full max-w-[440px] border border-[#252525] bg-[#050505] p-8 shadow-[0_0_40px_rgba(0,174,239,0.12)]">
         <div className="mb-6 text-center">
-          <div className="font-heading text-[22px] font-bold uppercase tracking-[0.2em] text-[#FFFFFF]">INTRAMS</div>
+          <div className="mx-auto mb-3 flex items-center justify-center">
+            <img
+              src="/intrams_logo.png"
+              alt="INTRAMS 2026"
+              className="h-20 sm:h-24 w-auto object-contain drop-shadow-[0_0_20px_rgba(0,174,239,0.4)] hover:scale-105 transition-transform"
+            />
+          </div>
+          <div className="font-heading text-[20px] font-bold uppercase tracking-[0.2em] text-[#FFFFFF]">INTRAMS 2026</div>
           <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.25em] text-[#00AEEF]">ADMIN PORTAL</div>
         </div>
 
