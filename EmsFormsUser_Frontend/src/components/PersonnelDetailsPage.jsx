@@ -1,8 +1,7 @@
 import React from 'react';
 import { Users, UserCheck, ShieldCheck, Award } from 'lucide-react';
 
-const DEPARTMENTS = [
-  'Select Department',
+const ENGINEERING_DEPARTMENTS = [
   'Apparel & Fashion Design',
   'Applied Science',
   'Automobile Engineering',
@@ -25,7 +24,23 @@ const DEPARTMENTS = [
   'Textile Technology'
 ];
 
-const YEARS = ['Select Year', 'I Year', 'II Year', 'III Year', 'IV Year', 'M.Sc 5-yr'];
+const MSC_PROGRAMMES = [
+  'M.Sc. Applied Mathematics',
+  'M.Sc. Computational Finance',
+  'M.Sc. Cyber Security',
+  'M.Sc. Data Science',
+  'M.Sc. Software Systems',
+  'M.Sc. Theoretical Computer Science',
+  'M.Sc. Fashion Design & Merchandising'
+];
+
+const DEPARTMENTS = [
+  'Select Department',
+  ...ENGINEERING_DEPARTMENTS,
+  ...MSC_PROGRAMMES
+];
+
+const YEARS = ['Select Year', 'I Year', 'II Year', 'III Year', 'IV Year', 'V Year', 'M.Sc 5-yr'];
 
 function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
   const [hasJudge, setHasJudge] = React.useState(!!formData.contacts?.judge?.name);
@@ -189,11 +204,21 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
             onChange={(e) => onUpdate('department', e.target.value)}
             className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none"
           >
-            {DEPARTMENTS.map((dept, i) => (
-              <option key={i} value={dept === 'Select Department' ? '' : dept} className="bg-slate-900 text-white">
-                {dept}
-              </option>
-            ))}
+            <option value="" className="bg-slate-900 text-white">Select Department</option>
+            <optgroup label="Departments / Engineering" className="bg-slate-900 text-sky-400 font-bold">
+              {ENGINEERING_DEPARTMENTS.map((dept, i) => (
+                <option key={`eng-${i}`} value={dept} className="bg-slate-900 text-white font-normal">
+                  {dept}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="M.Sc. Programmes" className="bg-slate-900 text-sky-400 font-bold">
+              {MSC_PROGRAMMES.map((dept, i) => (
+                <option key={`msc-${i}`} value={dept} className="bg-slate-900 text-white font-normal">
+                  {dept}
+                </option>
+              ))}
+            </optgroup>
           </select>
         </div>
         <div>

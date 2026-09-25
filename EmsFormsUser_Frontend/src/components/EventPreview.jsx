@@ -115,6 +115,7 @@ function EventPreview({ formData }) {
                   <div><span className="text-slate-400">Name:</span> {conv.name}</div>
                   <div><span className="text-slate-400">Roll No:</span> {conv.roll_number || 'N/A'}</div>
                   <div><span className="text-slate-400">Mobile:</span> {conv.mobile || 'N/A'}</div>
+                  {conv.department && <div><span className="text-slate-400">Dept:</span> {conv.department}</div>}
                 </div>
             ))}
 
