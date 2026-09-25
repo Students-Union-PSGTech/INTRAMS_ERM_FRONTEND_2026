@@ -103,12 +103,12 @@ export async function generateEventPdf(eventData = {}) {
 
   // Extract Event Data fields safely
   const ev = eventData || {};
-  const formSpecs = ev.form || {};
-  const clubName = ev.associationName || ev.club_name || ev.clubName || ev.association || formSpecs.associationName || 'Students Union';
+  const formSpecs = ev.form || ev.form_specs || {};
+  const clubName = ev.associationName || ev.club_name || ev.clubName || ev.association || formSpecs.associationName || ev.club_id?.club_name || 'Students Union';
   const eventId = ev.event_id || ev.id || ev._id || 'EVNT47';
   const rawEventName = ev.name || ev.event_name || ev.eventName || formSpecs.eventName || 'sample_event';
-  const eventName = `${rawEventName} ${eventId ? `(${eventId})` : ''}`.trim();
-  const tagline = ev.tagline || formSpecs.tagline || 'Find the time complexity';
+  const eventName = eventId && !rawEventName.includes(eventId) ? `${rawEventName} (${eventId})` : rawEventName;
+  const tagline = ev.tagline || formSpecs.tagline || '—';
   const about = ev.about || ev.description || formSpecs.about || '—';
 
   const formatYear = (yearStr) => {
@@ -123,32 +123,35 @@ export async function generateEventPdf(eventData = {}) {
     return y.includes('YEAR') ? y : `${y} YEAR`;
   };
 
-  const rawSec = ev.contacts?.secretaries || ev.secretaries || ev.contacts?.secretary;
+  const rawSec = ev.contacts?.secretaries || ev.secretaries || ev.contacts?.secretary || ev.secretary;
   const secretarialList = rawSec ? (Array.isArray(rawSec) ? rawSec : [rawSec]) : [];
-  const secRows = secretarialList.length > 0
-    ? secretarialList.map(s => [s.name || '', s.roll_number || s.rollNo || '', s.mobile || s.phone || '', s.department || '', formatYear(s.year)])
+  const validSecs = secretarialList.filter(s => s && ((s.name && s.name.trim()) || (s.roll_number && String(s.roll_number).trim())));
+  const secRows = validSecs.length > 0
+    ? validSecs.map(s => [s.name || '', s.roll_number || s.rollNo || '', s.mobile || s.phone || '', s.department || '', formatYear(s.year)])
     : [
       ['', '', '', '', '']
     ];
 
-  const rawConv = ev.contacts?.convenors || ev.convenors || ev.contacts?.convenor;
+  const rawConv = ev.contacts?.convenors || ev.convenors || ev.contacts?.convenor || ev.convenor;
   const convenorList = rawConv ? (Array.isArray(rawConv) ? rawConv : [rawConv]) : [];
-  const convRows = convenorList.length > 0
-    ? convenorList.map(c => [c.name || '', c.roll_number || c.rollNo || '', c.mobile || c.phone || '', c.department || '', formatYear(c.year)])
+  const validConvs = convenorList.filter(c => c && ((c.name && c.name.trim()) || (c.roll_number && String(c.roll_number).trim())));
+  const convRows = validConvs.length > 0
+    ? validConvs.map(c => [c.name || '', c.roll_number || c.rollNo || '', c.mobile || c.phone || '', c.department || '', formatYear(c.year)])
     : [
       ['', '', '', '', '']
     ];
 
-  const rawVol = ev.contacts?.volunteers || ev.volunteers || ev.contacts?.volunteer;
+  const rawVol = ev.contacts?.volunteers || ev.volunteers || ev.contacts?.volunteer || ev.volunteer;
   const volunteerList = rawVol ? (Array.isArray(rawVol) ? rawVol : [rawVol]) : [];
-  const volRows = volunteerList.length > 0
-    ? volunteerList.map(v => [v.name || '', v.roll_number || v.rollNo || '', v.mobile || v.phone || '', v.department || '', formatYear(v.year)])
+  const validVols = volunteerList.filter(v => v && ((v.name && v.name.trim()) || (v.roll_number && String(v.roll_number).trim())));
+  const volRows = validVols.length > 0
+    ? validVols.map(v => [v.name || '', v.roll_number || v.rollNo || '', v.mobile || v.phone || '', v.department || '', formatYear(v.year)])
     : [
       ['', '', '', '', '']
     ];
 
-  const facultyObj = ev.contacts?.faculty_advisor || ev.facultyAdvisor || {};
-  const facRows = facultyObj.name ? [
+  const facultyObj = ev.contacts?.faculty_advisor || ev.facultyAdvisor || ev.contacts?.facultyAdvisor || {};
+  const facRows = (facultyObj.name && facultyObj.name.trim()) ? [
     [facultyObj.name || '', facultyObj.designation || '', facultyObj.mobile || facultyObj.phone || '']
   ] : [
     ['', '', '']
@@ -159,15 +162,15 @@ export async function generateEventPdf(eventData = {}) {
     [judgeObj.name || '', judgeObj.designation || '', judgeObj.mobile || judgeObj.phone || '']
   ] : [];
 
-  const chiefGuestObj = ev.contacts?.chief_guest || ev.chief_guest || {};
+  const chiefGuestObj = ev.contacts?.chief_guest || ev.chief_guest || ev.contacts?.chiefGuest || {};
   const chiefGuestRows = chiefGuestObj.name && chiefGuestObj.name.trim() ? [
     [
       chiefGuestObj.name || '',
       chiefGuestObj.designation || '',
-      String(chiefGuestObj.remuneration || ''),
+      String(chiefGuestObj.remuneration || '—'),
       chiefGuestObj.accommodation_required ? 'Yes' : 'No',
       chiefGuestObj.travel_required ? 'Yes' : 'No',
-      chiefGuestObj.short_note || ''
+      chiefGuestObj.short_note || '—'
     ]
   ] : [];
 
@@ -607,15 +610,13 @@ export async function generateEventPdf(eventData = {}) {
     if (!rows || rows.length === 0) return;
     const headerH = 22;
     const rowH = 22;
-    const titleGap = 16;
-    const postGap = 22;
+    const titleGap = 14;
+    const postGap = 16;
     const neededSpace = titleGap + headerH + (rows.length * rowH) + postGap;
 
-    // Check if entire section fits; if not, check if at least title + header + 1 row fits
+    // Check if entire section fits; if not, cleanly move to next page
     if (currentY - neededSpace < 95) {
-      if (currentY - (titleGap + headerH + rowH + postGap) < 95) {
-        createNewPage();
-      }
+      createNewPage();
     }
 
     currentPage.drawText(title, { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
@@ -677,7 +678,7 @@ export async function generateEventPdf(eventData = {}) {
     borderWidth: 1.2,
   });
 
-  const eventDayText = formSpecs.is_two_day ? '2 Days Event' : (formSpecs.day || 'N/A');
+  const eventDayText = formSpecs.is_two_day ? '2 Days Event' : (formSpecs.day || 'Day 1');
   currentPage.drawText(`Event Day: ${eventDayText}`, { x: gridBoxX + 15, y: currentY - 24, size: 11, font: fontBold, color: rgb(0, 0, 0) });
 
   currentY -= box1H;
@@ -694,9 +695,9 @@ export async function generateEventPdf(eventData = {}) {
     borderWidth: 1.2,
   });
 
-  const roundsCount = Array.isArray(ev.rounds) ? ev.rounds.length : 2;
-  const expectedParticipants = ev.expectedParticipants || formSpecs.expectedParticipants || 7;
-  const durationText = formSpecs.duration || ev.duration || '11';
+  const roundsCount = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds.length : (formSpecs.num_rounds || 1);
+  const expectedParticipants = ev.expectedParticipants || formSpecs.expectedParticipants || ev.expected_participants || formSpecs.expected_participants || '—';
+  const durationText = formSpecs.duration || ev.duration || '—';
 
   currentPage.drawText(`No. of Rounds: ${roundsCount}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   currentPage.drawText(`Expected no of Participants: ${expectedParticipants}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
@@ -724,7 +725,7 @@ export async function generateEventPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  const pType = String(formSpecs.participant_type || ev.participant_type || '').toLowerCase();
+  const pType = String(formSpecs.participant_type || ev.participant_type || 'Solo').toLowerCase();
   const isTeam = pType.includes('team');
   currentPage.drawText('Individual:', { x: gridBoxX + 15, y: currentY - 30, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   drawRadioCircle(gridBoxX + 85, currentY - 26, !isTeam);
@@ -749,8 +750,8 @@ export async function generateEventPdf(eventData = {}) {
   });
 
   const hallsCount = formSpecs.halls_required || 1;
-  const preferredHalls = formSpecs.preferred_halls || ev.preferred_halls || '1123';
-  const reasonForHalls = formSpecs.reason_for_halls || ',n, ,';
+  const preferredHalls = formSpecs.preferred_halls || ev.preferred_halls || '—';
+  const reasonForHalls = formSpecs.reason_for_halls || '—';
 
   currentPage.drawText(`No of Halls Required: ${hallsCount}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   currentPage.drawText(`Preferred Halls: ${preferredHalls}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
@@ -793,12 +794,32 @@ export async function generateEventPdf(eventData = {}) {
   });
 
   const extBoxesCount = formSpecs.extension_boxes || 0;
-  const reasonExt = formSpecs.reason_for_extension_boxes || 'bhk';
+  const reasonExt = formSpecs.reason_for_extension_boxes || (extBoxesCount > 0 ? 'Required for event equipment' : '—');
 
-  currentPage.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : ''}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : '0'}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   currentPage.drawText(`Reason: ${reasonExt}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
 
   currentY -= box6H;
+
+  // Optional Box 7: Lab Requirements
+  if (formSpecs.labs_required || formSpecs.lab_name) {
+    const box7H = 65;
+    ensureSpace(box7H + 10);
+    currentPage.drawRectangle({
+      x: gridBoxX,
+      y: currentY - box7H,
+      width: gridBoxWidth,
+      height: box7H,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+    });
+    currentPage.drawText('Lab Requirements:', { x: gridBoxX + 15, y: currentY - 20, size: 11, font: fontBold, color: rgb(0, 0, 0) });
+    const labNameStr = formSpecs.lab_name ? `${formSpecs.lab_name} (${formSpecs.lab_block || ''}, Floor: ${formSpecs.lab_floor || 'N/A'}, Lab No: ${formSpecs.lab_no || 'N/A'})` : 'Yes';
+    currentPage.drawText(`Allotted Lab: ${labNameStr}`, { x: gridBoxX + 35, y: currentY - 38, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+    const labSlotStr = formSpecs.is_two_day_lab ? `Day 1: ${formSpecs.lab_session_slot || 'Slot 1'}, Day 2: ${formSpecs.lab_session_slot_day2 || 'Slot 2'}` : `${formSpecs.lab_day || 'Day 1'} - ${formSpecs.lab_session_slot || 'Slot 1'}`;
+    currentPage.drawText(`Lab Schedule: ${labSlotStr}`, { x: gridBoxX + 35, y: currentY - 52, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+    currentY -= box7H;
+  }
 
   // ==========================================
   // PAGE 5: EVENT DESCRIPTION & ROUND RULES
@@ -888,11 +909,11 @@ export async function generateEventPdf(eventData = {}) {
   currentY -= 20;
 
   const roundsList = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds : [
-    { name: 'dfbngf', description: 'iokj', rules: ['njjnj'] }
+    { name: 'Round 1', description: '—', rules: ['Rules to be announced'] }
   ];
 
   roundsList.forEach((rd, rIdx) => {
-    ensureSpace(120); // ensure space for round header + some content
+    ensureSpace(100);
 
     currentY -= 10;
     currentY = drawSectionHeader(currentPage, `ROUND ${rIdx + 1} : ${rd.name || `Round ${rIdx + 1}`}`, currentY);
@@ -900,10 +921,10 @@ export async function generateEventPdf(eventData = {}) {
     if (rd.description) {
       ensureSpace(40);
       currentY = drawSubHeader(currentPage, 'Description', currentY);
-      const descLines = wrapText(rd.description, 480, fontRegular, 12);
+      const descLines = wrapText(rd.description, 480, fontRegular, 11);
       descLines.forEach(line => {
-        ensureSpace(20);
-        currentPage.drawText(line, { x: 55, y: currentY, size: 12, font: fontRegular, color: rgb(0, 0, 0) });
+        ensureSpace(18);
+        currentPage.drawText(line, { x: 55, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
         currentY -= 16;
       });
       currentY -= 10;
@@ -913,10 +934,13 @@ export async function generateEventPdf(eventData = {}) {
     currentY = drawSubHeader(currentPage, 'Round Rules', currentY);
     const rules = Array.isArray(rd.rules) && rd.rules.length > 0 ? rd.rules : ['None'];
     rules.forEach((rl) => {
-      const rlLines = wrapText(`• ${rl}`, 480, fontRegular, 12);
-      rlLines.forEach((line) => {
-        ensureSpace(20);
-        currentPage.drawText(line, { x: 55, y: currentY, size: 12, font: fontRegular, color: rgb(0, 0, 0) });
+      const rlLines = wrapText(rl, 470, fontRegular, 11);
+      rlLines.forEach((line, lIdx) => {
+        ensureSpace(18);
+        if (lIdx === 0) {
+          currentPage.drawCircle({ x: 58, y: currentY + 3.5, size: 2.2, color: rgb(0.2, 0.2, 0.2) });
+        }
+        currentPage.drawText(line, { x: 68, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
         currentY -= 16;
       });
     });
@@ -930,7 +954,7 @@ export async function generateEventPdf(eventData = {}) {
         y: currentY - 18,
         width: 495.28,
         height: 20,
-        color: rgb(0.92, 0.94, 0.96), // Very light grey banner
+        color: rgb(0.92, 0.94, 0.96),
       });
       currentPage.drawText(`TIE-BREAKER : ${rd.tie_breaker_name || 'Sudden Death'}`, { x: 60, y: currentY - 12, size: 11, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
       if (rd.tie_breaker_participants) {
@@ -941,7 +965,7 @@ export async function generateEventPdf(eventData = {}) {
       if (rd.tie_breaker_description) {
         const tbDescLines = wrapText(rd.tie_breaker_description, 480, fontRegular, 11);
         tbDescLines.forEach(line => {
-          ensureSpace(20);
+          ensureSpace(18);
           currentPage.drawText(line, { x: 55, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
           currentY -= 16;
         });
@@ -953,10 +977,13 @@ export async function generateEventPdf(eventData = {}) {
         ensureSpace(40);
         currentY = drawSubHeader(currentPage, 'Tie-Breaker Rules', currentY);
         tbRules.forEach((rl) => {
-          const tbrLines = wrapText(`• ${rl}`, 480, fontRegular, 11);
-          tbrLines.forEach(line => {
-            ensureSpace(20);
-            currentPage.drawText(line, { x: 55, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+          const tbrLines = wrapText(rl, 470, fontRegular, 11);
+          tbrLines.forEach((line, lIdx) => {
+            ensureSpace(18);
+            if (lIdx === 0) {
+              currentPage.drawCircle({ x: 58, y: currentY + 3.5, size: 2.2, color: rgb(0.2, 0.2, 0.2) });
+            }
+            currentPage.drawText(line, { x: 68, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
             currentY -= 16;
           });
         });
