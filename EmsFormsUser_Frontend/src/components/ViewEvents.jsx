@@ -4,7 +4,8 @@ import UserLayout from './UserLayout';
 import EmptyState from './EmptyState';
 import LoadingSkeleton from './LoadingSkeleton';
 import { userAPI } from '../api/api';
-import { PlusCircle, Search, Edit, Eye, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { PlusCircle, Search, Edit, Eye, Lock, Loader2, AlertCircle, Download } from 'lucide-react';
+import { generateEventPdf } from '../utils/generateEventPdf';
 
 function ViewEvents() {
   const [events, setEvents] = useState([]);
@@ -12,6 +13,40 @@ function ViewEvents() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [requestingId, setRequestingId] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  const handleDownloadPdf = async (ev) => {
+    try {
+      setDownloadingId(ev._id);
+      let eventObj = ev;
+      if (!eventObj.contacts || !eventObj.form) {
+        try {
+          const res = await userAPI.getEventById(ev._id);
+          eventObj = res.data?.data || res.data;
+        } catch (_) {}
+      }
+      const filename = `Event_${eventObj.name || eventObj.event_name || eventObj._id}${eventObj.event_id ? `_${eventObj.event_id}` : ''}_DRAFT_ERM.pdf`;
+      let pdfBlob;
+      try {
+        pdfBlob = await generateEventPdf(eventObj);
+      } catch (e) {
+        const res = await userAPI.getEventPDF(ev._id);
+        pdfBlob = new Blob([res.data], { type: 'application/pdf' });
+      }
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Failed to generate Event PDF.');
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const navigate = useNavigate();
 
@@ -140,12 +175,23 @@ function ViewEvents() {
                   </div>
 
                   <div className="pt-4 border-t border-slate-800 flex flex-wrap gap-2 items-center justify-between">
-                    <button
-                      onClick={() => navigate(`/event/${ev._id}`, { state: ev })}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-sky-200 rounded-xl text-xs font-semibold transition-colors"
-                    >
-                      <Eye className="w-4 h-4 text-sky-400" /> View Details
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => navigate(`/event/${ev._id}`, { state: ev })}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-sky-200 rounded-xl text-xs font-semibold transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-sky-400" /> View
+                      </button>
+                      <button
+                        onClick={() => handleDownloadPdf(ev)}
+                        disabled={downloadingId === ev._id}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-sky-950/80 hover:bg-sky-900 border border-sky-500/30 text-sky-300 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50"
+                        title="Download Event PDF"
+                      >
+                        {downloadingId === ev._id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5 text-sky-400" />}
+                        PDF
+                      </button>
+                    </div>
 
                     {isEditable ? (
                       <button

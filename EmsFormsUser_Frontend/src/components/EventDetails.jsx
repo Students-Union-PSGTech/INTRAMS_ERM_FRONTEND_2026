@@ -3,7 +3,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import UserLayout from './UserLayout';
 import AnnexureUploadModal from './AnnexureUploadModal';
 import { userAPI } from '../api/api';
-import { ArrowLeft, Calendar, Clock, MapPin, Users, Layers, Package, Tag, Paperclip, Loader2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Users, Layers, Package, Tag, Paperclip, Loader2, Download } from 'lucide-react';
+import { generateEventPdf } from '../utils/generateEventPdf';
 
 function EventDetails() {
   const { id } = useParams();
@@ -12,6 +13,34 @@ function EventDetails() {
   const [event, setEvent] = useState(location.state || null);
   const [fetching, setFetching] = useState(!location.state);
   const [showAnnexureModal, setShowAnnexureModal] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!event) return;
+    try {
+      setDownloadingPdf(true);
+      const filename = `Event_${event.name || event.event_name || event._id}${event.event_id ? `_${event.event_id}` : ''}_DRAFT_ERM.pdf`;
+      let pdfBlob;
+      try {
+        pdfBlob = await generateEventPdf(event);
+      } catch (e) {
+        const res = await userAPI.getEventPDF(event._id || event.id || id);
+        pdfBlob = new Blob([res.data], { type: 'application/pdf' });
+      }
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Failed to generate Event PDF.');
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const grandTotal = Array.isArray(event?.items)
     ? event.items.reduce((sum, item) => {
@@ -66,19 +95,29 @@ function EventDetails() {
   return (
     <UserLayout showSidebar={true}>
       <div className="max-w-5xl w-full mx-auto space-y-6">
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
           <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-sky-200 rounded-xl text-sm font-medium transition-all"
           >
             <ArrowLeft className="w-4 h-4" /> Back to List
           </button>
-          <button
-            onClick={() => setShowAnnexureModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-sky-500/20 transition-all"
-          >
-            <Paperclip className="w-4 h-4" /> Supporting Annexures
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50"
+            >
+              {downloadingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Download Event PDF
+            </button>
+            <button
+              onClick={() => setShowAnnexureModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 text-sky-200 rounded-xl text-sm font-medium shadow-lg transition-all"
+            >
+              <Paperclip className="w-4 h-4" /> Supporting Annexures
+            </button>
+          </div>
         </div>
 
         <div className="glass-card rounded-3xl p-6 sm:p-8 shadow-2xl border border-sky-500/20">

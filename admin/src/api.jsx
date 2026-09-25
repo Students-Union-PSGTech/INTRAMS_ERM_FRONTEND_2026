@@ -112,7 +112,7 @@ export const adminAPI = {
   getStats: () => api.get('/admin/stats'),
   getRoleMembers: (role) => api.get(`/admin/personnel/${role}`),
   getLogs: () => api.get('/admin/logs'),
-  checkHealth: () => api.get(`${ASSET_BASE_URL}/health`),
+  checkHealth: () => api.get('/ping').catch(() => api.get(`${ASSET_BASE_URL}/health`)),
 };
 
 
