@@ -98,14 +98,21 @@ function Stats() {
       <div className="relative z-10 max-w-6xl w-full mx-auto space-y-8 pt-16 sm:pt-6">
         {/* Top Header & Export Button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-heading tracking-wide uppercase flex items-center gap-3">
-              <TrendingUp className="w-7 h-7 text-sky-400" />
-              ITEM STATISTICS
-            </h1>
-            <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
-              VIEW COMPREHENSIVE ITEM ANALYTICS AND EXPORT REPORTS
-            </p>
+          <div className="flex items-center gap-4">
+            <img
+              src="/intrams_logo.png"
+              alt="INTRAMS 2026"
+              className="h-14 sm:h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(56,189,248,0.4)] flex-shrink-0"
+            />
+            <div className="space-y-1">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-heading tracking-wide uppercase flex items-center gap-3">
+                <TrendingUp className="w-7 h-7 text-sky-400" />
+                ITEM STATISTICS
+              </h1>
+              <p className="text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                VIEW COMPREHENSIVE ITEM ANALYTICS AND EXPORT REPORTS
+              </p>
+            </div>
           </div>
 
           <button

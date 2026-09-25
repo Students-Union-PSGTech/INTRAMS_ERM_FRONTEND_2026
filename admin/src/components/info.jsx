@@ -88,6 +88,7 @@ export default function Dashboard() {
       <PageHeader
         title="ADMIN CONTROL CENTER"
         subtitle="System overview, ERM proposals, equipment stock, and allocation controls"
+        showLogo={true}
         actions={
           <Button onClick={() => navigate('/grant-allocation')}>+ GRANT ALLOCATION</Button>
         }

@@ -72,13 +72,20 @@ function HomePage() {
     <UserLayout showSidebar={true}>
       <div className="relative z-10 min-h-full font-sans space-y-6 max-w-5xl mx-auto w-full">
         {/* Top Banner Box */}
-        <div className="relative z-10 p-6 sm:p-8 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 text-white rounded-2xl shadow-2xl shadow-sky-500/5 w-full">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading">
-            DASHBOARD
-          </h1>
-          <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">
-            Centralized Event Management &amp; Control Center
-          </p>
+        <div className="relative z-10 p-6 sm:p-8 bg-slate-900/80 backdrop-blur-xl border border-slate-800/80 text-white rounded-2xl shadow-2xl shadow-sky-500/5 w-full flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-heading">
+              DASHBOARD
+            </h1>
+            <p className="text-slate-400 text-xs sm:text-sm font-medium mt-1">
+              Centralized Event Management &amp; Control Center
+            </p>
+          </div>
+          <img
+            src="/intrams_logo.png"
+            alt="INTRAMS 2026"
+            className="h-14 sm:h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(56,189,248,0.4)] flex-shrink-0"
+          />
         </div>
 
         {/* YOUR EVENTS Card */}

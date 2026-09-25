@@ -51,7 +51,7 @@ export default function Header({ onToggleMobileMenu, mobileMenuOpen }) {
           <img
             src="/intrams_logo.png"
             alt="INTRAMS"
-            className="h-8 w-auto object-contain flex-shrink-0 hidden sm:block drop-shadow-[0_0_8px_rgba(0,174,239,0.3)]"
+            className="h-7 sm:h-8 w-auto object-contain flex-shrink-0 drop-shadow-[0_0_8px_rgba(0,174,239,0.3)]"
           />
           <div className="min-w-0 truncate font-heading text-[13px] sm:text-[15px] font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[#FFFFFF]">
             INTRAMS ERM ADMIN
