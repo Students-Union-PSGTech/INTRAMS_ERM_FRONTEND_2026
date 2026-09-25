@@ -13,6 +13,7 @@ import {
   FlaskConical,
   LogOut,
   FileText,
+  PackagePlus,
   X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -92,6 +93,7 @@ export default function Sidebar({ onItemClick, onClose, isMobile = false }) {
           <Item to="/associations" icon={Users} label="CLUBS" onClick={onItemClick} />
           <Item to="/events" icon={Calendar} label="EVENTS" onClick={onItemClick} />
           <Item to="/items" icon={Package} label="ITEMS" onClick={onItemClick} />
+          <Item to="/custom-items" icon={PackagePlus} label="CUSTOM ITEM REQUESTS" onClick={onItemClick} />
           <Item to="/inventory" icon={Warehouse} label="INVENTORY" onClick={onItemClick} />
           <Item to="/grant-allocation" icon={Gift} label="GRANT ALLOCATION" onClick={onItemClick} />
           <Item to="/grant-history" icon={History} label="GRANT HISTORY" onClick={onItemClick} />

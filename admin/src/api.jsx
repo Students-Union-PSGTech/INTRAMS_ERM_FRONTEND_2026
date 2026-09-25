@@ -86,6 +86,10 @@ export const adminAPI = {
   getStocks: () => api.get('/admin/stocks'),
   updateStock: (id, data) => api.put(`/admin/stocks/${id}`, data),
 
+  // Custom Items
+  getCustomItems: (params) => api.get('/admin/custom-items', { params }),
+  updateCustomItemStatus: (id, status, notes) => api.put(`/admin/custom-items/${id}/status`, { status, notes }),
+
   // Grants
   getEventsByAssociation: (associationId) => api.get(`/admin/associations/${associationId}/events`),
   getEventQuantityToProvide: (eventId) => api.get(`/admin/events/${eventId}/grant-details`),

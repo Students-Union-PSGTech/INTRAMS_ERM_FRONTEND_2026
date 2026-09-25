@@ -12,6 +12,7 @@ const AssociationsList = lazy(() => import('./components/associations'));
 const AssociationDetail = lazy(() => import('./components/associationDetail'));
 const EventDetail = lazy(() => import('./components/info-deep'));
 const Items = lazy(() => import('./components/items'));
+const CustomItems = lazy(() => import('./components/customItems'));
 const Inventory = lazy(() => import('./components/stocks'));
 const LabConfirmation = lazy(() => import('./components/labConfirmation'));
 const GrantItems = lazy(() => import('./components/grantItems'));
@@ -55,6 +56,8 @@ function AppRoutes() {
         <Route path="/add" element={<Navigate to="/associations" replace />} />
 
         <Route path="/items" element={<Guard roles={['admin', 'member', 'procurement']}><Items /></Guard>} />
+        <Route path="/custom-items" element={<Guard roles={['admin', 'member', 'procurement']}><CustomItems /></Guard>} />
+        <Route path="/custom-item-requests" element={<Navigate to="/custom-items" replace />} />
         <Route path="/inventory" element={<Guard roles={['admin', 'member', 'procurement']}><Inventory /></Guard>} />
         <Route path="/stocks" element={<Navigate to="/inventory" replace />} />
         <Route path="/stats" element={<Navigate to="/inventory" replace />} />

@@ -165,56 +165,80 @@ function ItemsPage({ formData, setFormData }) {
           </div>
         )}
 
-        <h3 className="text-lg font-bold text-white mt-8 pt-6 mb-4 font-heading border-t border-slate-800">Other / Custom Items</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-8 pt-6 mb-4 border-t border-slate-800">
+          <div>
+            <h3 className="text-lg font-bold text-white font-heading">Other / Custom Items</h3>
+            <p className="text-slate-400 text-xs mt-0.5">
+              Custom items not found in the standard catalog will be sent as a <span className="text-amber-400 font-semibold">Custom Item Request</span> for Admin approval.
+            </p>
+          </div>
+        </div>
         
         <div className="space-y-4">
           {customItems.map((item, idx) => (
-            <div key={`custom-${idx}`} className="flex flex-col lg:flex-row gap-3 items-start lg:items-center bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
-              <div className="flex-1 w-full">
-                <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">Item Name</label>
+            <div key={`custom-${idx}`} className="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+                <div className="flex-1 w-full">
+                  <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">Item Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Special Helium Tank or Custom Memento"
+                    value={item.item_name || ''}
+                    onChange={(e) => updateCustomItem(idx, 'item_name', e.target.value)}
+                    className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-white font-medium"
+                  />
+                </div>
+                <div className="w-full lg:w-28">
+                  <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={item.quantity ?? ''}
+                    onChange={(e) => updateCustomItem(idx, 'quantity', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                    onBlur={(e) => updateCustomItem(idx, 'quantity', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-white font-medium text-center"
+                  />
+                </div>
+                <div className="w-full lg:w-32">
+                  <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">Unit Price (₹)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={item.price_per_unit ?? ''}
+                    onChange={(e) => updateCustomItem(idx, 'price_per_unit', e.target.value === '' ? '' : parseFloat(e.target.value))}
+                    onBlur={(e) => updateCustomItem(idx, 'price_per_unit', Math.max(0, parseFloat(e.target.value) || 0))}
+                    className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-white font-medium text-center"
+                  />
+                </div>
+                <div className="w-full lg:w-32">
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total (₹)</label>
+                  <div className="w-full p-2.5 bg-slate-900/50 border border-transparent rounded-xl text-sm text-sky-300 font-bold flex items-center h-[42px]">
+                    ₹ {calculateItemTotal(item).toFixed(2)}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeCustomItem(idx)}
+                  className="p-2 text-slate-400 hover:text-rose-400 rounded-lg lg:mt-5 transition-colors self-end lg:self-center"
+                  title="Remove custom item"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Justification / Notes for Admin */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Justification / Specification for Admin Review (Optional)
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. Special Decor"
-                  value={item.item_name || ''}
-                  onChange={(e) => updateCustomItem(idx, 'item_name', e.target.value)}
-                  className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-white font-medium"
+                  placeholder="e.g. Specifically required for experimental setup in round 2"
+                  value={item.notes || ''}
+                  onChange={(e) => updateCustomItem(idx, 'notes', e.target.value)}
+                  className="w-full p-2 bg-slate-900/80 border border-slate-800/80 rounded-lg text-xs focus:ring-1 focus:ring-sky-500 outline-none text-slate-200 placeholder:text-slate-600"
                 />
               </div>
-              <div className="w-full lg:w-28">
-                <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={item.quantity ?? ''}
-                  onChange={(e) => updateCustomItem(idx, 'quantity', e.target.value === '' ? '' : parseInt(e.target.value, 10))}
-                  onBlur={(e) => updateCustomItem(idx, 'quantity', Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-white font-medium text-center"
-                />
-              </div>
-              <div className="w-full lg:w-32">
-                <label className="block text-[11px] font-bold text-sky-200/90 uppercase tracking-wider mb-1">Unit Price (₹)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={item.price_per_unit ?? ''}
-                  onChange={(e) => updateCustomItem(idx, 'price_per_unit', e.target.value === '' ? '' : parseFloat(e.target.value))}
-                  onBlur={(e) => updateCustomItem(idx, 'price_per_unit', Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-white font-medium text-center"
-                />
-              </div>
-              <div className="w-full lg:w-32">
-                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Total (₹)</label>
-                <div className="w-full p-2.5 bg-slate-900/50 border border-transparent rounded-xl text-sm text-sky-300 font-bold flex items-center h-[42px]">
-                  ₹ {calculateItemTotal(item).toFixed(2)}
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => removeCustomItem(idx)}
-                className="p-2 text-slate-400 hover:text-rose-400 rounded-lg lg:mt-5 transition-colors self-end lg:self-center"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
             </div>
           ))}
           
