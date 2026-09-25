@@ -380,21 +380,43 @@ export async function generateEventPdf(eventData = {}) {
     return size;
   };
 
-  // Helper to wrap text
+  // Helper to wrap text cleanly and safely
   const wrapText = (text, maxWidth, font, fontSize) => {
     if (!text) return [];
     const words = String(text).split(' ');
     let lines = [];
-    let currentLine = words[0] || '';
+    let currentLine = '';
 
-    for (let i = 1; i < words.length; i++) {
-      const word = words[i];
-      const width = font.widthOfTextAtSize(currentLine + ' ' + word, fontSize);
-      if (width < maxWidth) {
-        currentLine += ' ' + word;
-      } else {
-        lines.push(currentLine);
+    for (let i = 0; i < words.length; i++) {
+      let word = words[i];
+      // If a single word itself exceeds maxWidth, break it down safely
+      while (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+        let fitCount = word.length - 1;
+        while (fitCount > 0 && font.widthOfTextAtSize(word.substring(0, fitCount), fontSize) > maxWidth) {
+          fitCount--;
+        }
+        if (fitCount > 0) {
+          if (currentLine) {
+            lines.push(currentLine);
+            currentLine = '';
+          }
+          lines.push(word.substring(0, fitCount));
+          word = word.substring(fitCount);
+        } else {
+          break;
+        }
+      }
+
+      if (!currentLine) {
         currentLine = word;
+      } else {
+        const testLine = currentLine + ' ' + word;
+        if (font.widthOfTextAtSize(testLine, fontSize) <= maxWidth) {
+          currentLine = testLine;
+        } else {
+          lines.push(currentLine);
+          currentLine = word;
+        }
       }
     }
     if (currentLine) lines.push(currentLine);
@@ -943,81 +965,206 @@ export async function generateEventPdf(eventData = {}) {
 
     currentY -= 40;
 
-    const tX = margin + 30;
-    const itemColWidths = [40, 200, 50, 80, 95.28];
+    const tX = margin + 15;
+    const itemColWidths = [35, 230.28, 45, 85, 100];
+    const tableWidth = itemColWidths.reduce((a, b) => a + b, 0);
     const itemHeaders = ['S.No', 'Item Name', 'Qty', 'Unit Price', 'Amount'];
 
+    let tableY = currentY;
+
+    const drawTableHeader = () => {
+      currentPage.drawRectangle({
+        x: tX,
+        y: tableY - 24,
+        width: tableWidth,
+        height: 24,
+        color: rgb(0.95, 0.95, 0.95),
+      });
+
+      let cellX = tX;
+      itemHeaders.forEach((h, idx) => {
+        const w = itemColWidths[idx];
+        const textW = fontBold.widthOfTextAtSize(h, 9.5);
+        let xPos;
+        if (idx === 0) {
+          xPos = cellX + (w - textW) / 2;
+        } else if (idx === 1) {
+          xPos = cellX + 8;
+        } else if (idx === 2) {
+          xPos = cellX + (w - textW) / 2;
+        } else if (idx === 3) {
+          xPos = cellX + w - textW - 8;
+        } else {
+          xPos = cellX + w - textW - 10;
+        }
+        currentPage.drawText(h, {
+          x: xPos,
+          y: tableY - 16,
+          size: 9.5,
+          font: fontBold,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+        cellX += w;
+      });
+
+      currentPage.drawLine({
+        start: { x: tX, y: tableY - 24 },
+        end: { x: tX + tableWidth, y: tableY - 24 },
+        thickness: 1,
+        color: rgb(0.8, 0.8, 0.8),
+      });
+      tableY -= 24;
+    };
+
+    drawTableHeader();
+
     let subTotal = 0;
-    const itemRows = ev.items.map((it, iIdx) => {
+    const lineHeight = 12;
+
+    ev.items.forEach((it, iIdx) => {
       const qty = it.quantity || it.requested_quantity || 1;
-      const unitPrice = it.price_per_unit || 0;
+      const unitPrice = Number(it.price_per_unit || 0);
       const total = qty * unitPrice;
       subTotal += total;
-      return [
-        String(iIdx + 1),
-        it.item_name || it.name || 'Unknown Item',
-        String(qty),
-        `Rs. ${unitPrice.toFixed(2)}`,
-        `Rs. ${total.toFixed(2)}`
-      ];
+
+      const itemName = String(it.item_name || it.name || 'Unknown Item').trim();
+      const maxNameWidth = itemColWidths[1] - 16;
+      let nameLines = wrapText(itemName, maxNameWidth, fontRegular, 9);
+      if (nameLines.length === 0) nameLines = ['Unknown Item'];
+
+      const dynamicRowH = Math.max(24, nameLines.length * lineHeight + 10);
+
+      if (tableY - dynamicRowH < 100) {
+        createNewPage();
+        tableY = currentY;
+        drawTableHeader();
+      }
+
+      const firstLineY = tableY - 15;
+
+      // Col 0: S.No (centered)
+      const snoStr = String(iIdx + 1);
+      const snoW = fontRegular.widthOfTextAtSize(snoStr, 9);
+      currentPage.drawText(snoStr, {
+        x: tX + (itemColWidths[0] - snoW) / 2,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      // Col 1: Item Name (left aligned, multi-line wrapped)
+      const nameX = tX + itemColWidths[0] + 8;
+      nameLines.forEach((line, lIdx) => {
+        currentPage.drawText(line, {
+          x: nameX,
+          y: firstLineY - (lIdx * lineHeight),
+          size: 9,
+          font: fontRegular,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+      });
+
+      // Col 2: Qty (centered)
+      const qtyX = tX + itemColWidths[0] + itemColWidths[1];
+      const qtyStr = String(qty);
+      const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9);
+      currentPage.drawText(qtyStr, {
+        x: qtyX + (itemColWidths[2] - qtyW) / 2,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      // Col 3: Unit Price (right aligned)
+      const priceX = qtyX + itemColWidths[2];
+      const priceStr = `Rs. ${unitPrice.toFixed(2)}`;
+      const priceW = fontRegular.widthOfTextAtSize(priceStr, 9);
+      currentPage.drawText(priceStr, {
+        x: priceX + itemColWidths[3] - priceW - 8,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      // Col 4: Amount (right aligned)
+      const amtX = priceX + itemColWidths[3];
+      const amtStr = `Rs. ${total.toFixed(2)}`;
+      const amtW = fontRegular.widthOfTextAtSize(amtStr, 9);
+      currentPage.drawText(amtStr, {
+        x: amtX + itemColWidths[4] - amtW - 10,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      currentPage.drawLine({
+        start: { x: tX, y: tableY - dynamicRowH },
+        end: { x: tX + tableWidth, y: tableY - dynamicRowH },
+        thickness: 0.5,
+        color: rgb(0.9, 0.9, 0.9),
+      });
+
+      tableY -= dynamicRowH;
     });
 
     const gstAmount = subTotal * 0.18;
     const grandTotal = subTotal + gstAmount;
 
-    itemRows.push(['', '', '', 'Subtotal:', `Rs. ${subTotal.toFixed(2)}`]);
-    itemRows.push(['', '', '', 'GST (18%):', `Rs. ${gstAmount.toFixed(2)}`]);
-    itemRows.push(['', '', '', 'Grand Total:', `Rs. ${grandTotal.toFixed(2)}`]);
+    const summaryRows = [
+      { label: 'Subtotal:', value: `Rs. ${subTotal.toFixed(2)}`, color: rgb(0.1, 0.1, 0.1), isGrand: false },
+      { label: 'GST (18%):', value: `Rs. ${gstAmount.toFixed(2)}`, color: rgb(0.1, 0.1, 0.1), isGrand: false },
+      { label: 'Grand Total:', value: `Rs. ${grandTotal.toFixed(2)}`, color: rgb(0.05, 0.45, 0.75), isGrand: true },
+    ];
 
-    // Draw Invoice Style Table
-    let tableY = currentY;
-    const tableWidth = itemColWidths.reduce((a, b) => a + b, 0);
+    if (tableY - 70 < 100) {
+      createNewPage();
+      tableY = currentY;
+    }
 
-    currentPage.drawRectangle({
-      x: tX, y: tableY - 24, width: tableWidth, height: 24,
-      color: rgb(0.95, 0.95, 0.95),
-    });
+    const priceColX = tX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2];
+    const amtColX = priceColX + itemColWidths[3];
 
-    let cellX = tX;
-    itemHeaders.forEach((h, idx) => {
-      const w = itemColWidths[idx];
-      const textW = fontBold.widthOfTextAtSize(h, 9.5);
-      const xPos = idx === itemHeaders.length - 1 ? cellX + w - textW - 10 : (idx === 0 ? cellX + 10 : cellX + (w - textW) / 2);
-      currentPage.drawText(h, { x: xPos, y: tableY - 16, size: 9.5, font: fontBold, color: rgb(0.2, 0.2, 0.2) });
-      cellX += w;
-    });
+    summaryRows.forEach((sRow, sIdx) => {
+      const sRowH = sRow.isGrand ? 24 : 20;
+      const sFont = fontBold;
+      const sSize = sRow.isGrand ? 10.5 : 9.5;
+      const sY = tableY - (sRow.isGrand ? 16 : 14);
 
-    currentPage.drawLine({
-      start: { x: tX, y: tableY - 24 }, end: { x: tX + tableWidth, y: tableY - 24 },
-      thickness: 1, color: rgb(0.8, 0.8, 0.8),
-    });
-    tableY -= 24;
-
-    itemRows.forEach((row, rIdx) => {
-      const isSummary = rIdx >= itemRows.length - 3;
-      const rowH = isSummary ? 20 : 24;
-      const fontToUse = isSummary ? fontBold : fontRegular;
-
-      let cellXData = tX;
-      row.forEach((val, idx) => {
-        const w = itemColWidths[idx];
-        const strVal = String(val || '');
-        if (strVal) {
-          let size = isSummary ? 10 : 9;
-          let textW = fontToUse.widthOfTextAtSize(strVal, size);
-          let xPos = idx === itemHeaders.length - 1 ? cellXData + w - textW - 10 : (idx === itemHeaders.length - 2 && isSummary ? cellXData + w - textW - 5 : (idx === 0 ? cellXData + 10 : cellXData + (w - textW) / 2));
-          currentPage.drawText(strVal, { x: xPos, y: tableY - 16, size: size, font: fontToUse, color: isSummary && idx === itemHeaders.length - 1 && rIdx === itemRows.length - 1 ? rgb(0.1, 0.5, 0.8) : rgb(0.1, 0.1, 0.1) });
-        }
-        cellXData += w;
+      const lblW = sFont.widthOfTextAtSize(sRow.label, sSize);
+      currentPage.drawText(sRow.label, {
+        x: priceColX + itemColWidths[3] - lblW - 8,
+        y: sY,
+        size: sSize,
+        font: sFont,
+        color: rgb(0.1, 0.1, 0.1),
       });
 
-      if (!isSummary) {
-        currentPage.drawLine({ start: { x: tX, y: tableY - rowH }, end: { x: tX + tableWidth, y: tableY - rowH }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) });
-      } else if (rIdx === itemRows.length - 2) {
-        currentPage.drawLine({ start: { x: tX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2], y: tableY - rowH }, end: { x: tX + tableWidth, y: tableY - rowH }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+      const valW = sFont.widthOfTextAtSize(sRow.value, sSize);
+      currentPage.drawText(sRow.value, {
+        x: amtColX + itemColWidths[4] - valW - 10,
+        y: sY,
+        size: sSize,
+        font: sFont,
+        color: sRow.color,
+      });
+
+      if (sIdx === 1) {
+        currentPage.drawLine({
+          start: { x: priceColX, y: tableY - sRowH },
+          end: { x: tX + tableWidth, y: tableY - sRowH },
+          thickness: 1,
+          color: rgb(0.8, 0.8, 0.8),
+        });
       }
-      tableY -= rowH;
+
+      tableY -= sRowH;
     });
+
+    currentY = tableY - 15;
   }
 
   // Ensure signatures fit on the final page
