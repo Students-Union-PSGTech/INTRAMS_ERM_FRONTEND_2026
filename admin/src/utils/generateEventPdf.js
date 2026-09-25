@@ -165,49 +165,55 @@ export async function generateEventPdf(eventData = {}) {
   // Helper to draw bordered table supporting dynamic pagination
   const drawPage3Table = (startX, colWidths, headers, rows) => {
     const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+    const headerH = 22;
+    const rowH = 22;
 
-    // Header Row (requires 24pt)
-    ensureSpace(24);
-
-    // Draw Header Background & Box
-    currentPage.drawRectangle({
-      x: startX,
-      y: currentY - 24,
-      width: tableWidth,
-      height: 24,
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1.2,
-      color: rgb(0.89, 0.95, 0.98),
-    });
-
-    let cellX = startX;
-    headers.forEach((h, idx) => {
-      const w = colWidths[idx];
-      const textW = fontBold.widthOfTextAtSize(h, 9.5);
-      currentPage.drawText(h, {
-        x: cellX + (w - textW) / 2,
-        y: currentY - 16,
-        size: 9.5,
-        font: fontBold,
-        color: rgb(0, 0, 0),
+    const renderHeader = () => {
+      currentPage.drawRectangle({
+        x: startX,
+        y: currentY - headerH,
+        width: tableWidth,
+        height: headerH,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1.2,
+        color: rgb(0.89, 0.95, 0.98),
       });
-      if (idx < headers.length - 1) {
-        currentPage.drawLine({
-          start: { x: cellX + w, y: currentY },
-          end: { x: cellX + w, y: currentY - 24 },
-          thickness: 1,
+
+      let cellX = startX;
+      headers.forEach((h, idx) => {
+        const w = colWidths[idx];
+        const textW = fontBold.widthOfTextAtSize(h, 9.5);
+        currentPage.drawText(h, {
+          x: cellX + (w - textW) / 2,
+          y: currentY - 15,
+          size: 9.5,
+          font: fontBold,
           color: rgb(0, 0, 0),
         });
-      }
-      cellX += w;
-    });
+        if (idx < headers.length - 1) {
+          currentPage.drawLine({
+            start: { x: cellX + w, y: currentY },
+            end: { x: cellX + w, y: currentY - headerH },
+            thickness: 1,
+            color: rgb(0, 0, 0),
+          });
+        }
+        cellX += w;
+      });
 
-    currentY -= 24;
+      currentY -= headerH;
+    };
+
+    // Header Row
+    ensureSpace(headerH + rowH);
+    renderHeader();
 
     // Data Rows
     rows.forEach((row) => {
-      const rowH = 24;
-      ensureSpace(rowH); // Ensure space for the row!
+      if (currentY - rowH < 95) {
+        createNewPage();
+        renderHeader();
+      }
 
       currentPage.drawRectangle({
         x: startX,
@@ -222,18 +228,17 @@ export async function generateEventPdf(eventData = {}) {
       row.forEach((val, idx) => {
         const w = colWidths[idx];
         const strVal = String(val || '');
-        const font = idx === 0 ? fontRegular : fontRegular;
         let size = 9;
-        let textW = font.widthOfTextAtSize(strVal, size);
-        while (textW > (w - 6) && size > 4) {
+        let textW = fontRegular.widthOfTextAtSize(strVal, size);
+        while (textW > (w - 8) && size > 4) {
           size -= 0.5;
-          textW = font.widthOfTextAtSize(strVal, size);
+          textW = fontRegular.widthOfTextAtSize(strVal, size);
         }
         currentPage.drawText(strVal, {
           x: cellXData + (w - textW) / 2,
-          y: currentY - 16,
+          y: currentY - 15,
           size: size,
-          font: font,
+          font: fontRegular,
           color: rgb(0, 0, 0),
         });
         if (idx < row.length - 1) {
@@ -522,50 +527,51 @@ export async function generateEventPdf(eventData = {}) {
   currentY -= 40;
 
   const tX = margin + 15;
-  const p3ColWidths5 = [100, 85, 95, 125, 80];
+  const p3ColWidths5 = [105, 85, 95, 125, 85.28];
+  const p3ColWidths3 = [165, 165, 165.28];
+  const p3ColWidths6 = [85, 95, 80, 50, 50, 135.28];
+
+  const drawPage3Section = (title, colWidths, headers, rows) => {
+    if (!rows || rows.length === 0) return;
+    const headerH = 22;
+    const rowH = 22;
+    const titleGap = 16;
+    const postGap = 22;
+    const neededSpace = titleGap + headerH + (rows.length * rowH) + postGap;
+
+    // Check if entire section fits; if not, check if at least title + header + 1 row fits
+    if (currentY - neededSpace < 95) {
+      if (currentY - (titleGap + headerH + rowH + postGap) < 95) {
+        createNewPage();
+      }
+    }
+
+    currentPage.drawText(title, { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+    currentY -= titleGap;
+    drawPage3Table(tX, colWidths, headers, rows);
+    currentY -= postGap;
+  };
 
   // Secretary Details
-  ensureSpace(45);
-  currentPage.drawText('Secretary Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  currentY -= 12;
-  drawPage3Table(tX, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], secRows);
-  currentY -= 30;
+  drawPage3Section('Secretary Details', p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], secRows);
 
   // Convenor Details
-  ensureSpace(45);
-  currentPage.drawText('Convenor Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  currentY -= 12;
-  drawPage3Table(tX, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], convRows);
-  currentY -= 30;
+  drawPage3Section('Convenor Details', p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], convRows);
 
   // Volunteer Details
-  ensureSpace(45);
-  currentPage.drawText('Volunteer Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  currentY -= 12;
-  drawPage3Table(tX, p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], volRows);
-  currentY -= 30;
+  drawPage3Section('Volunteer Details', p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], volRows);
 
   // Faculty Advisor Details
-  ensureSpace(45);
-  currentPage.drawText('Faculty Advisor Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-  currentY -= 12;
-  drawPage3Table(tX, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], facRows);
-  currentY -= 30;
+  drawPage3Section('Faculty Advisor Details', p3ColWidths3, ['Name', 'Designation', 'Contact Details'], facRows);
 
   // Judge Details
   if (judgeRows.length > 0) {
-    ensureSpace(45);
-    currentPage.drawText('Judge Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-    currentY -= 12;
-    drawPage3Table(tX, [160, 160, 165.28], ['Name', 'Designation', 'Contact Details'], judgeRows);
+    drawPage3Section('Judge Details', p3ColWidths3, ['Name', 'Designation', 'Contact Details'], judgeRows);
   }
 
   // Chief Guest Details
   if (chiefGuestRows.length > 0) {
-    ensureSpace(45);
-    currentPage.drawText('Chief Guest Details', { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-    currentY -= 12;
-    drawPage3Table(tX, [80, 90, 80, 50, 50, 135.28], ['Name', 'Designation', 'Remuneration', 'Accomm.', 'Travel', 'Note'], chiefGuestRows);
+    drawPage3Section('Chief Guest Details', p3ColWidths6, ['Name', 'Designation', 'Remuneration', 'Accomm.', 'Travel', 'Note'], chiefGuestRows);
   }
 
   // ==========================================
@@ -719,6 +725,8 @@ export async function generateEventPdf(eventData = {}) {
 
   currentPage.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : ''}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   currentPage.drawText(`Reason: ${reasonExt}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+
+  currentY -= box6H;
 
   // ==========================================
   // PAGE 5: EVENT DESCRIPTION & ROUND RULES
