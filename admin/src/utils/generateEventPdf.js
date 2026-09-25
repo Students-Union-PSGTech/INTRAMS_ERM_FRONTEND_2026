@@ -256,15 +256,24 @@ export async function generateEventPdf(eventData = {}) {
       let cellXData = startX;
       row.forEach((val, idx) => {
         const w = colWidths[idx];
-        const strVal = String(val || '');
+        let strVal = String(val || '');
         let size = 9;
         let textW = fontRegular.widthOfTextAtSize(strVal, size);
-        while (textW > (w - 8) && size > 4) {
+        while (textW > (w - 8) && size > 5) {
           size -= 0.5;
           textW = fontRegular.widthOfTextAtSize(strVal, size);
         }
+        if (textW > w - 8) {
+          while (textW > w - 8 && strVal.length > 3) {
+            strVal = strVal.slice(0, -1);
+            textW = fontRegular.widthOfTextAtSize(strVal + '...', size);
+          }
+          strVal = strVal + '...';
+          textW = fontRegular.widthOfTextAtSize(strVal, size);
+        }
+        const xPos = Math.max(cellXData + 4, cellXData + (w - textW) / 2);
         currentPage.drawText(strVal, {
-          x: cellXData + (w - textW) / 2,
+          x: xPos,
           y: currentY - 15,
           size: size,
           font: fontRegular,

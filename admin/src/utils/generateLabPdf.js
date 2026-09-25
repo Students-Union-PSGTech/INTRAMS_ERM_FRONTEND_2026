@@ -395,14 +395,28 @@ export async function generateLabPdf(eventData = {}) {
 
     const rowVals = [String(r + 1), String(item.name || ''), String(item.rollNo || ''), String(item.phone || item.mobile || '')];
     cellX = table1X;
-    rowVals.forEach((val, idx) => {
+    rowVals.forEach((rawVal, idx) => {
       const w = col1Widths[idx];
       const font = idx === 0 ? fontBold : fontRegular;
-      const textW = font.widthOfTextAtSize(val, 9.5);
+      let val = rawVal;
+      let size = 9.5;
+      let textW = font.widthOfTextAtSize(val, size);
+      while (textW > (w - 14) && size > 6) {
+        size -= 0.5;
+        textW = font.widthOfTextAtSize(val, size);
+      }
+      if (textW > w - 14) {
+        while (textW > w - 14 && val.length > 3) {
+          val = val.slice(0, -1);
+          textW = font.widthOfTextAtSize(val + '...', size);
+        }
+        val = val + '...';
+        textW = font.widthOfTextAtSize(val, size);
+      }
       page2.drawText(val, {
-        x: cellX + (idx === 0 ? (w - textW) / 2 : 12),
+        x: cellX + (idx === 0 ? (w - textW) / 2 : 8),
         y: currentY - 17,
-        size: 9.5,
+        size: size,
         font: font,
         color: rgb(0, 0, 0),
       });
