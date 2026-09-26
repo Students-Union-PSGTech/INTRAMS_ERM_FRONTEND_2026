@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
-import { PSG_LOGO_BASE64 } from './psgLogoBase64';
-import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64';
+import { PSG_LOGO_BASE64 } from './psgLogoBase64.js';
+import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64.js';
 
 /**
  * Generates exact high-fidelity 5-Page EVENT RESOURCE FORM PDF matching official PSG College of Technology INTRAMS standard.
@@ -10,6 +10,62 @@ export async function generateEventPdf(eventData = {}) {
   const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+
+  const cleanText = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2013\u2014]/g, '-')
+      .replace(/[\u2022\u25CF\u00B7]/g, '-')
+      .replace(/\u00A0/g, ' ')
+      .replace(/\t/g, '    ');
+  };
+
+  const wrapFontWidth = (font) => {
+    const origWidth = font.widthOfTextAtSize.bind(font);
+    font.widthOfTextAtSize = (text, size) => {
+      if (!text) return 0;
+      const cleanStr = cleanText(text).replace(/\n/g, ' ');
+      try {
+        return origWidth(cleanStr, size);
+      } catch (_) {
+        const asciiOnly = cleanStr.replace(/[^\x20-\x7E]/g, ' ');
+        try {
+          return origWidth(asciiOnly, size);
+        } catch (_) {
+          return cleanStr.length * size * 0.55;
+        }
+      }
+    };
+  };
+
+  wrapFontWidth(fontRegular);
+  wrapFontWidth(fontBold);
+  wrapFontWidth(fontItalic);
+
+  const originalAddPage = pdfDoc.addPage.bind(pdfDoc);
+  pdfDoc.addPage = (...args) => {
+    const page = originalAddPage(...args);
+    const origDrawText = page.drawText.bind(page);
+    page.drawText = (text, options) => {
+      if (!text && text !== 0 && text !== '0') return;
+      const cleanStr = cleanText(text).replace(/\n/g, ' ');
+      try {
+        origDrawText(cleanStr, options);
+      } catch (_) {
+        const asciiOnly = cleanStr.replace(/[^\x20-\x7E]/g, ' ');
+        try {
+          origDrawText(asciiOnly, options);
+        } catch (e) {
+          // ignore to prevent crashing whole PDF
+        }
+      }
+    };
+    return page;
+  };
 
   const pageWidth = 595.28; // A4 Portrait width
   const pageHeight = 841.89; // A4 Portrait height
@@ -410,43 +466,51 @@ export async function generateEventPdf(eventData = {}) {
   // Helper to wrap text cleanly and safely
   const wrapText = (text, maxWidth, font, fontSize) => {
     if (!text) return [];
-    const words = String(text).split(' ');
-    let lines = [];
-    let currentLine = '';
+    const cleaned = cleanText(text);
+    const paragraphs = cleaned.split('\n');
+    const lines = [];
 
-    for (let i = 0; i < words.length; i++) {
-      let word = words[i];
-      // If a single word itself exceeds maxWidth, break it down safely
-      while (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
-        let fitCount = word.length - 1;
-        while (fitCount > 0 && font.widthOfTextAtSize(word.substring(0, fitCount), fontSize) > maxWidth) {
-          fitCount--;
-        }
-        if (fitCount > 0) {
-          if (currentLine) {
-            lines.push(currentLine);
-            currentLine = '';
+    for (const para of paragraphs) {
+      const trimmedPara = para.trim();
+      if (!trimmedPara) continue;
+
+      const words = trimmedPara.split(/\s+/).filter(Boolean);
+      let currentLine = '';
+
+      for (let i = 0; i < words.length; i++) {
+        let word = words[i];
+        // If a single word itself exceeds maxWidth, break it down safely
+        while (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+          let fitCount = word.length - 1;
+          while (fitCount > 0 && font.widthOfTextAtSize(word.substring(0, fitCount), fontSize) > maxWidth) {
+            fitCount--;
           }
-          lines.push(word.substring(0, fitCount));
-          word = word.substring(fitCount);
-        } else {
-          break;
+          if (fitCount > 0) {
+            if (currentLine) {
+              lines.push(currentLine);
+              currentLine = '';
+            }
+            lines.push(word.substring(0, fitCount));
+            word = word.substring(fitCount);
+          } else {
+            break;
+          }
         }
-      }
 
-      if (!currentLine) {
-        currentLine = word;
-      } else {
-        const testLine = currentLine + ' ' + word;
-        if (font.widthOfTextAtSize(testLine, fontSize) <= maxWidth) {
-          currentLine = testLine;
-        } else {
-          lines.push(currentLine);
+        if (!currentLine) {
           currentLine = word;
+        } else {
+          const testLine = currentLine + ' ' + word;
+          if (font.widthOfTextAtSize(testLine, fontSize) <= maxWidth) {
+            currentLine = testLine;
+          } else {
+            lines.push(currentLine);
+            currentLine = word;
+          }
         }
       }
+      if (currentLine) lines.push(currentLine);
     }
-    if (currentLine) lines.push(currentLine);
     return lines;
   };
 
