@@ -711,7 +711,20 @@ export async function generateEventPdf(eventData = {}) {
   });
 
   const roundsCount = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds.length : (formSpecs.num_rounds || 1);
-  const expectedParticipants = ev.expectedParticipants || formSpecs.expectedParticipants || ev.expected_participants || formSpecs.expected_participants || formSpecs.participant_count || (Array.isArray(ev.rounds) && ev.rounds[0]?.participant_count ? ev.rounds[0].participant_count : '—');
+  const getExpectedParticipants = () => {
+    if (ev.expectedParticipants && ev.expectedParticipants !== '—' && ev.expectedParticipants !== 0) return ev.expectedParticipants;
+    if (formSpecs.expectedParticipants && formSpecs.expectedParticipants !== '—' && formSpecs.expectedParticipants !== 0) return formSpecs.expectedParticipants;
+    if (ev.expected_participants && ev.expected_participants !== '—' && ev.expected_participants !== 0) return ev.expected_participants;
+    if (formSpecs.expected_participants && formSpecs.expected_participants !== '—' && formSpecs.expected_participants !== 0) return formSpecs.expected_participants;
+    if (formSpecs.participant_count && formSpecs.participant_count > 0) return formSpecs.participant_count;
+    if (ev.participant_count && ev.participant_count > 0) return ev.participant_count;
+    if (Array.isArray(ev.rounds) && ev.rounds.length > 0) {
+      const maxR = ev.rounds.reduce((m, r) => Math.max(m, parseInt(r.participant_count, 10) || 0), 0);
+      if (maxR > 0) return maxR;
+    }
+    return '—';
+  };
+  const expectedParticipants = getExpectedParticipants();
   const durationText = formSpecs.duration || ev.duration || formSpecs.duration_in_hrs || '—';
 
   currentPage.drawText(`No. of Rounds: ${roundsCount}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
