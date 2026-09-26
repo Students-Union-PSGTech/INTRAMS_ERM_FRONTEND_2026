@@ -1,4 +1,5 @@
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64';
 import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64';
 
@@ -7,8 +8,88 @@ import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64';
  */
 export async function generateLabPdf(eventData = {}) {
   const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+  let tamilFont = null;
+  try {
+    const tamilRes = await fetch('/fonts/NotoSansTamil-Regular.ttf');
+    if (tamilRes.ok) {
+      const tamilBytes = await tamilRes.arrayBuffer();
+      tamilFont = await pdfDoc.embedFont(tamilBytes);
+    }
+  } catch (err) { }
   const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+
+  const cleanText = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"').replace(/[\u2013\u2014]/g, '-').replace(/[\u2022\u25CF\u00B7]/g, '-').replace(/\u00A0/g, ' ').replace(/\t/g, '    ');
+  };
+  const wrapFontWidth = (font) => {
+    const origWidth = font.widthOfTextAtSize.bind(font);
+    font.widthOfTextAtSize = (text, size) => {
+      if (!text) return 0;
+      const cleanStr = cleanText(text).replace(/\n/g, ' ');
+      const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
+      if (hasTamil && tamilFont) {
+        const words = cleanStr.split(/(\s+)/);
+        let totalWidth = 0;
+        for (const word of words) {
+          const isTamilWord = /[\u0B80-\u0BFF]/.test(word);
+          const currentFont = isTamilWord ? tamilFont : font;
+          try {
+            totalWidth += currentFont.widthOfTextAtSize(word, size);
+          } catch(e) {
+            totalWidth += word.length * size * 0.55;
+          }
+        }
+        return totalWidth;
+      }
+      try { return origWidth(cleanStr, size); } catch (_) {
+        const asciiOnly = cleanStr.replace(/[^\x20-\x7E\u0B80-\u0BFF]/g, ' ');
+        try { return origWidth(asciiOnly, size); } catch (_) { return cleanStr.length * size * 0.55; }
+      }
+    };
+  };
+  wrapFontWidth(fontRegular);
+  wrapFontWidth(fontBold);
+  const originalAddPage = pdfDoc.addPage.bind(pdfDoc);
+  pdfDoc.addPage = (...args) => {
+    const page = originalAddPage(...args);
+    const origDrawText = page.drawText.bind(page);
+    page.drawText = (text, options) => {
+      if (!text && text !== 0 && text !== '0') return;
+      const cleanStr = cleanText(text).replace(/\n/g, ' ');
+      const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
+      
+      if (hasTamil && tamilFont) {
+        const words = cleanStr.split(/(\s+)/);
+        let currentX = options.x || 0;
+        const size = options.size || 12;
+        
+        for (const word of words) {
+          if (!word) continue;
+          const isTamilWord = /[\u0B80-\u0BFF]/.test(word);
+          const currentFont = isTamilWord ? tamilFont : (options.font || fontRegular);
+          const actualOptions = { ...options, font: currentFont, x: currentX };
+          try { origDrawText(word, actualOptions); } catch(e) {}
+          
+          try {
+            currentX += currentFont.widthOfTextAtSize(word, size);
+          } catch(e) {
+            currentX += word.length * size * 0.55;
+          }
+        }
+        return;
+      }
+      
+      const actualOptions = { ...options };
+      try { origDrawText(cleanStr, actualOptions); } catch (_) {
+        const asciiOnly = cleanStr.replace(/[^\x20-\x7E\u0B80-\u0BFF]/g, ' ');
+        try { origDrawText(asciiOnly, actualOptions); } catch (e) {}
+      }
+    };
+    return page;
+  };
 
   const pageWidth = 595.28; // A4 Portrait width
   const pageHeight = 841.89; // A4 Portrait height
@@ -516,6 +597,7 @@ export async function generateLabPdf(eventData = {}) {
   currentY -= gridRadioH;
 
   // --- SESSION SELECTOR ROW ---
+  const sessionColW = gridWidth / 5;
   page2.drawRectangle({
     x: gridX,
     y: currentY - gridHeaderH,
@@ -525,20 +607,20 @@ export async function generateLabPdf(eventData = {}) {
     borderWidth: 1.2,
   });
 
-  const sessionHeaders = ['SESSION', 'I (9.30-12.30)', 'II (1.30-4.30)', 'BOTH'];
+  const sessionHeaders = ['SESSION', 'I (9.30-12.30)', 'II (1.30-4.30)', 'III (4.30-7.00)', 'ALL'];
   sessionHeaders.forEach((sh, idx) => {
-    const textW = fontBold.widthOfTextAtSize(sh, 9.5);
+    const textW = fontBold.widthOfTextAtSize(sh, 9);
     page2.drawText(sh, {
-      x: gridX + idx * gridColW + (gridColW - textW) / 2,
+      x: gridX + idx * sessionColW + (sessionColW - textW) / 2,
       y: currentY - 15,
-      size: 9.5,
+      size: 9,
       font: fontBold,
       color: rgb(0, 0, 0),
     });
-    if (idx < 3) {
+    if (idx < 4) {
       page2.drawLine({
-        start: { x: gridX + (idx + 1) * gridColW, y: currentY },
-        end: { x: gridX + (idx + 1) * gridColW, y: currentY - gridHeaderH },
+        start: { x: gridX + (idx + 1) * sessionColW, y: currentY },
+        end: { x: gridX + (idx + 1) * sessionColW, y: currentY - gridHeaderH },
         thickness: 1,
         color: rgb(0, 0, 0),
       });
@@ -549,7 +631,8 @@ export async function generateLabPdf(eventData = {}) {
 
   // Determine selected session
   const getSessionIdxs = (str) => {
-    if (str.includes('both') || str.includes('full')) return [1, 2, 3]; // Check I, II, and BOTH
+    if (str.includes('both') || str.includes('full')) return [1, 2, 3, 4];
+    if (str.includes('iii') || str.includes('3') || str.includes('evening')) return [3];
     if (str.includes('ii') || str.includes('afternoon') || str.includes('2')) return [2];
     if (str.includes('i') || str.includes('morning') || str.includes('1')) return [1];
     return [1];
@@ -568,7 +651,7 @@ export async function generateLabPdf(eventData = {}) {
     if (label) {
       const textW = fontBold.widthOfTextAtSize(label, 9);
       page2.drawText(label, {
-        x: gridX + (gridColW - textW) / 2,
+        x: gridX + (sessionColW - textW) / 2,
         y: currentY - 18,
         size: 9,
         font: fontBold,
@@ -576,17 +659,17 @@ export async function generateLabPdf(eventData = {}) {
       });
     }
 
-    for (let s = 0; s < 4; s++) {
+    for (let s = 0; s < 5; s++) {
       if (s > 0) {
-        const cx = gridX + s * gridColW + gridColW / 2;
+        const cx = gridX + s * sessionColW + sessionColW / 2;
         const cy = currentY - gridRadioH / 2;
         drawRadioCircle(page2, cx, cy, selectedIdxs.includes(s));
       }
 
-      if (s < 3) {
+      if (s < 4) {
         page2.drawLine({
-          start: { x: gridX + (s + 1) * gridColW, y: currentY },
-          end: { x: gridX + (s + 1) * gridColW, y: currentY - gridRadioH },
+          start: { x: gridX + (s + 1) * sessionColW, y: currentY },
+          end: { x: gridX + (s + 1) * sessionColW, y: currentY - gridRadioH },
           thickness: 1,
           color: rgb(0, 0, 0),
         });

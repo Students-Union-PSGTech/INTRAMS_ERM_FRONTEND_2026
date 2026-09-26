@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Noto Sans Tamil';
+  src: url('/fonts/NotoSansTamil-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   color-scheme: dark;
   --bg: #000000;

@@ -5,9 +5,10 @@ import NewDescriptionPage from './NewDescriptionPage';
 import RoundsPage from './RoundsPage';
 import ItemsPage from './ItemsPage';
 import ReviewSubmit from './ReviewSubmit';
+import PersonnelDetailsPage from './PersonnelDetailsPage';
 import { userAPI } from '../api/api';
 import { validateStep } from '../utils/stepValidation';
-import { ArrowLeft, Loader2, Info, Calendar, Layers, Package, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Info, Calendar, Layers, Package, CheckCircle, Users } from 'lucide-react';
 
 // The event list (ViewEvents/HomePage) passes the full event aggregate as
 // location.state, but the Edit Access list only passes a shallow-populated
@@ -21,9 +22,37 @@ const formatEventForEdit = (data) => {
   const newData = { ...data };
   
   if (newData.form) {
+    const normalizeSlot = (val) => {
+      if (!val) return val;
+      const str = String(val).toLowerCase();
+      if (str === '1' || str.includes('slot 1')) return 'Slot 1 (9:30 to 12:30)';
+      if (str === '2' || str.includes('slot 2')) return 'Slot 2 (1:30 to 4:30)';
+      if (str === '3' || str.includes('slot 3')) return 'Slot 3 (4:30 to 7:00)';
+      if (str === 'both' || str.includes('full')) return 'Full Day';
+      return val;
+    };
+
+    const normalizeLabSlot = (val) => {
+      if (!val) return val;
+      const str = String(val).toLowerCase();
+      if (str.includes('slot 1') || str === '1') return '1';
+      if (str.includes('slot 2') || str === '2') return '2';
+      if (str.includes('slot 3') || str === '3') return '3';
+      if (str.includes('full') || str === 'both') return 'Both';
+      return val;
+    };
+
     newData.form = {
       ...newData.form,
-      labs_required: Boolean(newData.form.lab_name || newData.form.lab_block)
+      labs_required: Boolean(newData.form.lab_name || newData.form.lab_block || String(newData.form.labs_required) === 'true' || newData.form.labs_required === true),
+      is_two_day: String(newData.form.is_two_day) === 'true' || newData.form.is_two_day === true,
+      is_two_day_lab: String(newData.form.is_two_day_lab) === 'true' || newData.form.is_two_day_lab === true,
+      needs_extension_boxes: String(newData.form.needs_extension_boxes) === 'true' || newData.form.needs_extension_boxes === true,
+      slot: normalizeSlot(newData.form.slot),
+      day1_slot: normalizeSlot(newData.form.day1_slot),
+      day2_slot: normalizeSlot(newData.form.day2_slot),
+      lab_session_slot: normalizeLabSlot(newData.form.lab_session_slot),
+      lab_session_slot_day2: normalizeLabSlot(newData.form.lab_session_slot_day2)
     };
   }
   
@@ -129,6 +158,7 @@ function UpdateEventController() {
   const tabs = [
     { id: 'basic', label: 'Basic Info', icon: Info },
     { id: 'logistics', label: 'Venue & Logistics', icon: Calendar },
+    { id: 'personnel', label: 'Personnel', icon: Users },
     { id: 'rounds', label: 'Rounds & Rules', icon: Layers },
     { id: 'items', label: 'Logistics Items', icon: Package },
     { id: 'review', label: 'Review & Submit', icon: CheckCircle },
@@ -275,6 +305,27 @@ function UpdateEventController() {
                 ← Back
               </button>
               <button
+                onClick={() => setActiveTab('personnel')}
+                className="px-6 py-2.5 bg-white text-black font-semibold rounded-xl text-sm hover:bg-zinc-200 transition-all"
+              >
+                Next: Personnel Details →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2.5: Personnel Details */}
+        {activeTab === 'personnel' && (
+          <div>
+            <PersonnelDetailsPage formData={formData} setFormData={setFormData} errors={errors} />
+            <div className="mt-6 flex justify-between">
+              <button
+                onClick={() => setActiveTab('logistics')}
+                className="px-6 py-2.5 bg-zinc-800 text-white font-medium rounded-xl text-sm hover:bg-zinc-700 transition-all"
+              >
+                ← Back
+              </button>
+              <button
                 onClick={() => setActiveTab('rounds')}
                 className="px-6 py-2.5 bg-white text-black font-semibold rounded-xl text-sm hover:bg-zinc-200 transition-all"
               >
@@ -290,7 +341,7 @@ function UpdateEventController() {
             <RoundsPage formData={formData} setFormData={setFormData} errors={errors} />
             <div className="mt-6 flex justify-between">
               <button
-                onClick={() => setActiveTab('logistics')}
+                onClick={() => setActiveTab('personnel')}
                 className="px-6 py-2.5 bg-zinc-800 text-white font-medium rounded-xl text-sm hover:bg-zinc-700 transition-all"
               >
                 ← Back

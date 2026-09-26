@@ -1,4 +1,5 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64.js';
 import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64.js';
 
@@ -7,6 +8,17 @@ import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64.js';
  */
 export async function generateEventPdf(eventData = {}) {
   const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+  let tamilFont = null;
+  try {
+    const tamilRes = await fetch('/fonts/NotoSansTamil-Regular.ttf');
+    if (tamilRes.ok) {
+      const tamilBytes = await tamilRes.arrayBuffer();
+      tamilFont = await pdfDoc.embedFont(tamilBytes);
+    }
+  } catch (err) {
+    console.warn("Could not load Tamil font", err);
+  }
   const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
@@ -29,10 +41,25 @@ export async function generateEventPdf(eventData = {}) {
     font.widthOfTextAtSize = (text, size) => {
       if (!text) return 0;
       const cleanStr = cleanText(text).replace(/\n/g, ' ');
+      const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
+      if (hasTamil && tamilFont) {
+        const words = cleanStr.split(/(\s+)/);
+        let totalWidth = 0;
+        for (const word of words) {
+          const isTamilWord = /[\u0B80-\u0BFF]/.test(word);
+          const currentFont = isTamilWord ? tamilFont : font;
+          try {
+            totalWidth += currentFont.widthOfTextAtSize(word, size);
+          } catch(e) {
+            totalWidth += word.length * size * 0.55;
+          }
+        }
+        return totalWidth;
+      }
       try {
         return origWidth(cleanStr, size);
       } catch (_) {
-        const asciiOnly = cleanStr.replace(/[^\x20-\x7E]/g, ' ');
+        const asciiOnly = cleanStr.replace(/[^\x20-\x7E\u0B80-\u0BFF]/g, ' ');
         try {
           return origWidth(asciiOnly, size);
         } catch (_) {
@@ -53,14 +80,38 @@ export async function generateEventPdf(eventData = {}) {
     page.drawText = (text, options) => {
       if (!text && text !== 0 && text !== '0') return;
       const cleanStr = cleanText(text).replace(/\n/g, ' ');
+      const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
+      
+      if (hasTamil && tamilFont) {
+        const words = cleanStr.split(/(\s+)/);
+        let currentX = options.x || 0;
+        const size = options.size || 12;
+        
+        for (const word of words) {
+          if (!word) continue;
+          const isTamilWord = /[\u0B80-\u0BFF]/.test(word);
+          const currentFont = isTamilWord ? tamilFont : (options.font || fontRegular);
+          const actualOptions = { ...options, font: currentFont, x: currentX };
+          try { origDrawText(word, actualOptions); } catch(e) {}
+          
+          try {
+            currentX += currentFont.widthOfTextAtSize(word, size);
+          } catch(e) {
+            currentX += word.length * size * 0.55;
+          }
+        }
+        return;
+      }
+      
+      const actualOptions = { ...options };
       try {
-        origDrawText(cleanStr, options);
+        origDrawText(cleanStr, actualOptions);
       } catch (_) {
-        const asciiOnly = cleanStr.replace(/[^\x20-\x7E]/g, ' ');
+        const asciiOnly = cleanStr.replace(/[^\x20-\x7E\u0B80-\u0BFF]/g, ' ');
         try {
-          origDrawText(asciiOnly, options);
+          origDrawText(asciiOnly, actualOptions);
         } catch (e) {
-          // ignore to prevent crashing whole PDF
+          // ignore
         }
       }
     };
@@ -923,13 +974,21 @@ export async function generateEventPdf(eventData = {}) {
 
   currentY -= box6H;
 
+  const formatSlot = (val) => {
+    if (String(val) === '1') return 'Slot 1 (9:30 to 12:30)';
+    if (String(val) === '2') return 'Slot 2 (1:30 to 4:30)';
+    if (String(val) === '3') return 'Slot 3 (4:30 to 7:00)';
+    if (String(val).toLowerCase() === 'both') return 'Full Day';
+    return val || 'Slot 1 (9:30 to 12:30)';
+  };
+
   // Optional Box 7: Lab Requirements (Dynamic Height based on text content)
   if (formSpecs.labs_required || formSpecs.lab_name || formSpecs.lab_allocated_venue || formSpecs.labsRequired) {
     const lName = formSpecs.lab_name || formSpecs.lab_allocated_venue || formSpecs.labName;
     const labNameStr = lName ? `${lName} (${formSpecs.lab_block || formSpecs.labBlock || ''}, Floor: ${formSpecs.lab_floor || formSpecs.labFloor || 'N/A'}, Lab No: ${formSpecs.lab_no || formSpecs.labNo || 'N/A'})` : 'Yes';
     const labSlotStr = (formSpecs.is_two_day_lab || formSpecs.isTwoDayLab) 
-      ? `Day 1: ${formSpecs.lab_session_slot || formSpecs.labSessionSlot || 'Slot 1'}, Day 2: ${formSpecs.lab_session_slot_day2 || formSpecs.labSessionSlotDay2 || 'Slot 2'}` 
-      : `${formSpecs.lab_day || formSpecs.labDay || 'Day 1'} - ${formSpecs.lab_session_slot || formSpecs.labSessionSlot || 'Slot 1'}`;
+      ? `Day 1: ${formatSlot(formSpecs.lab_session_slot || formSpecs.labSessionSlot)}, Day 2: ${formatSlot(formSpecs.lab_session_slot_day2 || formSpecs.labSessionSlotDay2)}` 
+      : `${formSpecs.lab_day || formSpecs.labDay || 'Day 1'} - ${formatSlot(formSpecs.lab_session_slot || formSpecs.labSessionSlot)}`;
 
     const labLines = wrapText(`Allotted Lab: ${labNameStr}`, maxBoxContentW - 20, fontRegular, 10);
     const slotLines = wrapText(`Lab Schedule: ${labSlotStr}`, maxBoxContentW - 20, fontRegular, 10);

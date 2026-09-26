@@ -13,6 +13,7 @@ import Badge from './ui/Badge';
 import { Table, THead, Th, Td, Tr } from './ui/Table';
 import EmptyState from './ui/EmptyState';
 import { TableSkeleton } from './ui/LoadingState';
+import EventPreview from './EventPreview';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -109,28 +110,15 @@ export default function EventDetail() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
-          <Card className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF]">EVENT INFORMATION</h2>
-              <Badge status={event.status} />
-            </div>
-            {event.tagline && <p className="text-[13px] text-[#00AEEF] italic mb-3">{event.tagline}</p>}
-            <p className="text-[14px] text-[#E5E5E5] leading-relaxed">{event.description || event.about || 'No description provided.'}</p>
-            <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-[#252525] text-[13px]">
-              <div>
-                <p className="text-[#A0A0A0] text-[11px] font-bold uppercase">EVENT TYPE</p>
-                <p className="text-[#FFFFFF] font-bold mt-0.5">{event.event_type || 'GENERAL'}</p>
-              </div>
-              <div>
-                <p className="text-[#A0A0A0] text-[11px] font-bold uppercase">PARTICIPANT MODE</p>
-                <p className="text-[#FFFFFF] font-bold mt-0.5">{event.form?.participant_type || '—'}</p>
-              </div>
-            </div>
-          </Card>
+          <EventPreview formData={event} />
+        </div>
 
-          <Card className="overflow-hidden">
-            <div className="px-4 py-3 border-b border-[#252525] bg-[#000000]">
-              <h2 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF]">REQUESTED EQUIPMENT ITEMS</h2>
+        <div className="space-y-4">
+          <Card className="overflow-hidden border border-[#252525] bg-[#050505]/50 backdrop-blur-md shadow-2xl">
+            <div className="px-5 py-4 border-b border-[#252525] bg-[#000000]/80">
+              <h2 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF] flex items-center gap-2">
+                REQUESTED EQUIPMENT ITEMS
+              </h2>
             </div>
             {itemsList.length === 0 ? (
               <EmptyState title="NO REQUESTED ITEMS" />
@@ -161,35 +149,22 @@ export default function EventDetail() {
               </Table>
             )}
           </Card>
-        </div>
-
-        <div className="space-y-4">
-          <Card className="p-5">
-            <h3 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF] mb-3">ASSOCIATION DETAILS</h3>
-            <p className="text-[#00AEEF] text-[14px] font-bold">{event.club_name || '—'}</p>
-            {contacts.faculty_advisor?.name && (
-              <p className="text-[13px] text-[#E5E5E5] mt-2 font-bold">ADVISOR: <span className="text-[#A0A0A0]">{contacts.faculty_advisor.name}</span></p>
-            )}
-            {contacts.secretary?.name && (
-              <p className="text-[13px] text-[#E5E5E5] mt-1 font-bold">SECRETARY: <span className="text-[#A0A0A0]">{contacts.secretary.name}</span></p>
-            )}
-          </Card>
 
           {Array.isArray(event.annexures) && event.annexures.length > 0 && (
-            <Card className="p-5">
-              <h3 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF] mb-3">
+            <Card className="p-6 border border-[#252525] bg-[#050505]/50 backdrop-blur-md shadow-2xl">
+              <h3 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF] mb-4 flex items-center gap-2">
                 SUPPORTING ANNEXURES ({event.annexures.length})
               </h3>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {event.annexures.map((ann, idx) => (
                   <a
                     key={ann._id || idx}
                     href={resolveAssetUrl(ann.file_url)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block p-2.5 bg-[#000000] border border-[#252525] hover:border-[#00AEEF] rounded text-xs font-medium text-[#E5E5E5] hover:text-white transition-colors truncate"
+                    className="flex items-center gap-3 p-3 bg-[#0A0A0A] border border-[#1A1A1A] hover:border-[#00AEEF] hover:bg-[#00AEEF]/5 rounded-xl text-[13px] font-medium text-[#E5E5E5] hover:text-white transition-all truncate"
                   >
-                    📎 {ann.original_name || ann.file_name || `Annexure ${idx + 1}`}
+                    <span className="truncate">{ann.original_name || ann.file_name || `Annexure ${idx + 1}`}</span>
                   </a>
                 ))}
               </div>

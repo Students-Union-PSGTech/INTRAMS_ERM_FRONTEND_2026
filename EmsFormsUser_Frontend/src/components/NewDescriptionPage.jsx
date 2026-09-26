@@ -4,6 +4,7 @@ import { sanitizeTeamSizeInput } from '../utils/proposalHelpers';
 const SLOT_OPTIONS = [
   { id: 'Slot 1 (9:30 to 12:30)', label: 'Slot 1 (9:30 to 12:30)' },
   { id: 'Slot 2 (1:30 to 4:30)', label: 'Slot 2 (1:30 to 4:30)' },
+  { id: 'Slot 3 (4:30 to 7:00)', label: 'Slot 3 (4:30 to 7:00)' },
   { id: 'Full Day', label: 'Full Day' },
 ];
 
@@ -301,6 +302,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                         {[
                           { id: '1', label: 'Slot 1 (9:30 to 12:30)' },
                           { id: '2', label: 'Slot 2 (1:30 to 4:30)' },
+                          { id: '3', label: 'Slot 3 (4:30 to 7:00)' },
                           { id: 'Both', label: 'Full Day' },
                         ].map((slotOpt) => (
                           <label
@@ -332,6 +334,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                         {[
                           { id: '1', label: 'Slot 1 (9:30 to 12:30)' },
                           { id: '2', label: 'Slot 2 (1:30 to 4:30)' },
+                          { id: '3', label: 'Slot 3 (4:30 to 7:00)' },
                           { id: 'Both', label: 'Full Day' },
                         ].map((slotOpt) => (
                           <label
@@ -360,6 +363,7 @@ function NewDescriptionPage({ formData, setFormData, errors = {} }) {
                         {[
                           { id: '1', label: 'Slot 1 (9:30 to 12:30)' },
                           { id: '2', label: 'Slot 2 (1:30 to 4:30)' },
+                          { id: '3', label: 'Slot 3 (4:30 to 7:00)' },
                           { id: 'Both', label: 'Full Day' },
                         ].map((slotOpt) => (
                           <label

@@ -14,8 +14,8 @@ export default {
         cyan: '#22d3ee',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        heading: ['Outfit', 'Inter', 'sans-serif'],
+        sans: ['Inter', '"Noto Sans Tamil"', 'system-ui', 'sans-serif'],
+        heading: ['Outfit', 'Inter', '"Noto Sans Tamil"', 'sans-serif'],
       },
       maxWidth: {
         content: '1500px',
