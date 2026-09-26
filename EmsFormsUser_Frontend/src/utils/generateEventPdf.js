@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64.js';
 import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64.js';
 
@@ -129,7 +129,7 @@ export async function generateEventPdf(eventData = {}) {
   };
 
   // Light INTRAMS 2026 Background Watermark
-  const drawWatermark = (page) => {
+  const drawWatermark = () => {
     // Watermark removed
   };
 
