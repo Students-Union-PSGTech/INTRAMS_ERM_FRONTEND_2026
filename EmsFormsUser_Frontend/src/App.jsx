@@ -1,3 +1,26 @@
+import React from 'react';
+import Maintenance from './components/Maintenance';
+
+/**
+ * ============================================================================
+ * CONVENOR PORTAL MAINTENANCE MODE
+ * ============================================================================
+ * To restore the normal Convenor Portal, revert this file or restore the
+ * original routes and AuthProvider configuration below.
+ * ============================================================================
+ */
+
+function App() {
+  return <Maintenance />;
+}
+
+export default App;
+
+/*
+================================================================================
+ORIGINAL PORTAL CODE (UNCOMMENT TO RESTORE):
+================================================================================
+
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -58,3 +81,5 @@ function App() {
 }
 
 export default App;
+================================================================================
+*/
