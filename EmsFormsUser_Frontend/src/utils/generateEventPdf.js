@@ -111,23 +111,38 @@ export async function generateEventPdf(eventData = {}) {
   const tagline = ev.tagline || formSpecs.tagline || '—';
   const about = ev.about || ev.description || formSpecs.about || '—';
 
-  const formatYear = (yearStr) => {
-    if (!yearStr) return 'IV YEAR';
-    const y = String(yearStr).trim().toUpperCase();
-    if (y.includes('MSC')) return y;
-    if (y === '1' || y.startsWith('1ST') || y === 'I' || y === 'I YEAR') return 'I YEAR';
-    if (y === '2' || y.startsWith('2ND') || y === 'II' || y === 'II YEAR') return 'II YEAR';
-    if (y === '3' || y.startsWith('3RD') || y === 'III' || y === 'III YEAR') return 'III YEAR';
-    if (y === '4' || y.startsWith('4TH') || y === 'IV' || y === 'IV YEAR') return 'IV YEAR';
-    if (y === '5' || y.startsWith('5TH') || y === 'V' || y === 'V YEAR') return 'V YEAR';
-    return y.includes('YEAR') ? y : `${y} YEAR`;
+  const formatYear = (yearStr, rollNo = '') => {
+    if (yearStr) {
+      const y = String(yearStr).trim().toUpperCase();
+      if (y.includes('MSC')) return y;
+      if (y === '1' || y.startsWith('1ST') || y === 'I' || y === 'I YEAR') return 'I YEAR';
+      if (y === '2' || y.startsWith('2ND') || y === 'II' || y === 'II YEAR') return 'II YEAR';
+      if (y === '3' || y.startsWith('3RD') || y === 'III' || y === 'III YEAR') return 'III YEAR';
+      if (y === '4' || y.startsWith('4TH') || y === 'IV' || y === 'IV YEAR') return 'IV YEAR';
+      if (y === '5' || y.startsWith('5TH') || y === 'V' || y === 'V YEAR') return 'V YEAR';
+      if (y) return y.includes('YEAR') ? y : `${y} YEAR`;
+    }
+
+    if (rollNo) {
+      const rollMatch = String(rollNo).trim().match(/^(\d{2})/);
+      if (rollMatch) {
+        const batch = parseInt(rollMatch[1], 10);
+        if (batch === 25) return 'I YEAR';
+        if (batch === 24) return 'II YEAR';
+        if (batch === 23) return 'III YEAR';
+        if (batch === 22) return 'IV YEAR';
+        if (batch === 21) return 'V YEAR';
+      }
+    }
+
+    return '—';
   };
 
   const rawSec = ev.contacts?.secretaries || ev.secretaries || ev.contacts?.secretary || ev.secretary;
   const secretarialList = rawSec ? (Array.isArray(rawSec) ? rawSec : [rawSec]) : [];
   const validSecs = secretarialList.filter(s => s && ((s.name && s.name.trim()) || (s.roll_number && String(s.roll_number).trim())));
   const secRows = validSecs.length > 0
-    ? validSecs.map(s => [s.name || '', s.roll_number || s.rollNo || '', s.mobile || s.phone || '', s.department || '', formatYear(s.year)])
+    ? validSecs.map(s => [s.name || '', s.roll_number || s.rollNo || '', s.mobile || s.phone || '', s.department || '', formatYear(s.year, s.roll_number || s.rollNo)])
     : [
       ['', '', '', '', '']
     ];
@@ -136,7 +151,7 @@ export async function generateEventPdf(eventData = {}) {
   const convenorList = rawConv ? (Array.isArray(rawConv) ? rawConv : [rawConv]) : [];
   const validConvs = convenorList.filter(c => c && ((c.name && c.name.trim()) || (c.roll_number && String(c.roll_number).trim())));
   const convRows = validConvs.length > 0
-    ? validConvs.map(c => [c.name || '', c.roll_number || c.rollNo || '', c.mobile || c.phone || '', c.department || '', formatYear(c.year)])
+    ? validConvs.map(c => [c.name || '', c.roll_number || c.rollNo || '', c.mobile || c.phone || '', c.department || '', formatYear(c.year, c.roll_number || c.rollNo)])
     : [
       ['', '', '', '', '']
     ];
@@ -145,7 +160,7 @@ export async function generateEventPdf(eventData = {}) {
   const volunteerList = rawVol ? (Array.isArray(rawVol) ? rawVol : [rawVol]) : [];
   const validVols = volunteerList.filter(v => v && ((v.name && v.name.trim()) || (v.roll_number && String(v.roll_number).trim())));
   const volRows = validVols.length > 0
-    ? validVols.map(v => [v.name || '', v.roll_number || v.rollNo || '', v.mobile || v.phone || '', v.department || '', formatYear(v.year)])
+    ? validVols.map(v => [v.name || '', v.roll_number || v.rollNo || '', v.mobile || v.phone || '', v.department || '', formatYear(v.year, v.roll_number || v.rollNo)])
     : [
       ['', '', '', '', '']
     ];
@@ -678,7 +693,7 @@ export async function generateEventPdf(eventData = {}) {
     borderWidth: 1.2,
   });
 
-  const eventDayText = formSpecs.is_two_day ? '2 Days Event' : (formSpecs.day || 'Day 1');
+  const eventDayText = formSpecs.is_two_day ? '2 Days Event' : (formSpecs.day || formSpecs.event_day || 'Day 1');
   currentPage.drawText(`Event Day: ${eventDayText}`, { x: gridBoxX + 15, y: currentY - 24, size: 11, font: fontBold, color: rgb(0, 0, 0) });
 
   currentY -= box1H;
@@ -696,8 +711,8 @@ export async function generateEventPdf(eventData = {}) {
   });
 
   const roundsCount = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds.length : (formSpecs.num_rounds || 1);
-  const expectedParticipants = ev.expectedParticipants || formSpecs.expectedParticipants || ev.expected_participants || formSpecs.expected_participants || '—';
-  const durationText = formSpecs.duration || ev.duration || '—';
+  const expectedParticipants = ev.expectedParticipants || formSpecs.expectedParticipants || ev.expected_participants || formSpecs.expected_participants || formSpecs.participant_count || (Array.isArray(ev.rounds) && ev.rounds[0]?.participant_count ? ev.rounds[0].participant_count : '—');
+  const durationText = formSpecs.duration || ev.duration || formSpecs.duration_in_hrs || '—';
 
   currentPage.drawText(`No. of Rounds: ${roundsCount}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   currentPage.drawText(`Expected no of Participants: ${expectedParticipants}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
@@ -725,20 +740,31 @@ export async function generateEventPdf(eventData = {}) {
     color: rgb(0, 0, 0),
   });
 
-  const pType = String(formSpecs.participant_type || ev.participant_type || 'Solo').toLowerCase();
+  const pType = String(formSpecs.participant_type || ev.participant_type || ev.event_type || 'Solo').toLowerCase();
   const isTeam = pType.includes('team');
   currentPage.drawText('Individual:', { x: gridBoxX + 15, y: currentY - 30, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   drawRadioCircle(gridBoxX + 85, currentY - 26, !isTeam);
 
   currentPage.drawText('Team:', { x: gridBoxX + 255, y: currentY - 20, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   drawRadioCircle(gridBoxX + 310, currentY - 16, isTeam);
-  currentPage.drawText(`Min Size: ${formSpecs.team_min || 1}`, { x: gridBoxX + 255, y: currentY - 35, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
-  currentPage.drawText(`Max Size: ${formSpecs.team_max || 1}`, { x: gridBoxX + 255, y: currentY - 47, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Min Size: ${formSpecs.team_min || formSpecs.minimum_team_size || (isTeam ? 2 : 1)}`, { x: gridBoxX + 255, y: currentY - 35, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+  currentPage.drawText(`Max Size: ${formSpecs.team_max || formSpecs.maximum_team_size || (isTeam ? 3 : 1)}`, { x: gridBoxX + 255, y: currentY - 47, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
 
   currentY -= box3H;
 
-  // Box 4: Halls Required
-  const box4H = 75;
+  // Box 4: Halls Required (Dynamic Height based on text content)
+  const hallsCount = formSpecs.halls_required || formSpecs.hallsRequired || 1;
+  const preferredHalls = formSpecs.preferred_halls || ev.preferred_halls || (Array.isArray(formSpecs.preferredHalls) ? formSpecs.preferredHalls.join(', ') : '—');
+  const reasonForHalls = formSpecs.reason_for_halls || formSpecs.hall_requirement_reason || formSpecs.reasonForHalls || '—';
+
+  const maxBoxContentW = gridBoxWidth - 30; // 465.28 pt
+  const prefLines = wrapText(`Preferred Halls: ${preferredHalls}`, maxBoxContentW, fontRegular, 10);
+  const reasonLines = wrapText(`Reason: ${reasonForHalls}`, maxBoxContentW, fontRegular, 10);
+
+  const lineStep = 13.5;
+  const box4ContentH = 12 + 15 + 4 + (prefLines.length * lineStep) + 4 + (reasonLines.length * lineStep) + 10;
+  const box4H = Math.max(75, box4ContentH);
+
   ensureSpace(box4H + 10);
   currentPage.drawRectangle({
     x: gridBoxX,
@@ -749,16 +775,24 @@ export async function generateEventPdf(eventData = {}) {
     borderWidth: 1.2,
   });
 
-  const hallsCount = formSpecs.halls_required || 1;
-  const preferredHalls = formSpecs.preferred_halls || ev.preferred_halls || '—';
-  const reasonForHalls = formSpecs.reason_for_halls || '—';
+  let curY = currentY - 12;
+  currentPage.drawText(`No of Halls Required: ${hallsCount}`, { x: gridBoxX + 15, y: curY - 8, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  curY -= (15 + 4);
 
-  currentPage.drawText(`No of Halls Required: ${hallsCount}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  currentPage.drawText(`Preferred Halls: ${preferredHalls}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  currentPage.drawText(`Reason: ${reasonForHalls}`, { x: gridBoxX + 15, y: currentY - 62, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  prefLines.forEach((pLine) => {
+    currentPage.drawText(pLine, { x: gridBoxX + 15, y: curY - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+    curY -= lineStep;
+  });
+  curY -= 4;
+
+  reasonLines.forEach((rLine) => {
+    currentPage.drawText(rLine, { x: gridBoxX + 15, y: curY - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+    curY -= lineStep;
+  });
 
   currentY -= box4H;
 
+  // Box 5: Slot Details
   const box5H = 65;
   ensureSpace(box5H + 10);
   currentPage.drawRectangle({
@@ -773,16 +807,24 @@ export async function generateEventPdf(eventData = {}) {
   currentPage.drawText('Slot Details:', { x: gridBoxX + 15, y: currentY - 20, size: 11, font: fontBold, color: rgb(0, 0, 0) });
 
   if (formSpecs.is_two_day) {
-    currentPage.drawText(`Day 1 Slot: ${formSpecs.day1_slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-    currentPage.drawText(`Day 2 Slot: ${formSpecs.day2_slot || 'N/A'}`, { x: gridBoxX + 250, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentPage.drawText(`Day 1 Slot: ${formSpecs.day1_slot || formSpecs.day1Slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentPage.drawText(`Day 2 Slot: ${formSpecs.day2_slot || formSpecs.day2Slot || 'N/A'}`, { x: gridBoxX + 250, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   } else {
-    currentPage.drawText(`Time Slot: ${formSpecs.day ? formSpecs.day + ' - ' : ''}${formSpecs.slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    const dStr = formSpecs.day || formSpecs.event_day || '';
+    const sStr = formSpecs.slot || formSpecs.time_slot || formSpecs.timeSlot || 'N/A';
+    currentPage.drawText(`Time Slot: ${dStr ? dStr + ' - ' : ''}${sStr}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
   }
 
   currentY -= box5H;
 
-  // Box 6: Extension Boxes
-  const box6H = 55;
+  // Box 6: Extension Boxes (Dynamic Height based on text content)
+  const extBoxesCount = formSpecs.extension_boxes || formSpecs.extension_box_count || formSpecs.extensionBoxes || 0;
+  const reasonExt = formSpecs.reason_for_extension_boxes || formSpecs.extension_requirement_reason || formSpecs.reasonForExtensionBoxes || (extBoxesCount > 0 ? 'Required for event equipment' : '—');
+  const reasonExtLines = wrapText(`Reason: ${reasonExt}`, maxBoxContentW, fontRegular, 10);
+
+  const box6ContentH = 12 + 15 + 4 + (reasonExtLines.length * lineStep) + 10;
+  const box6H = Math.max(55, box6ContentH);
+
   ensureSpace(box6H + 10);
   currentPage.drawRectangle({
     x: gridBoxX,
@@ -793,17 +835,31 @@ export async function generateEventPdf(eventData = {}) {
     borderWidth: 1.2,
   });
 
-  const extBoxesCount = formSpecs.extension_boxes || 0;
-  const reasonExt = formSpecs.reason_for_extension_boxes || (extBoxesCount > 0 ? 'Required for event equipment' : '—');
+  let curY6 = currentY - 12;
+  currentPage.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : '0'}`, { x: gridBoxX + 15, y: curY6 - 8, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  curY6 -= (15 + 4);
 
-  currentPage.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : '0'}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
-  currentPage.drawText(`Reason: ${reasonExt}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+  reasonExtLines.forEach((rLine) => {
+    currentPage.drawText(rLine, { x: gridBoxX + 15, y: curY6 - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+    curY6 -= lineStep;
+  });
 
   currentY -= box6H;
 
-  // Optional Box 7: Lab Requirements
-  if (formSpecs.labs_required || formSpecs.lab_name) {
-    const box7H = 65;
+  // Optional Box 7: Lab Requirements (Dynamic Height based on text content)
+  if (formSpecs.labs_required || formSpecs.lab_name || formSpecs.lab_allocated_venue || formSpecs.labsRequired) {
+    const lName = formSpecs.lab_name || formSpecs.lab_allocated_venue || formSpecs.labName;
+    const labNameStr = lName ? `${lName} (${formSpecs.lab_block || formSpecs.labBlock || ''}, Floor: ${formSpecs.lab_floor || formSpecs.labFloor || 'N/A'}, Lab No: ${formSpecs.lab_no || formSpecs.labNo || 'N/A'})` : 'Yes';
+    const labSlotStr = (formSpecs.is_two_day_lab || formSpecs.isTwoDayLab) 
+      ? `Day 1: ${formSpecs.lab_session_slot || formSpecs.labSessionSlot || 'Slot 1'}, Day 2: ${formSpecs.lab_session_slot_day2 || formSpecs.labSessionSlotDay2 || 'Slot 2'}` 
+      : `${formSpecs.lab_day || formSpecs.labDay || 'Day 1'} - ${formSpecs.lab_session_slot || formSpecs.labSessionSlot || 'Slot 1'}`;
+
+    const labLines = wrapText(`Allotted Lab: ${labNameStr}`, maxBoxContentW - 20, fontRegular, 10);
+    const slotLines = wrapText(`Lab Schedule: ${labSlotStr}`, maxBoxContentW - 20, fontRegular, 10);
+
+    const box7ContentH = 12 + 15 + 4 + (labLines.length * lineStep) + 4 + (slotLines.length * lineStep) + 10;
+    const box7H = Math.max(65, box7ContentH);
+
     ensureSpace(box7H + 10);
     currentPage.drawRectangle({
       x: gridBoxX,
@@ -813,11 +869,22 @@ export async function generateEventPdf(eventData = {}) {
       borderColor: rgb(0, 0, 0),
       borderWidth: 1.2,
     });
-    currentPage.drawText('Lab Requirements:', { x: gridBoxX + 15, y: currentY - 20, size: 11, font: fontBold, color: rgb(0, 0, 0) });
-    const labNameStr = formSpecs.lab_name ? `${formSpecs.lab_name} (${formSpecs.lab_block || ''}, Floor: ${formSpecs.lab_floor || 'N/A'}, Lab No: ${formSpecs.lab_no || 'N/A'})` : 'Yes';
-    currentPage.drawText(`Allotted Lab: ${labNameStr}`, { x: gridBoxX + 35, y: currentY - 38, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
-    const labSlotStr = formSpecs.is_two_day_lab ? `Day 1: ${formSpecs.lab_session_slot || 'Slot 1'}, Day 2: ${formSpecs.lab_session_slot_day2 || 'Slot 2'}` : `${formSpecs.lab_day || 'Day 1'} - ${formSpecs.lab_session_slot || 'Slot 1'}`;
-    currentPage.drawText(`Lab Schedule: ${labSlotStr}`, { x: gridBoxX + 35, y: currentY - 52, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+
+    let curY7 = currentY - 12;
+    currentPage.drawText('Lab Requirements:', { x: gridBoxX + 15, y: curY7 - 8, size: 11, font: fontBold, color: rgb(0, 0, 0) });
+    curY7 -= (15 + 4);
+
+    labLines.forEach((lLine) => {
+      currentPage.drawText(lLine, { x: gridBoxX + 35, y: curY7 - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+      curY7 -= lineStep;
+    });
+    curY7 -= 4;
+
+    slotLines.forEach((sLine) => {
+      currentPage.drawText(sLine, { x: gridBoxX + 35, y: curY7 - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+      curY7 -= lineStep;
+    });
+
     currentY -= box7H;
   }
 
