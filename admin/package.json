@@ -21,6 +21,7 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.18.3",
     "react-tsparticles": "^2.12.2",
+    "regenerator-runtime": "^0.14.1",
     "tailwind-merge": "^2.2.2",
     "tsparticles-slim": "^2.12.0"
   },

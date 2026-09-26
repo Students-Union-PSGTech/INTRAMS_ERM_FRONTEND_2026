@@ -1,3 +1,5 @@
+import "regenerator-runtime/runtime";
+import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 
 function normalizeRole(role) {
@@ -96,9 +98,90 @@ function getAssociationEntries(data, role) {
 
 export async function generateRolePdf({ role, data }) {
   const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
   const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+
+  let tamilFont = null;
+  try {
+    const tamilRes = await fetch('/fonts/NotoSansTamil-Regular.ttf');
+    if (tamilRes.ok) {
+      const tamilBytes = await tamilRes.arrayBuffer();
+      tamilFont = await pdfDoc.embedFont(tamilBytes);
+    }
+  } catch (err) {
+    console.warn("Could not load Tamil font", err);
+  }
+
+  const wrapFontWidth = (fontObj) => {
+    const origWidth = fontObj.widthOfTextAtSize.bind(fontObj);
+    fontObj.widthOfTextAtSize = (text, size) => {
+      try {
+        return origWidth(text, size);
+      } catch (err) {
+        let clean = text.replace(/[\u0B80-\u0BFF]/g, '');
+        if (clean.length === 0) return text.length * size * 0.55;
+        try {
+          let w = origWidth(clean, size);
+          w += (text.length - clean.length) * size * 0.55;
+          return w;
+        } catch (_) {
+          return text.length * size * 0.55;
+        }
+      }
+    };
+  };
+
+  wrapFontWidth(fontRegular);
+  wrapFontWidth(fontBold);
+  wrapFontWidth(fontItalic);
+
+  const cleanText = (text) => {
+    if (text === null || text === undefined) return '';
+    return String(text).replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  };
+
+  const originalAddPage = pdfDoc.addPage.bind(pdfDoc);
+  pdfDoc.addPage = (...args) => {
+    const page = originalAddPage(...args);
+    const origDrawText = page.drawText.bind(page);
+    page.drawText = (text, options) => {
+      if (!text && text !== 0 && text !== '0') return;
+      const cleanStr = cleanText(text);
+      const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
+      
+      if (hasTamil && tamilFont) {
+        const chunks = cleanStr.match(/[\u0B80-\u0BFF]+|[^\u0B80-\u0BFF]+/g) || [];
+        let currentX = options.x || 0;
+        const size = options.size || 12;
+        
+        for (const chunk of chunks) {
+          if (!chunk) continue;
+          const isTamilChunk = /[\u0B80-\u0BFF]/.test(chunk);
+          const currentFont = isTamilChunk ? tamilFont : (options.font || fontRegular);
+          const actualOptions = { ...options, font: currentFont, x: currentX };
+          try { origDrawText(chunk, actualOptions); } catch(e) {}
+          
+          try {
+            currentX += currentFont.widthOfTextAtSize(chunk, size);
+          } catch(e) {
+            currentX += chunk.length * size * 0.55;
+          }
+        }
+        return;
+      }
+      
+      const actualOptions = { ...options };
+      try {
+        origDrawText(cleanStr, actualOptions);
+      } catch (_) {
+        const asciiOnly = cleanStr.replace(/[^\x20-\x7E\u0B80-\u0BFF]/g, ' ');
+        try { origDrawText(asciiOnly, actualOptions); } catch (e) {}
+      }
+    };
+    return page;
+  };
 
   const pageWidth = 841.89; // Landscape A4 width
   const pageHeight = 595.28; // Landscape A4 height
@@ -129,34 +212,39 @@ export async function generateRolePdf({ role, data }) {
     });
   };
 
-  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawWatermark(currentPage);
-  drawPageBorder(currentPage);
-
-  // Title Header
+  // Title and Timestamp Header Logic
   const title = getRoleTitle(role);
   const titleWidth = fontBold.widthOfTextAtSize(title, 20);
-  currentPage.drawText(title, {
-    x: (pageWidth - titleWidth) / 2,
-    y: pageHeight - 55,
-    size: 20,
-    font: fontBold,
-    color: rgb(0, 0, 0),
-  });
-
-  // Timestamp Subtitle
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-GB'); // DD/MM/YYYY
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).toLowerCase();
   const generatedText = `Generated on ${dateStr}, ${timeStr}`;
   const generatedWidth = fontItalic.widthOfTextAtSize(generatedText, 10);
-  currentPage.drawText(generatedText, {
-    x: (pageWidth - generatedWidth) / 2,
-    y: pageHeight - 74,
-    size: 10,
-    font: fontItalic,
-    color: rgb(0, 0, 0),
-  });
+
+  const drawPageHeaders = (page) => {
+    // Title Header
+    page.drawText(title, {
+      x: (pageWidth - titleWidth) / 2,
+      y: pageHeight - 55,
+      size: 20,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
+    // Timestamp Subtitle
+    page.drawText(generatedText, {
+      x: (pageWidth - generatedWidth) / 2,
+      y: pageHeight - 74,
+      size: 10,
+      font: fontItalic,
+      color: rgb(0, 0, 0),
+    });
+  };
+
+  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+  drawWatermark(currentPage);
+  drawPageBorder(currentPage);
+  drawPageHeaders(currentPage);
 
   let currentY = pageHeight - 105;
   const associationGroups = getAssociationEntries(data, role);
@@ -166,7 +254,8 @@ export async function generateRolePdf({ role, data }) {
       currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
       drawWatermark(currentPage);
       drawPageBorder(currentPage);
-      currentY = pageHeight - 50;
+      drawPageHeaders(currentPage);
+      currentY = pageHeight - 105;
     }
   };
 
@@ -176,58 +265,66 @@ export async function generateRolePdf({ role, data }) {
     const rowHeight = 24;
     const sectionGap = 16;
 
-    // Ensure space for banner + header + at least 1 row
-    checkAddPage(bannerHeight + headerHeight + rowHeight);
+    const drawHeaders = () => {
+      // Association Banner (Dark Blue)
+      const bannerY = currentY - bannerHeight;
+      currentPage.drawRectangle({
+        x: tableX,
+        y: bannerY,
+        width: tableWidth,
+        height: bannerHeight,
+        color: rgb(0.14, 0.32, 0.48), // Dark Blue #24527a
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1,
+      });
 
-    // Association Banner (Dark Blue)
-    const bannerY = currentY - bannerHeight;
-    currentPage.drawRectangle({
-      x: tableX,
-      y: bannerY,
-      width: tableWidth,
-      height: bannerHeight,
-      color: rgb(0.14, 0.32, 0.48), // Dark Blue #24527a
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1,
-    });
-
-    currentPage.drawText(associationName, {
-      x: tableX + 8,
-      y: bannerY + 7,
-      size: 11,
-      font: fontBold,
-      color: rgb(1, 1, 1), // White Text
-    });
-
-    currentY -= bannerHeight;
-
-    // Table Header Row (Light Blue-Grey #d9e2ec, Black Text)
-    const headerY = currentY - headerHeight;
-    currentPage.drawRectangle({
-      x: tableX,
-      y: headerY,
-      width: tableWidth,
-      height: headerHeight,
-      color: rgb(0.85, 0.89, 0.93), // Light grey-blue #d9e2ec
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1,
-    });
-
-    const headerValues = ['S.No', `${getRoleLabel(role)} Name`, 'Roll Number', 'Year', 'Department', 'Phone No'];
-    let xPos = tableX;
-
-    headerValues.forEach((header, index) => {
-      const width = colWidths[index];
-      const textWidth = fontBold.widthOfTextAtSize(header, 10);
-      const isCentered = index === 0 || index === 2 || index === 3;
-      const textX = isCentered ? xPos + (width - textWidth) / 2 : xPos + 8;
-
-      currentPage.drawText(header, {
-        x: textX,
-        y: headerY + 7,
-        size: 10,
+      currentPage.drawText(associationName, {
+        x: tableX + 8,
+        y: bannerY + 7,
+        size: 11,
         font: fontBold,
-        color: rgb(0, 0, 0), // Black Text
+        color: rgb(1, 1, 1), // White Text
+      });
+
+      currentY -= bannerHeight;
+
+      // Table Header Row (Light Blue-Grey #d9e2ec, Black Text)
+      const headerY = currentY - headerHeight;
+      currentPage.drawRectangle({
+        x: tableX,
+        y: headerY,
+        width: tableWidth,
+        height: headerHeight,
+        color: rgb(0.85, 0.89, 0.93), // Light grey-blue #d9e2ec
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1,
+      });
+
+      const headerValues = ['S.No', `${getRoleLabel(role)} Name`, 'Roll Number', 'Year', 'Department', 'Phone No'];
+      let xPos = tableX;
+
+      headerValues.forEach((header, index) => {
+        const width = colWidths[index];
+        const textWidth = fontBold.widthOfTextAtSize(header, 10);
+        const isCentered = index === 0 || index === 2 || index === 3;
+        const textX = isCentered ? xPos + (width - textWidth) / 2 : xPos + 8;
+
+        currentPage.drawText(header, {
+          x: textX,
+          y: headerY + 7,
+          size: 10,
+          font: fontBold,
+          color: rgb(0, 0, 0), // Black Text
+        });
+
+        currentPage.drawLine({
+          start: { x: xPos, y: headerY },
+          end: { x: xPos, y: headerY + headerHeight },
+          thickness: 1,
+          color: rgb(0, 0, 0),
+        });
+
+        xPos += width;
       });
 
       currentPage.drawLine({
@@ -237,21 +334,22 @@ export async function generateRolePdf({ role, data }) {
         color: rgb(0, 0, 0),
       });
 
-      xPos += width;
-    });
+      currentY -= headerHeight;
+    };
 
-    currentPage.drawLine({
-      start: { x: xPos, y: headerY },
-      end: { x: xPos, y: headerY + headerHeight },
-      thickness: 1,
-      color: rgb(0, 0, 0),
-    });
-
-    currentY = headerY;
+    // Ensure space for banner + header + at least 1 row
+    checkAddPage(bannerHeight + headerHeight + rowHeight);
+    drawHeaders();
 
     // Member Data Rows (White Background, Black Text)
     members.forEach((member, memberIndex) => {
+      const prevPage = currentPage;
       checkAddPage(rowHeight);
+      
+      if (currentPage !== prevPage) {
+        // Redraw headers on new page
+        drawHeaders();
+      }
 
       const rowTop = currentY;
       const rowBottom = rowTop - rowHeight;

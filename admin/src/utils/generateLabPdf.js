@@ -1,3 +1,4 @@
+import "regenerator-runtime/runtime";
 import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import { PSG_LOGO_BASE64 } from './psgLogoBase64';
@@ -62,21 +63,21 @@ export async function generateLabPdf(eventData = {}) {
       const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
       
       if (hasTamil && tamilFont) {
-        const words = cleanStr.split(/(\s+)/);
+        const chunks = cleanStr.match(/[\u0B80-\u0BFF]+|[^\u0B80-\u0BFF]+/g) || [];
         let currentX = options.x || 0;
         const size = options.size || 12;
         
-        for (const word of words) {
-          if (!word) continue;
-          const isTamilWord = /[\u0B80-\u0BFF]/.test(word);
-          const currentFont = isTamilWord ? tamilFont : (options.font || fontRegular);
+        for (const chunk of chunks) {
+          if (!chunk) continue;
+          const isTamilChunk = /[\u0B80-\u0BFF]/.test(chunk);
+          const currentFont = isTamilChunk ? tamilFont : (options.font || fontRegular);
           const actualOptions = { ...options, font: currentFont, x: currentX };
-          try { origDrawText(word, actualOptions); } catch(e) {}
+          try { origDrawText(chunk, actualOptions); } catch(e) {}
           
           try {
-            currentX += currentFont.widthOfTextAtSize(word, size);
+            currentX += currentFont.widthOfTextAtSize(chunk, size);
           } catch(e) {
-            currentX += word.length * size * 0.55;
+            currentX += chunk.length * size * 0.55;
           }
         }
         return;
