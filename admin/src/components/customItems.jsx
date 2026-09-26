@@ -201,6 +201,7 @@ export default function CustomItems() {
                 <tr>
                   <Th>ITEM NAME</Th>
                   <Th>CLUB / ASSOCIATION</Th>
+                  <Th>EVENT ID</Th>
                   <Th>EVENT</Th>
                   <Th>QTY</Th>
                   <Th>EST. UNIT / TOTAL</Th>
@@ -242,6 +243,17 @@ export default function CustomItems() {
                         )}
                       </Td>
 
+                      {/* Event ID */}
+                      <Td>
+                        {eventObj.event_id ? (
+                          <span className="font-mono text-[#00AEEF] font-bold">
+                            {eventObj.event_id}
+                          </span>
+                        ) : (
+                          <span className="text-[#A0A0A0]">—</span>
+                        )}
+                      </Td>
+
                       {/* Event */}
                       <Td>
                         <div className="flex items-center gap-1.5">
@@ -249,11 +261,6 @@ export default function CustomItems() {
                             {eventObj.event_name || 'Event Proposal'}
                           </span>
                         </div>
-                        {eventObj.event_id && (
-                          <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded-none bg-[#0a192f] border border-[#00AEEF]/40 text-[#00AEEF] text-[9px] font-mono font-bold">
-                            {eventObj.event_id}
-                          </span>
-                        )}
                       </Td>
 
                       {/* Quantity */}

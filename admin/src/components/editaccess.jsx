@@ -86,8 +86,9 @@ export default function EditAccess() {
             <Table>
               <THead>
                 <tr>
+                  <Th>EVENT ID</Th>
                   <Th>EVENT</Th>
-                  <Th>ASSOCIATION</Th>
+                  <Th>CLUB</Th>
                   <Th>REASON FOR EDIT</Th>
                   <Th>REQUEST DATE</Th>
                   <Th>STATUS</Th>
@@ -100,7 +101,8 @@ export default function EditAccess() {
                   const eventId = req.submission_id?._id || req.submission_id;
                   return (
                     <Tr key={req._id}>
-                      <Td className="text-[#FFFFFF] font-bold">{`${req.submission_id?.event_name || req.submission_id?.name || 'Event'} ${req.submission_id?.event_id ? `(${req.submission_id.event_id})` : ''}`.trim()}</Td>
+                      <Td className="font-mono text-[#00AEEF] font-bold">{req.submission_id?.event_id || '—'}</Td>
+                      <Td className="text-[#FFFFFF] font-bold">{`${req.submission_id?.event_name || req.submission_id?.name || 'Event'}`.trim()}</Td>
                       <Td>{req.requested_by?.club_name || req.requested_by?.username || '—'}</Td>
                       <Td className="max-w-xs truncate">{req.message || req.reason || '—'}</Td>
                       <Td>{(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleString('en-IN') : '—'}</Td>
