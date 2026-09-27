@@ -101,7 +101,15 @@ export const validateStep = (step, formData = {}) => {
     vols.forEach((v, idx) => checkStudent(v, 'Volunteer', idx));
 
     checkFaculty(contacts.faculty_advisor || contacts.faculty);
-    checkJudge(contacts.judge);
+    if (Array.isArray(contacts.judges)) {
+      contacts.judges.forEach((j, idx) => {
+        if (j.name || j.designation || j.mobile) {
+          checkJudge(j, idx);
+        }
+      });
+    } else {
+      checkJudge(contacts.judge);
+    }
 
     return { isValid: Object.keys(errors).length === 0, errors };
   }

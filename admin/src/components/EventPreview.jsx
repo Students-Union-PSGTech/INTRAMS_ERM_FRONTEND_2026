@@ -144,14 +144,14 @@ function EventPreview({ formData }) {
             )}
             
             {/* Judge */}
-            {formData.contacts.judge?.name && (
-              <div className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
-                <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Judge</span>
-                <div><span className="text-slate-400">Name:</span> {formData.contacts.judge.name}</div>
-                <div><span className="text-slate-400">Designation:</span> {formData.contacts.judge.designation || 'N/A'}</div>
-                <div><span className="text-slate-400">Contact:</span> {formData.contacts.judge.mobile || 'N/A'}</div>
+            {(Array.isArray(formData.contacts?.judges) ? formData.contacts.judges : (formData.contacts?.judge ? [formData.contacts.judge] : [])).filter(j => j?.name).map((judge, idx) => (
+              <div key={idx} className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+                <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Judge {idx + 1}</span>
+                <div><span className="text-slate-400">Name:</span> {judge.name}</div>
+                <div><span className="text-slate-400">Designation:</span> {judge.designation || 'N/A'}</div>
+                <div><span className="text-slate-400">Contact:</span> {judge.mobile || 'N/A'}</div>
               </div>
-            )}
+            ))}
           </div>
         </div>
       )}

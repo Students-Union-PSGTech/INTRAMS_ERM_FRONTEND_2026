@@ -202,14 +202,14 @@ function EventDetails() {
                 )}
                 
                 {/* Judge */}
-                {event.contacts.judge?.name && (
-                  <div className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
-                    <span className="font-bold text-sky-400 block mb-2 uppercase tracking-wider">Judge</span>
-                    <div><span className="text-slate-400">Name:</span> {event.contacts.judge.name}</div>
-                    <div><span className="text-slate-400">Designation:</span> {event.contacts.judge.designation || 'N/A'}</div>
-                    <div><span className="text-slate-400">Contact:</span> {event.contacts.judge.mobile || 'N/A'}</div>
+                {(Array.isArray(event.contacts?.judges) ? event.contacts.judges : (event.contacts?.judge ? [event.contacts.judge] : [])).filter(j => j?.name).map((judge, idx) => (
+                  <div key={idx} className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
+                    <span className="font-bold text-sky-400 block mb-2 uppercase tracking-wider">Judge {idx + 1}</span>
+                    <div><span className="text-slate-400">Name:</span> {judge.name}</div>
+                    <div><span className="text-slate-400">Designation:</span> {judge.designation || 'N/A'}</div>
+                    <div><span className="text-slate-400">Contact:</span> {judge.mobile || 'N/A'}</div>
                   </div>
-                )}
+                ))}
               </div>
             </div>
           )}

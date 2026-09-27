@@ -288,10 +288,12 @@ export async function generateEventPdf(eventData = {}) {
     ['', '', '']
   ];
 
-  const judgeObj = ev.contacts?.judge || ev.judge || {};
-  const judgeRows = judgeObj.name && judgeObj.name.trim() ? [
-    [judgeObj.name || '', judgeObj.designation || '', judgeObj.mobile || judgeObj.phone || '']
-  ] : [];
+  const judgesArray = Array.isArray(ev.contacts?.judges) ? ev.contacts.judges : (ev.contacts?.judge ? [ev.contacts.judge] : (ev.judge ? [ev.judge] : []));
+  const validJudges = judgesArray.filter(j => j && j.name && j.name.trim());
+  const hasMultipleJudges = validJudges.length > 1;
+  const judgeRows = hasMultipleJudges
+    ? validJudges.map((j, idx) => [`Judge ${idx + 1}`, j.name || '', j.designation || '', j.mobile || j.phone || ''])
+    : validJudges.map(j => [j.name || '', j.designation || '', j.mobile || j.phone || '']);
 
   const chiefGuestObj = ev.contacts?.chief_guest || ev.chief_guest || ev.contacts?.chiefGuest || {};
   const chiefGuestRows = chiefGuestObj.name && chiefGuestObj.name.trim() ? [
@@ -778,7 +780,12 @@ export async function generateEventPdf(eventData = {}) {
 
   // Judge Details
   if (judgeRows.length > 0) {
-    drawPage3Section('Judge Details', p3ColWidths3, ['Name', 'Designation', 'Contact Details'], judgeRows);
+    if (hasMultipleJudges) {
+      const p3ColWidthsJudge = [75, 140, 140, 140.28];
+      drawPage3Section('Judge Details', p3ColWidthsJudge, ['Judge', 'Name', 'Designation', 'Contact Details'], judgeRows);
+    } else {
+      drawPage3Section('Judge Details', p3ColWidths3, ['Name', 'Designation', 'Contact Details'], judgeRows);
+    }
   }
 
   // Chief Guest Details
@@ -1275,7 +1282,8 @@ export async function generateEventPdf(eventData = {}) {
       const total = qty * unitPrice;
       subTotal += total;
 
-      const itemName = String(it.item_name || it.name || 'Unknown Item').trim();
+      const returnableTag = it.is_returnable ? ' (Returnable)' : (it.is_custom ? '' : ' (Not Returnable)');
+      const itemName = String(it.item_name || it.name || 'Unknown Item').trim() + returnableTag;
       const maxNameWidth = itemColWidths[1] - 16;
       let nameLines = wrapText(itemName, maxNameWidth, fontRegular, 9);
       if (nameLines.length === 0) nameLines = ['Unknown Item'];

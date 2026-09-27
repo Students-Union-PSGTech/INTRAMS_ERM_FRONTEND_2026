@@ -46,7 +46,7 @@ const getInitialFormData = () => ({
       { name: '', roll_number: '', mobile: '', department: '', year: '' }
     ],
     faculty_advisor: { name: '', designation: '', department: '', mobile: '' },
-    judge: { name: '', designation: '', mobile: '' }
+    judges: [{ name: '', designation: '', mobile: '' }]
   }
 });
 
