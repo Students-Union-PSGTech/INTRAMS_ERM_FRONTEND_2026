@@ -124,37 +124,29 @@ export default function EventDetail() {
         }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <EventPreview formData={event} />
-        </div>
+      <div className="flex flex-col gap-4">
+        <EventPreview formData={event} />
 
-        <div className="space-y-4">
-
-
-          {Array.isArray(event.annexures) && event.annexures.length > 0 && (
-            <Card className="p-6 border border-[#252525] bg-[#050505]/50 backdrop-blur-md shadow-2xl">
-              <h3 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF] mb-4 flex items-center gap-2">
-                SUPPORTING ANNEXURES ({event.annexures.length})
-              </h3>
-              <div className="space-y-3">
-                {event.annexures.map((ann, idx) => (
-                  <a
-                    key={ann._id || idx}
-                    href={resolveAssetUrl(ann.file_url)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 bg-[#0A0A0A] border border-[#1A1A1A] hover:border-[#00AEEF] hover:bg-[#00AEEF]/5 rounded-xl text-[13px] font-medium text-[#E5E5E5] hover:text-white transition-all truncate"
-                  >
-                    <span className="truncate">{ann.original_name || ann.file_name || `Annexure ${idx + 1}`}</span>
-                  </a>
-                ))}
-              </div>
-            </Card>
-          )}
-
-
-        </div>
+        {Array.isArray(event.annexures) && event.annexures.length > 0 && (
+          <Card className="p-6 border border-[#252525] bg-[#050505]/50 backdrop-blur-md shadow-2xl">
+            <h3 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF] mb-4 flex items-center gap-2">
+              SUPPORTING ANNEXURES ({event.annexures.length})
+            </h3>
+            <div className="space-y-3">
+              {event.annexures.map((ann, idx) => (
+                <a
+                  key={ann._id || idx}
+                  href={resolveAssetUrl(ann.file_url)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-3 bg-[#0A0A0A] border border-[#1A1A1A] hover:border-[#00AEEF] hover:bg-[#00AEEF]/5 rounded-xl text-[13px] font-medium text-[#E5E5E5] hover:text-white transition-all truncate"
+                >
+                  <span className="truncate">{ann.original_name || ann.file_name || `Annexure ${idx + 1}`}</span>
+                </a>
+              ))}
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   );
