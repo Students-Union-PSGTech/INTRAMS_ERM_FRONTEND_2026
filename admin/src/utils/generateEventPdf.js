@@ -230,13 +230,16 @@ export async function generateEventPdf(eventData = {}) {
   const formatYear = (yearStr, rollNo = '') => {
     if (yearStr) {
       const y = String(yearStr).trim().toUpperCase();
-      if (y.includes('MSC')) return y;
-      if (y === '1' || y.startsWith('1ST') || y === 'I' || y === 'I YEAR') return 'I YEAR';
-      if (y === '2' || y.startsWith('2ND') || y === 'II' || y === 'II YEAR') return 'II YEAR';
-      if (y === '3' || y.startsWith('3RD') || y === 'III' || y === 'III YEAR') return 'III YEAR';
-      if (y === '4' || y.startsWith('4TH') || y === 'IV' || y === 'IV YEAR') return 'IV YEAR';
-      if (y === '5' || y.startsWith('5TH') || y === 'V' || y === 'V YEAR') return 'V YEAR';
-      if (y) return y.includes('YEAR') ? y : `${y} YEAR`;
+      const cleanY = y.replace(/\s*YEAR\s*/g, '').trim();
+      if (cleanY.includes('MSC')) return cleanY + ' YEAR';
+      
+      if (cleanY === '1' || cleanY === '1ST' || cleanY === 'I') return 'I YEAR';
+      if (cleanY === '2' || cleanY === '2ND' || cleanY === 'II') return 'II YEAR';
+      if (cleanY === '3' || cleanY === '3RD' || cleanY === 'III') return 'III YEAR';
+      if (cleanY === '4' || cleanY === '4TH' || cleanY === 'IV') return 'IV YEAR';
+      if (cleanY === '5' || cleanY === '5TH' || cleanY === 'V') return 'V YEAR';
+      
+      if (cleanY) return `${cleanY} YEAR`;
     }
 
     if (rollNo) {
@@ -295,17 +298,15 @@ export async function generateEventPdf(eventData = {}) {
     ? validJudges.map((j, idx) => [`Judge ${idx + 1}`, j.name || '', j.designation || '', j.mobile || j.phone || ''])
     : validJudges.map(j => [j.name || '', j.designation || '', j.mobile || j.phone || '']);
 
-  const chiefGuestObj = ev.contacts?.chief_guest || ev.chief_guest || ev.contacts?.chiefGuest || {};
-  const chiefGuestRows = chiefGuestObj.name && chiefGuestObj.name.trim() ? [
-    [
-      chiefGuestObj.name || '',
-      chiefGuestObj.designation || '',
-      String(chiefGuestObj.remuneration || '—'),
-      chiefGuestObj.accommodation_required ? 'Yes' : 'No',
-      chiefGuestObj.travel_required ? 'Yes' : 'No',
-      chiefGuestObj.short_note || '—'
-    ]
-  ] : [];
+  const chiefGuestsArray = Array.isArray(ev.contacts?.chief_guests) ? ev.contacts.chief_guests : (ev.contacts?.chief_guest ? [ev.contacts.chief_guest] : (ev.chief_guest ? [ev.chief_guest] : []));
+  const chiefGuestRows = chiefGuestsArray.filter(cg => cg && cg.name && cg.name.trim()).map(cg => [
+      cg.name || '',
+      cg.designation || '',
+      String(cg.remuneration || '—'),
+      cg.accommodation_required ? 'Yes' : 'No',
+      cg.travel_required ? 'Yes' : 'No',
+      cg.short_note || '—'
+  ]);
 
   let currentPage;
   let currentY;

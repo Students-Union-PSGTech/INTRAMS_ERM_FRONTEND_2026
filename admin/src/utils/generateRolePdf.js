@@ -13,15 +13,16 @@ function normalizeRole(role) {
 function formatYear(yearStr) {
   if (!yearStr) return 'IV YEAR';
   const y = String(yearStr).trim().toUpperCase();
-  if (y.includes('MSC')) return y;
+  const cleanY = y.replace(/\s*YEAR\s*/g, '').trim();
+  if (cleanY.includes('MSC')) return cleanY + ' YEAR';
   
-  if (y === '1' || y.startsWith('1ST') || y === 'I' || y === 'I YEAR') return 'I YEAR';
-  if (y === '2' || y.startsWith('2ND') || y === 'II' || y === 'II YEAR') return 'II YEAR';
-  if (y === '3' || y.startsWith('3RD') || y === 'III' || y === 'III YEAR') return 'III YEAR';
-  if (y === '4' || y.startsWith('4TH') || y === 'IV' || y === 'IV YEAR') return 'IV YEAR';
-  if (y === '5' || y.startsWith('5TH') || y === 'V' || y === 'V YEAR') return 'V YEAR';
+  if (cleanY === '1' || cleanY === '1ST' || cleanY === 'I') return 'I YEAR';
+  if (cleanY === '2' || cleanY === '2ND' || cleanY === 'II') return 'II YEAR';
+  if (cleanY === '3' || cleanY === '3RD' || cleanY === 'III') return 'III YEAR';
+  if (cleanY === '4' || cleanY === '4TH' || cleanY === 'IV') return 'IV YEAR';
+  if (cleanY === '5' || cleanY === '5TH' || cleanY === 'V') return 'V YEAR';
   
-  return y.includes('YEAR') ? y : `${y} YEAR`;
+  return cleanY ? `${cleanY} YEAR` : '—';
 }
 
 function getRoleLabel(role) {
@@ -52,11 +53,11 @@ function getAssociationEntries(data, role) {
           : (Array.isArray(data?.[String(role).toLowerCase()])
             ? data[String(role).toLowerCase()]
             : Object.keys(data || {}).flatMap((key) => {
-                const value = data[key];
-                if (Array.isArray(value)) return [{ associationName: key, members: value }];
-                if (value && Array.isArray(value.members)) return [{ associationName: key, members: value.members }];
-                return [];
-              })))));
+              const value = data[key];
+              if (Array.isArray(value)) return [{ associationName: key, members: value }];
+              if (value && Array.isArray(value.members)) return [{ associationName: key, members: value.members }];
+              return [];
+            })))));
 
   const map = {};
 
@@ -103,14 +104,14 @@ export async function generateRolePdf({ role, data }) {
   const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
 
-  
+
   let tamilFont = null;
   try {
     const tamilRes = await fetch('/fonts/NotoSansTamil-Regular.ttf');
     if (tamilRes.ok) {
       const tamilBytes = await tamilRes.arrayBuffer();
       tamilFont = await pdfDoc.embedFont(tamilBytes);
-      
+
       if (!window.__pdfTamilFontLoaded) {
         try {
           const font = new FontFace('Noto Sans Tamil', tamilBytes);
@@ -142,7 +143,7 @@ export async function generateRolePdf({ role, data }) {
         const ctx = window.__pdfCanvasCtx;
         const isBold = font === fontBold;
         ctx.font = (isBold ? 'bold ' : '') + size + 'px "Noto Sans Tamil", Arial, sans-serif';
-        
+
         const chunks = cleanStr.match(/[\u0B80-\u0BFF\u200C\u200D]+(?:[\s]+[\u0B80-\u0BFF\u200C\u200D]+)*|[^\u0B80-\u0BFF\u200C\u200D]+/g) || [];
         let totalWidth = 0;
         for (const chunk of chunks) {
@@ -151,8 +152,8 @@ export async function generateRolePdf({ role, data }) {
           if (isTamilChunk) {
             totalWidth += ctx.measureText(chunk).width;
           } else {
-            try { totalWidth += origWidth(chunk, size); } 
-            catch(e) { totalWidth += chunk.length * size * 0.55; }
+            try { totalWidth += origWidth(chunk, size); }
+            catch (e) { totalWidth += chunk.length * size * 0.55; }
           }
         }
         return totalWidth;
@@ -192,7 +193,7 @@ export async function generateRolePdf({ role, data }) {
       if (!text && text !== 0 && text !== '0') return;
       const cleanStr = cleanText(text).replace(/\n/g, ' ');
       const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
-      
+
       if (hasTamil) {
         drawQueue.push({ type: 'tamil', origDrawText, origDrawImage, text: cleanStr, options });
       } else {
@@ -200,7 +201,7 @@ export async function generateRolePdf({ role, data }) {
         drawQueue.push({ type: 'text', method: origDrawText, args: [cleanStr, actualOptions] });
       }
     };
-    
+
     page.drawRectangle = (opts) => drawQueue.push({ type: 'op', method: origDrawRectangle, args: [opts] });
     page.drawLine = (opts) => drawQueue.push({ type: 'op', method: origDrawLine, args: [opts] });
     page.drawImage = (img, opts) => drawQueue.push({ type: 'op', method: origDrawImage, args: [img, opts] });
@@ -371,7 +372,7 @@ export async function generateRolePdf({ role, data }) {
     members.forEach((member, memberIndex) => {
       const prevPage = currentPage;
       checkAddPage(rowHeight);
-      
+
       if (currentPage !== prevPage) {
         // Redraw headers on new page
         drawHeaders();
@@ -405,7 +406,7 @@ export async function generateRolePdf({ role, data }) {
         let displayValue = value;
         let size = 9.5;
         let textWidth = fontRegular.widthOfTextAtSize(displayValue, size);
-        
+
         while (textWidth > (width - 8) && size > 5) {
           size -= 0.5;
           textWidth = fontRegular.widthOfTextAtSize(displayValue, size);
@@ -418,7 +419,7 @@ export async function generateRolePdf({ role, data }) {
           displayValue = displayValue + '...';
           textWidth = fontRegular.widthOfTextAtSize(displayValue, size);
         }
-        
+
         const isCentered = index === 0 || index === 2 || index === 3;
         const textX = Math.max(cellX + 4, isCentered ? cellX + (width - textWidth) / 2 : cellX + 8);
 
@@ -463,7 +464,7 @@ export async function generateRolePdf({ role, data }) {
       for (const chunk of chunks) {
         if (!chunk) continue;
         const isTamilChunk = /[\u0B80-\u0BFF]/.test(chunk);
-        
+
         if (isTamilChunk) {
           if (!window.__pdfCanvasCtx) {
             const cvs = document.createElement('canvas');
@@ -473,11 +474,11 @@ export async function generateRolePdf({ role, data }) {
           const isBold = options.font === fontBold;
           const fontStr = (isBold ? 'bold ' : '') + size + 'px "Noto Sans Tamil", Arial, sans-serif';
           ctx.font = fontStr;
-          
+
           const padding = 2;
           const scale = 4;
           const textW = Math.max(1, ctx.measureText(chunk).width);
-          
+
           const cvs = document.createElement('canvas');
           cvs.width = Math.ceil(textW * scale) + padding * 2;
           cvs.height = Math.ceil(size * 1.8 * scale) + padding * 2;
@@ -485,7 +486,7 @@ export async function generateRolePdf({ role, data }) {
           cvsCtx.scale(scale, scale);
           cvsCtx.font = fontStr;
           cvsCtx.textBaseline = 'alphabetic';
-          
+
           let r = 0, g = 0, b = 0;
           if (options.color) {
             r = Math.round((options.color.red || 0) * 255);
@@ -494,32 +495,32 @@ export async function generateRolePdf({ role, data }) {
           }
           cvsCtx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
           cvsCtx.fillText(chunk, padding / scale, size * 1.4);
-          
+
           const dataUrl = cvs.toDataURL('image/png');
           const pngImage = await pdfDoc.embedPng(dataUrl);
-          
+
           origDrawImage(pngImage, {
             x: currentX - (padding / scale),
             y: (options.y || 0) - (size * 0.4) - (padding / scale),
             width: cvs.width / scale,
             height: cvs.height / scale
           });
-          
+
           currentX += textW;
         } else {
           const currentFont = options.font || fontRegular;
           const actualOptions = { ...options, font: currentFont, x: currentX };
-          try { origDrawText(chunk, actualOptions); } catch(e) {}
-          
+          try { origDrawText(chunk, actualOptions); } catch (e) { }
+
           try {
             currentX += currentFont.widthOfTextAtSize(chunk, size);
-          } catch(e) {
+          } catch (e) {
             currentX += chunk.length * size * 0.55;
           }
         }
       }
     } else {
-      try { op.method(...op.args); } catch(e) {}
+      try { op.method(...op.args); } catch (e) { }
     }
   }
 

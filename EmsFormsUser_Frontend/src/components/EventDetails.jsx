@@ -210,6 +210,16 @@ function EventDetails() {
                     <div><span className="text-slate-400">Contact:</span> {judge.mobile || 'N/A'}</div>
                   </div>
                 ))}
+
+                {/* Chief Guest */}
+                {(Array.isArray(event.contacts?.chief_guests) ? event.contacts.chief_guests : (event.contacts?.chief_guest ? [event.contacts.chief_guest] : [])).filter(cg => cg?.name).map((cg, idx) => (
+                  <div key={`cg-${idx}`} className="bg-slate-950/60 p-5 rounded-2xl border border-slate-800 text-sm text-slate-300">
+                    <span className="font-bold text-sky-400 block mb-2 uppercase tracking-wider">Chief Guest {idx + 1}</span>
+                    <div><span className="text-slate-400">Name:</span> {cg.name}</div>
+                    <div><span className="text-slate-400">Designation:</span> {cg.designation || 'N/A'}</div>
+                    <div><span className="text-slate-400">Remuneration:</span> {cg.remuneration || 'None'}</div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -277,25 +287,31 @@ function EventDetails() {
                   <thead className="bg-slate-900 text-sky-300 font-semibold font-mono text-xs uppercase tracking-wider">
                     <tr>
                       <th className="p-3.5">Item Name</th>
-                      <th className="p-3.5">Quantity</th>
-                      <th className="p-3.5">Price / Unit</th>
-                      <th className="p-3.5">Total (inc. 18% Tax)</th>
+                      <th className="p-3.5 text-center">Returnable</th>
+                      <th className="p-3.5 text-center">Quantity</th>
+                      <th className="p-3.5 text-right">Price / Unit</th>
+                      <th className="p-3.5 text-right">Total (inc. 18% Tax)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {event.items.map((item, iIdx) => (
                       <tr key={iIdx}>
                         <td className="p-3.5 font-medium text-white">{item.item_name}</td>
-                        <td className="p-3.5">{item.quantity}</td>
-                        <td className="p-3.5">₹{item.price_per_unit || 0}</td>
-                        <td className="p-3.5 font-bold text-sky-400">
+                        <td className="p-3.5 text-center">
+                          <span className={item.is_custom ? "text-slate-500" : (item.is_returnable ? "text-emerald-400 font-bold" : "text-red-400 font-bold")}>
+                            {item.is_custom ? '-' : (item.is_returnable ? 'YES' : 'NO')}
+                          </span>
+                        </td>
+                        <td className="p-3.5 text-center">{item.quantity}</td>
+                        <td className="p-3.5 text-right">₹{item.price_per_unit || 0}</td>
+                        <td className="p-3.5 text-right font-bold text-sky-400">
                           ₹{((item.quantity || 0) * (item.price_per_unit || 0) * 1.18).toFixed(2)}
                         </td>
                       </tr>
                     ))}
-                    <tr className="bg-slate-900/80">
-                      <td colSpan="3" className="p-3.5 text-right font-semibold text-slate-300">Total Amount</td>
-                      <td className="p-3.5 font-bold text-cyan-400">₹{grandTotal.toFixed(2)}</td>
+                    <tr className="bg-slate-900/80 border-t border-slate-800">
+                      <td colSpan="4" className="p-3.5 text-right font-semibold text-slate-300">Total Amount</td>
+                      <td className="p-3.5 text-right font-bold text-cyan-400">₹{grandTotal.toFixed(2)}</td>
                     </tr>
                   </tbody>
                 </table>

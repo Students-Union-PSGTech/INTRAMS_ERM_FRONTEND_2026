@@ -295,17 +295,15 @@ export async function generateEventPdf(eventData = {}) {
     ? validJudges.map((j, idx) => [`Judge ${idx + 1}`, j.name || '', j.designation || '', j.mobile || j.phone || ''])
     : validJudges.map(j => [j.name || '', j.designation || '', j.mobile || j.phone || '']);
 
-  const chiefGuestObj = ev.contacts?.chief_guest || ev.chief_guest || ev.contacts?.chiefGuest || {};
-  const chiefGuestRows = chiefGuestObj.name && chiefGuestObj.name.trim() ? [
-    [
-      chiefGuestObj.name || '',
-      chiefGuestObj.designation || '',
-      String(chiefGuestObj.remuneration || '—'),
-      chiefGuestObj.accommodation_required ? 'Yes' : 'No',
-      chiefGuestObj.travel_required ? 'Yes' : 'No',
-      chiefGuestObj.short_note || '—'
-    ]
-  ] : [];
+  const chiefGuestsArray = Array.isArray(ev.contacts?.chief_guests) ? ev.contacts.chief_guests : (ev.contacts?.chief_guest ? [ev.contacts.chief_guest] : (ev.chief_guest ? [ev.chief_guest] : []));
+  const chiefGuestRows = chiefGuestsArray.filter(cg => cg && cg.name && cg.name.trim()).map(cg => [
+      cg.name || '',
+      cg.designation || '',
+      String(cg.remuneration || '—'),
+      cg.accommodation_required ? 'Yes' : 'No',
+      cg.travel_required ? 'Yes' : 'No',
+      cg.short_note || '—'
+  ]);
 
   let currentPage;
   let currentY;

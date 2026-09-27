@@ -197,8 +197,8 @@ export async function generateEventItemsPdf(event) {
 
   currentY -= (boxHeight + 20);
 
-  const itemColWidths = [35, 230.28, 45, 85, 100];
-  const itemHeaders = ['S.No', 'Item Name', 'Qty', 'Unit Price', 'Amount'];
+  const itemColWidths = [30, 185.28, 35, 60, 85, 100];
+  const itemHeaders = ['S.No', 'Item Name', 'Qty', 'Returnable', 'Unit Price', 'Amount'];
 
   const drawTableHeader = () => {
     currentPage.drawRectangle({ x: tX, y: currentY - 24, width: tableWidth, height: 24, color: rgb(0.95, 0.95, 0.95), borderColor: rgb(0.8, 0.8, 0.8), borderWidth: 1 });
@@ -207,11 +207,11 @@ export async function generateEventItemsPdf(event) {
       const w = itemColWidths[idx];
       let xPos;
       const hw = fontBold.widthOfTextAtSize(h, 9.5);
-      if (idx === 0 || idx === 2) {
+      if (idx === 0 || idx === 2 || idx === 3) {
         xPos = cellX + (w - hw) / 2;
       } else if (idx === 1) {
         xPos = cellX + 8;
-      } else if (idx === 3) {
+      } else if (idx === 4) {
         xPos = cellX + w - hw - 8;
       } else {
         xPos = cellX + w - hw - 10;
@@ -271,15 +271,22 @@ export async function generateEventItemsPdf(event) {
       const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9);
       currentPage.drawText(qtyStr, { x: qtyX + (itemColWidths[2] - qtyW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0.06, 0.06, 0.06) });
 
-      const priceX = qtyX + itemColWidths[2];
+      const retX = qtyX + itemColWidths[2];
+      const isRet = it.is_returnable;
+      const retStr = isRet ? 'YES' : 'NO';
+      const retColor = isRet ? rgb(0.18, 0.49, 0.20) : rgb(0.78, 0.16, 0.16);
+      const retW = fontBold.widthOfTextAtSize(retStr, 9);
+      currentPage.drawText(retStr, { x: retX + (itemColWidths[3] - retW) / 2, y: topY, size: 9, font: fontBold, color: retColor });
+
+      const priceX = retX + itemColWidths[3];
       const priceStr = `Rs. ${unitPrice.toFixed(2)}`;
       const priceW = fontRegular.widthOfTextAtSize(priceStr, 9);
-      currentPage.drawText(priceStr, { x: priceX + itemColWidths[3] - priceW - 8, y: topY, size: 9, font: fontRegular, color: rgb(0.06, 0.06, 0.06) });
+      currentPage.drawText(priceStr, { x: priceX + itemColWidths[4] - priceW - 8, y: topY, size: 9, font: fontRegular, color: rgb(0.06, 0.06, 0.06) });
 
-      const amtX = priceX + itemColWidths[3];
+      const amtX = priceX + itemColWidths[4];
       const amtStr = `Rs. ${total.toFixed(2)}`;
       const amtW = fontRegular.widthOfTextAtSize(amtStr, 9);
-      currentPage.drawText(amtStr, { x: amtX + itemColWidths[4] - amtW - 10, y: topY, size: 9, font: fontRegular, color: rgb(0.06, 0.06, 0.06) });
+      currentPage.drawText(amtStr, { x: amtX + itemColWidths[5] - amtW - 10, y: topY, size: 9, font: fontRegular, color: rgb(0.06, 0.06, 0.06) });
 
       currentPage.drawLine({ start: { x: tX, y: currentY - rowH }, end: { x: tX + tableWidth, y: currentY - rowH }, thickness: 0.5, color: rgb(0.9, 0.9, 0.9) });
       currentY -= rowH;
@@ -294,8 +301,8 @@ export async function generateEventItemsPdf(event) {
       { label: 'Grand Total (Inc. 18% GST):', value: `Rs. ${grandTotal.toFixed(2)}`, color: rgb(0, 0.33, 0.65), isGrand: true },
     ];
 
-    const priceColX = tX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2];
-    const amtColX = priceColX + itemColWidths[3];
+    const priceColX = tX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2] + itemColWidths[3];
+    const amtColX = priceColX + itemColWidths[4];
 
     summaryRows.forEach((sRow, sIdx) => {
       const sRowH = sRow.isGrand ? 24 : 20;
@@ -303,10 +310,10 @@ export async function generateEventItemsPdf(event) {
       const sY = currentY - (sRowH + sSize) / 2 - 2;
 
       const lblW = fontBold.widthOfTextAtSize(sRow.label, sSize);
-      currentPage.drawText(sRow.label, { x: priceColX + itemColWidths[3] - lblW - 8, y: sY, size: sSize, font: fontBold, color: rgb(0.06, 0.06, 0.06) });
+      currentPage.drawText(sRow.label, { x: priceColX + itemColWidths[4] - lblW - 8, y: sY, size: sSize, font: fontBold, color: rgb(0.06, 0.06, 0.06) });
 
       const valW = fontBold.widthOfTextAtSize(sRow.value, sSize);
-      currentPage.drawText(sRow.value, { x: amtColX + itemColWidths[4] - valW - 10, y: sY, size: sSize, font: fontBold, color: sRow.color });
+      currentPage.drawText(sRow.value, { x: amtColX + itemColWidths[5] - valW - 10, y: sY, size: sSize, font: fontBold, color: sRow.color });
 
       if (sIdx === 1) {
         currentPage.drawLine({ start: { x: priceColX, y: currentY - sRowH }, end: { x: tX + tableWidth, y: currentY - sRowH }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });

@@ -152,6 +152,16 @@ function EventPreview({ formData }) {
                 <div><span className="text-slate-400">Contact:</span> {judge.mobile || 'N/A'}</div>
               </div>
             ))}
+
+            {/* Chief Guest */}
+            {(Array.isArray(formData.contacts?.chief_guests) ? formData.contacts.chief_guests : (formData.contacts?.chief_guest ? [formData.contacts.chief_guest] : [])).filter(cg => cg?.name).map((cg, idx) => (
+              <div key={`cg-${idx}`} className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+                <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Chief Guest {idx + 1}</span>
+                <div><span className="text-slate-400">Name:</span> {cg.name}</div>
+                <div><span className="text-slate-400">Designation:</span> {cg.designation || 'N/A'}</div>
+                <div><span className="text-slate-400">Remuneration:</span> {cg.remuneration || 'None'}</div>
+              </div>
+            ))}
           </div>
         </div>
       )}

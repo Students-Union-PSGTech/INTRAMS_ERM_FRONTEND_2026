@@ -151,6 +151,16 @@ function EventPreview({ formData }) {
                 <div><span className="text-slate-400">Contact:</span> {judge.mobile || 'N/A'}</div>
               </div>
             ))}
+
+            {/* Chief Guest */}
+            {(Array.isArray(formData.contacts?.chief_guests) ? formData.contacts.chief_guests : (formData.contacts?.chief_guest ? [formData.contacts.chief_guest] : [])).filter(cg => cg?.name).map((cg, idx) => (
+              <div key={`cg-${idx}`} className="bg-slate-950/70 p-4 rounded-2xl text-xs text-slate-300 border border-slate-800">
+                <span className="font-bold text-sky-400 block mb-1 uppercase tracking-wider">Chief Guest {idx + 1}</span>
+                <div><span className="text-slate-400">Name:</span> {cg.name}</div>
+                <div><span className="text-slate-400">Designation:</span> {cg.designation || 'N/A'}</div>
+                <div><span className="text-slate-400">Remuneration:</span> {cg.remuneration || 'None'}</div>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -204,17 +214,41 @@ function EventPreview({ formData }) {
             <Package className="w-4 h-4 text-sky-400" />
             Items ({formData.items.length})
           </h3>
-          <div className="bg-slate-950/70 rounded-2xl p-3 border border-slate-800 text-xs">
-            {formData.items.map((it, idx) => (
-              <div key={idx} className="flex justify-between gap-2 py-1 border-b last:border-0 border-slate-800">
-                <span className="font-medium text-white">{it.item_name}</span>
-                <span className="text-slate-400 text-right">Return: <span className={it.is_custom ? "text-slate-500" : (it.is_returnable ? "text-emerald-400 font-bold" : "text-red-400 font-bold")}>{it.is_custom ? '-' : (it.is_returnable ? 'YES' : 'NO')}</span> | Qty: {it.quantity} | ₹{it.price_per_unit || 0}/unit | Total: ₹{calculateItemTotal(it).toFixed(2)} | Inc GST: ₹{(calculateItemTotal(it) * 1.18).toFixed(2)}</span>
-              </div>
-            ))}
-            <div className="mt-3 pt-3 border-t border-slate-800 flex justify-between items-center text-sm">
-              <span className="font-semibold text-slate-300">Total Amount</span>
-              <span className="font-bold text-sky-400">₹{calculateGrandTotal(formData.items).toFixed(2)}</span>
-            </div>
+          <div className="overflow-x-auto bg-slate-950/70 rounded-2xl border border-slate-800">
+            <table className="w-full text-left text-xs text-slate-300">
+              <thead className="bg-slate-900 text-sky-300 font-semibold uppercase tracking-wider">
+                <tr>
+                  <th className="p-3">Item Name</th>
+                  <th className="p-3 text-center">Returnable</th>
+                  <th className="p-3 text-center">Qty</th>
+                  <th className="p-3 text-right">Price/Unit</th>
+                  <th className="p-3 text-right">Total</th>
+                  <th className="p-3 text-right">Inc GST (18%)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                {formData.items.map((it, idx) => (
+                  <tr key={idx} className="hover:bg-slate-900/50">
+                    <td className="p-3 font-medium text-white">{it.item_name}</td>
+                    <td className="p-3 text-center">
+                      <span className={it.is_custom ? "text-slate-500" : (it.is_returnable ? "text-emerald-400 font-bold" : "text-red-400 font-bold")}>
+                        {it.is_custom ? '-' : (it.is_returnable ? 'YES' : 'NO')}
+                      </span>
+                    </td>
+                    <td className="p-3 text-center">{it.quantity}</td>
+                    <td className="p-3 text-right">₹{it.price_per_unit || 0}</td>
+                    <td className="p-3 text-right">₹{calculateItemTotal(it).toFixed(2)}</td>
+                    <td className="p-3 text-right font-bold text-sky-400">₹{(calculateItemTotal(it) * 1.18).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-slate-900/80 border-t border-slate-800">
+                <tr>
+                  <td colSpan="5" className="p-3 text-right font-semibold text-slate-300">Total Amount</td>
+                  <td className="p-3 text-right font-bold text-cyan-400">₹{calculateGrandTotal(formData.items).toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       )}

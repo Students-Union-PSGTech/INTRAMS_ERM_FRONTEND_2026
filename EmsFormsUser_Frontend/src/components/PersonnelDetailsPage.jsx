@@ -44,19 +44,60 @@ const YEARS = ['Select Year', 'I Year', 'II Year', 'III Year', 'IV Year', 'V Yea
 
 function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
   const [hasJudge, setHasJudge] = React.useState(Array.isArray(formData.contacts?.judges) ? formData.contacts.judges.some(j => j.name) : !!formData.contacts?.judge?.name);
-  const [hasChiefGuest, setHasChiefGuest] = React.useState(!!formData.contacts?.chief_guest?.name);
+  const [hasChiefGuest, setHasChiefGuest] = React.useState(Array.isArray(formData.contacts?.chief_guests) ? formData.contacts.chief_guests.some(c => c.name) : !!formData.contacts?.chief_guest?.name);
 
-  const updateChiefGuest = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      contacts: {
-        ...(prev.contacts || {}),
-        chief_guest: {
-          ...(prev.contacts?.chief_guest || {}),
-          [field]: value
+  const updateChiefGuest = (index, field, value) => {
+    setFormData((prev) => {
+      const currentChiefs = Array.isArray(prev.contacts?.chief_guests) 
+        ? [...prev.contacts.chief_guests] 
+        : (prev.contacts?.chief_guest ? [{...prev.contacts.chief_guest}] : [{ name: '', designation: '', remuneration: '', accommodation_required: false, travel_required: false, short_note: '' }]);
+      
+      if (!currentChiefs[index]) currentChiefs[index] = { name: '', designation: '', remuneration: '', accommodation_required: false, travel_required: false, short_note: '' };
+      currentChiefs[index] = { ...currentChiefs[index], [field]: value };
+      
+      return {
+        ...prev,
+        contacts: {
+          ...(prev.contacts || {}),
+          chief_guests: currentChiefs
         }
-      }
-    }));
+      };
+    });
+  };
+
+  const addChiefGuest = () => {
+    setFormData((prev) => {
+      const currentChiefs = Array.isArray(prev.contacts?.chief_guests) 
+        ? [...prev.contacts.chief_guests] 
+        : (prev.contacts?.chief_guest ? [{...prev.contacts.chief_guest}] : [{ name: '', designation: '', remuneration: '', accommodation_required: false, travel_required: false, short_note: '' }]);
+      
+      return {
+        ...prev,
+        contacts: {
+          ...(prev.contacts || {}),
+          chief_guests: [...currentChiefs, { name: '', designation: '', remuneration: '', accommodation_required: false, travel_required: false, short_note: '' }]
+        }
+      };
+    });
+  };
+
+  const removeChiefGuest = (index) => {
+    setFormData((prev) => {
+      const currentChiefs = Array.isArray(prev.contacts?.chief_guests) 
+        ? [...prev.contacts.chief_guests] 
+        : [];
+      
+      if (currentChiefs.length <= 1) return prev;
+      
+      const newChiefs = currentChiefs.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        contacts: {
+          ...(prev.contacts || {}),
+          chief_guests: newChiefs
+        }
+      };
+    });
   };
 
   const updateSecretary = (index, field, value) => {
@@ -192,7 +233,7 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
   ];
   const faculty = formData.contacts?.faculty_advisor || { name: '', designation: '', mobile: '' };
   const judges = Array.isArray(formData.contacts?.judges) ? formData.contacts.judges : (formData.contacts?.judge ? [formData.contacts.judge] : [{ name: '', designation: '', mobile: '' }]);
-  const chief_guest = formData.contacts?.chief_guest || { name: '', designation: '', remuneration: '', accommodation_required: false, travel_required: false, short_note: '' };
+  const chief_guests = Array.isArray(formData.contacts?.chief_guests) ? formData.contacts.chief_guests : (formData.contacts?.chief_guest ? [formData.contacts.chief_guest] : [{ name: '', designation: '', remuneration: '', accommodation_required: false, travel_required: false, short_note: '' }]);
 
   const renderStudentForm = (title, data, onUpdate, isRequired = true) => (
     <div className="glass-card border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
@@ -472,12 +513,10 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
                 const checked = e.target.checked;
                 setHasChiefGuest(checked);
                 if (!checked) {
-                  updateChiefGuest('name', '');
-                  updateChiefGuest('designation', '');
-                  updateChiefGuest('remuneration', '');
-                  updateChiefGuest('accommodation_required', false);
-                  updateChiefGuest('travel_required', false);
-                  updateChiefGuest('short_note', '');
+                  setFormData(prev => ({
+                    ...prev,
+                    contacts: { ...prev.contacts, chief_guests: [{ name: '', designation: '', remuneration: '', accommodation_required: false, travel_required: false, short_note: '' }] }
+                  }));
                 }
               }}
             />
@@ -486,77 +525,100 @@ function PersonnelDetailsPage({ formData, setFormData, errors = {} }) {
         </div>
 
         {hasChiefGuest && (
-          <div className="glass-card border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
-                  Name <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Chief Guest Name"
-                  value={chief_guest.name || ''}
-                  onChange={(e) => updateChiefGuest('name', e.target.value)}
-                  className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
-                />
+          <div className="space-y-3">
+            {chief_guests.map((cg, index) => (
+              <div key={index} className="glass-card border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-2xl relative">
+                {chief_guests.length > 1 && (
+                  <button 
+                    type="button" 
+                    onClick={() => removeChiefGuest(index)}
+                    className="absolute top-4 right-4 text-rose-400 hover:text-rose-300 bg-rose-400/10 hover:bg-rose-400/20 p-1.5 rounded-lg transition-colors"
+                  >
+                    ✕
+                  </button>
+                )}
+                <h4 className="text-[11px] font-bold text-sky-400 uppercase tracking-wider mb-3">Chief Guest {index + 1}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
+                      Name <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Chief Guest Name"
+                      value={cg.name || ''}
+                      onChange={(e) => updateChiefGuest(index, 'name', e.target.value)}
+                      className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
+                      Designation <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. CEO / Director"
+                      value={cg.designation || ''}
+                      onChange={(e) => updateChiefGuest(index, 'designation', e.target.value)}
+                      className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
+                      Remuneration <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 5000 or None"
+                      value={cg.remuneration || ''}
+                      onChange={(e) => updateChiefGuest(index, 'remuneration', e.target.value)}
+                      className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
+                    />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-[11px] font-bold text-sky-200/90 uppercase cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="accent-sky-500 w-4 h-4"
+                        checked={cg.accommodation_required || false}
+                        onChange={(e) => updateChiefGuest(index, 'accommodation_required', e.target.checked)}
+                      />
+                      Accommodation required
+                    </label>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-[11px] font-bold text-sky-200/90 uppercase cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="accent-sky-500 w-4 h-4"
+                        checked={cg.travel_required || false}
+                        onChange={(e) => updateChiefGuest(index, 'travel_required', e.target.checked)}
+                      />
+                      Travel required
+                    </label>
+                  </div>
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-3">
+                    <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
+                      Short note on the Chief guest
+                    </label>
+                    <textarea
+                      placeholder="Brief note about the chief guest..."
+                      value={cg.short_note || ''}
+                      onChange={(e) => updateChiefGuest(index, 'short_note', e.target.value)}
+                      className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500 resize-none h-20"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
-                  Designation <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. CEO / Director"
-                  value={chief_guest.designation || ''}
-                  onChange={(e) => updateChiefGuest('designation', e.target.value)}
-                  className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
-                  Remuneration <span className="text-rose-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 5000 or None"
-                  value={chief_guest.remuneration || ''}
-                  onChange={(e) => updateChiefGuest('remuneration', e.target.value)}
-                  className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500"
-                />
-              </div>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-[11px] font-bold text-sky-200/90 uppercase cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="accent-sky-500 w-4 h-4"
-                    checked={chief_guest.accommodation_required || false}
-                    onChange={(e) => updateChiefGuest('accommodation_required', e.target.checked)}
-                  />
-                  Accommodation required
-                </label>
-              </div>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-[11px] font-bold text-sky-200/90 uppercase cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="accent-sky-500 w-4 h-4"
-                    checked={chief_guest.travel_required || false}
-                    onChange={(e) => updateChiefGuest('travel_required', e.target.checked)}
-                  />
-                  Travel required
-                </label>
-              </div>
-              <div className="col-span-1 sm:col-span-2 lg:col-span-3">
-                <label className="block text-[11px] font-bold text-sky-200/90 uppercase mb-1">
-                  Short note on the Chief guest
-                </label>
-                <textarea
-                  placeholder="Brief note about the chief guest..."
-                  value={chief_guest.short_note || ''}
-                  onChange={(e) => updateChiefGuest('short_note', e.target.value)}
-                  className="w-full p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white font-medium focus:ring-2 focus:ring-sky-500 outline-none placeholder-slate-500 resize-none h-20"
-                />
-              </div>
+            ))}
+            <div className="flex justify-end mt-2">
+              <button 
+                type="button" 
+                onClick={addChiefGuest}
+                className="flex items-center gap-1.5 px-4 py-2 bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 rounded-xl text-xs font-bold uppercase transition-colors"
+              >
+                <span className="text-lg leading-none">+</span> Add Another Chief Guest
+              </button>
             </div>
           </div>
         )}
