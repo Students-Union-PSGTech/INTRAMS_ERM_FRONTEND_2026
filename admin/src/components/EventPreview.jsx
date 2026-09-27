@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, Layers, Package, Building2, Cpu, Wrench, Users } from 'lucide-react';
+import { Table, THead, Th, Td, Tr } from './ui/Table';
 import { calculateGrandTotal, calculateItemTotal } from '../utils/proposalHelpers';
 
 function EventPreview({ formData }) {
@@ -204,15 +205,31 @@ function EventPreview({ formData }) {
             <Package className="w-4 h-4 text-sky-400" />
             Items ({formData.items.length})
           </h3>
-          <div className="bg-slate-950/70 rounded-2xl p-3 border border-slate-800 text-xs">
-            {formData.items.map((it, idx) => (
-              <div key={idx} className="flex justify-between gap-2 py-1 border-b last:border-0 border-slate-800">
-                <span className="font-medium text-white">{it.item_name}</span>
-                <span className="text-slate-400 text-right">Qty: {it.quantity} | ₹{it.price_per_unit || 0}/unit | Total: ₹{calculateItemTotal(it).toFixed(2)} | Inc GST: ₹{(calculateItemTotal(it) * 1.18).toFixed(2)}</span>
-              </div>
-            ))}
-            <div className="mt-3 pt-3 border-t border-slate-800 flex justify-between items-center text-sm">
-              <span className="font-semibold text-slate-300">Total Amount</span>
+          <div className="bg-slate-950/70 rounded-2xl border border-slate-800 text-xs overflow-hidden">
+            <Table>
+              <THead>
+                <tr>
+                  <Th>ITEM NAME</Th>
+                  <Th numeric>QTY</Th>
+                  <Th numeric>UNIT PRICE</Th>
+                  <Th numeric>TOTAL</Th>
+                  <Th numeric>INC GST (18%)</Th>
+                </tr>
+              </THead>
+              <tbody>
+                {formData.items.map((it, idx) => (
+                  <Tr key={idx}>
+                    <Td className="font-medium text-white">{it.item_name}</Td>
+                    <Td numeric>{it.quantity}</Td>
+                    <Td numeric>₹{it.price_per_unit || 0}</Td>
+                    <Td numeric>₹{calculateItemTotal(it).toFixed(2)}</Td>
+                    <Td numeric className="text-sky-400 font-bold">₹{(calculateItemTotal(it) * 1.18).toFixed(2)}</Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+            <div className="px-4 py-3 bg-[#0A0A0A] border-t border-slate-800 flex justify-between items-center text-sm">
+              <span className="font-semibold text-slate-300">Total Amount (Inc GST)</span>
               <span className="font-bold text-sky-400">₹{calculateGrandTotal(formData.items).toFixed(2)}</span>
             </div>
           </div>

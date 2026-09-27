@@ -28,8 +28,8 @@ export default function RolePdf() {
   const generateExactPdfBlob = async () => {
     let rawData = [];
     try {
-      const res = await adminAPI.getAssociations();
-      rawData = res.data?.data || res.data?.associations || [];
+      const res = await adminAPI.getRoleMembers(selected);
+      rawData = res.data?.data || res.data || {};
     } catch (_) {
       rawData = [];
     }
@@ -39,19 +39,7 @@ export default function RolePdf() {
   const previewPdf = async () => {
     try {
       setBusy('preview');
-      let pdfBlob;
-      try {
-        const res = await adminAPI.getRoleWisePDF(selected);
-        pdfBlob = res.data;
-      } catch (_) {
-        pdfBlob = await generateExactPdfBlob();
-      }
-
-      // If blob is small or not a valid PDF response, fallback to generating exact screenshot format
-      if (!pdfBlob || pdfBlob.size < 100) {
-        pdfBlob = await generateExactPdfBlob();
-      }
-
+      const pdfBlob = await generateExactPdfBlob();
       const url = await handlePdfBlob({ data: pdfBlob }, { filename: `Role_${selected}.pdf`, preview: true });
       if (url) {
         setPreviewUrl(url);
@@ -67,18 +55,7 @@ export default function RolePdf() {
   const downloadPdf = async () => {
     try {
       setBusy('download');
-      let pdfBlob;
-      try {
-        const res = await adminAPI.getRoleWisePDF(selected);
-        pdfBlob = res.data;
-      } catch (_) {
-        pdfBlob = await generateExactPdfBlob();
-      }
-
-      if (!pdfBlob || pdfBlob.size < 100) {
-        pdfBlob = await generateExactPdfBlob();
-      }
-
+      const pdfBlob = await generateExactPdfBlob();
       await handlePdfBlob({ data: pdfBlob }, { filename: `Role_${selected}.pdf` });
     } catch (err) {
       showToast(getApiErrorMessage(err, 'Unable to download PDF.'), 'error');

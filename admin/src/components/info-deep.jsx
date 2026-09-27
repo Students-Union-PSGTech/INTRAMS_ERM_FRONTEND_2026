@@ -4,6 +4,7 @@ import { adminAPI, resolveAssetUrl } from '../api';
 import { getApiErrorMessage } from '../utils/apiError';
 import { handlePdfBlob } from '../utils/pdf';
 import { generateEventPdf } from '../utils/generateEventPdf';
+import { generateEventItemsPdf } from '../utils/generateEventItemsPdf';
 import { getAllocated, getRequested } from '../utils/allocation';
 import { useToast } from '../context/ToastContext';
 import PageHeader from './ui/PageHeader';
@@ -63,9 +64,24 @@ export default function EventDetail() {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+      } else if (type === 'items') {
+        let pdfBlob;
+        try {
+          pdfBlob = await generateEventItemsPdf(event);
+        } catch (_) {
+          const res = await adminAPI.getEventItemsPDF(event._id);
+          pdfBlob = new Blob([res.data], { type: 'application/pdf' });
+        }
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       } else {
         const map = {
-          items: () => adminAPI.getEventItemsPDF(event._id),
           procurement: () => adminAPI.getProcurementPDF(event._id),
         };
         const res = await map[type]();

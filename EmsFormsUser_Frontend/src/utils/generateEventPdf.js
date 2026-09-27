@@ -10,12 +10,24 @@ import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64.js';
 export async function generateEventPdf(eventData = {}) {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
+  
   let tamilFont = null;
   try {
     const tamilRes = await fetch('/fonts/NotoSansTamil-Regular.ttf');
     if (tamilRes.ok) {
       const tamilBytes = await tamilRes.arrayBuffer();
       tamilFont = await pdfDoc.embedFont(tamilBytes);
+      
+      if (!window.__pdfTamilFontLoaded) {
+        try {
+          const font = new FontFace('Noto Sans Tamil', tamilBytes);
+          await font.load();
+          document.fonts.add(font);
+          window.__pdfTamilFontLoaded = true;
+        } catch (e) {
+          console.warn("Could not load FontFace", e);
+        }
+      }
     }
   } catch (err) {
     console.warn("Could not load Tamil font", err);
@@ -37,22 +49,33 @@ export async function generateEventPdf(eventData = {}) {
       .replace(/\t/g, '    ');
   };
 
+  const drawQueue = [];
+
   const wrapFontWidth = (font) => {
     const origWidth = font.widthOfTextAtSize.bind(font);
     font.widthOfTextAtSize = (text, size) => {
       if (!text) return 0;
       const cleanStr = cleanText(text).replace(/\n/g, ' ');
       const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
-      if (hasTamil && tamilFont) {
-        const words = cleanStr.split(/(\s+)/);
+      if (hasTamil) {
+        if (!window.__pdfCanvasCtx) {
+          const cvs = document.createElement('canvas');
+          window.__pdfCanvasCtx = cvs.getContext('2d');
+        }
+        const ctx = window.__pdfCanvasCtx;
+        const isBold = font === fontBold;
+        ctx.font = (isBold ? 'bold ' : '') + size + 'px "Noto Sans Tamil", Arial, sans-serif';
+        
+        const chunks = cleanStr.match(/[\u0B80-\u0BFF\u200C\u200D]+(?:[\s]+[\u0B80-\u0BFF\u200C\u200D]+)*|[^\u0B80-\u0BFF\u200C\u200D]+/g) || [];
         let totalWidth = 0;
-        for (const word of words) {
-          const isTamilWord = /[\u0B80-\u0BFF]/.test(word);
-          const currentFont = isTamilWord ? tamilFont : font;
-          try {
-            totalWidth += currentFont.widthOfTextAtSize(word, size);
-          } catch(e) {
-            totalWidth += word.length * size * 0.55;
+        for (const chunk of chunks) {
+          if (!chunk) continue;
+          const isTamilChunk = /[\u0B80-\u0BFF]/.test(chunk);
+          if (isTamilChunk) {
+            totalWidth += ctx.measureText(chunk).width;
+          } else {
+            try { totalWidth += origWidth(chunk, size); } 
+            catch(e) { totalWidth += chunk.length * size * 0.55; }
           }
         }
         return totalWidth;
@@ -78,44 +101,29 @@ export async function generateEventPdf(eventData = {}) {
   pdfDoc.addPage = (...args) => {
     const page = originalAddPage(...args);
     const origDrawText = page.drawText.bind(page);
+    const origDrawRectangle = page.drawRectangle.bind(page);
+    const origDrawLine = page.drawLine.bind(page);
+    const origDrawImage = page.drawImage.bind(page);
+    const origDrawCircle = page.drawCircle.bind(page);
+
     page.drawText = (text, options) => {
       if (!text && text !== 0 && text !== '0') return;
       const cleanStr = cleanText(text).replace(/\n/g, ' ');
       const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
       
-      if (hasTamil && tamilFont) {
-        const chunks = cleanStr.match(/[\u0B80-\u0BFF]+|[^\u0B80-\u0BFF]+/g) || [];
-        let currentX = options.x || 0;
-        const size = options.size || 12;
-        
-        for (const chunk of chunks) {
-          if (!chunk) continue;
-          const isTamilChunk = /[\u0B80-\u0BFF]/.test(chunk);
-          const currentFont = isTamilChunk ? tamilFont : (options.font || fontRegular);
-          const actualOptions = { ...options, font: currentFont, x: currentX };
-          try { origDrawText(chunk, actualOptions); } catch(e) {}
-          
-          try {
-            currentX += currentFont.widthOfTextAtSize(chunk, size);
-          } catch(e) {
-            currentX += chunk.length * size * 0.55;
-          }
-        }
-        return;
-      }
-      
-      const actualOptions = { ...options };
-      try {
-        origDrawText(cleanStr, actualOptions);
-      } catch (_) {
-        const asciiOnly = cleanStr.replace(/[^\x20-\x7E\u0B80-\u0BFF]/g, ' ');
-        try {
-          origDrawText(asciiOnly, actualOptions);
-        } catch (e) {
-          // ignore
-        }
+      if (hasTamil) {
+        drawQueue.push({ type: 'tamil', origDrawText, origDrawImage, text: cleanStr, options });
+      } else {
+        const actualOptions = { ...options };
+        drawQueue.push({ type: 'text', method: origDrawText, args: [cleanStr, actualOptions] });
       }
     };
+    
+    page.drawRectangle = (opts) => drawQueue.push({ type: 'op', method: origDrawRectangle, args: [opts] });
+    page.drawLine = (opts) => drawQueue.push({ type: 'op', method: origDrawLine, args: [opts] });
+    page.drawImage = (img, opts) => drawQueue.push({ type: 'op', method: origDrawImage, args: [img, opts] });
+    page.drawCircle = (opts) => drawQueue.push({ type: 'op', method: origDrawCircle, args: [opts] });
+
     return page;
   };
 
@@ -1429,6 +1437,76 @@ export async function generateEventPdf(eventData = {}) {
       font: fontRegular,
       color: rgb(0, 0, 0)
     });
+  }
+
+  for (const op of drawQueue) {
+    if (op.type === 'tamil') {
+      const { origDrawText, origDrawImage, text, options } = op;
+      const chunks = text.match(/[\u0B80-\u0BFF\u200C\u200D]+(?:[\s]+[\u0B80-\u0BFF\u200C\u200D]+)*|[^\u0B80-\u0BFF\u200C\u200D]+/g) || [];
+      let currentX = options.x || 0;
+      const size = options.size || 12;
+
+      for (const chunk of chunks) {
+        if (!chunk) continue;
+        const isTamilChunk = /[\u0B80-\u0BFF]/.test(chunk);
+        
+        if (isTamilChunk) {
+          if (!window.__pdfCanvasCtx) {
+            const cvs = document.createElement('canvas');
+            window.__pdfCanvasCtx = cvs.getContext('2d');
+          }
+          const ctx = window.__pdfCanvasCtx;
+          const isBold = options.font === fontBold;
+          const fontStr = (isBold ? 'bold ' : '') + size + 'px "Noto Sans Tamil", Arial, sans-serif';
+          ctx.font = fontStr;
+          
+          const padding = 2;
+          const scale = 4;
+          const textW = Math.max(1, ctx.measureText(chunk).width);
+          
+          const cvs = document.createElement('canvas');
+          cvs.width = Math.ceil(textW * scale) + padding * 2;
+          cvs.height = Math.ceil(size * 1.8 * scale) + padding * 2;
+          const cvsCtx = cvs.getContext('2d');
+          cvsCtx.scale(scale, scale);
+          cvsCtx.font = fontStr;
+          cvsCtx.textBaseline = 'alphabetic';
+          
+          let r = 0, g = 0, b = 0;
+          if (options.color) {
+            r = Math.round((options.color.red || 0) * 255);
+            g = Math.round((options.color.green || 0) * 255);
+            b = Math.round((options.color.blue || 0) * 255);
+          }
+          cvsCtx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+          cvsCtx.fillText(chunk, padding / scale, size * 1.4);
+          
+          const dataUrl = cvs.toDataURL('image/png');
+          const pngImage = await pdfDoc.embedPng(dataUrl);
+          
+          origDrawImage(pngImage, {
+            x: currentX - (padding / scale),
+            y: (options.y || 0) - (size * 0.4) - (padding / scale),
+            width: cvs.width / scale,
+            height: cvs.height / scale
+          });
+          
+          currentX += textW;
+        } else {
+          const currentFont = options.font || fontRegular;
+          const actualOptions = { ...options, font: currentFont, x: currentX };
+          try { origDrawText(chunk, actualOptions); } catch(e) {}
+          
+          try {
+            currentX += currentFont.widthOfTextAtSize(chunk, size);
+          } catch(e) {
+            currentX += chunk.length * size * 0.55;
+          }
+        }
+      }
+    } else {
+      try { op.method(...op.args); } catch(e) {}
+    }
   }
 
   const pdfBytes = await pdfDoc.save();
