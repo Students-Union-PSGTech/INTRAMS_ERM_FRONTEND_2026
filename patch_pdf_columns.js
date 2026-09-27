@@ -1,42 +1,145 @@
 const fs = require('fs');
 
-function patchPdf(path) {
+function patch(path) {
   let content = fs.readFileSync(path, 'utf8');
 
-  // Replace judgeRows declaration
-  const oldJudgeRows = `  const judgesArray = Array.isArray(ev.contacts?.judges) ? ev.contacts.judges : (ev.contacts?.judge ? [ev.contacts.judge] : (ev.judge ? [ev.judge] : []));
-  const judgeRows = judgesArray.filter(j => j && j.name && j.name.trim()).map(j => [
-    j.name || '', j.designation || '', j.mobile || j.phone || ''
-  ]);`;
+  // Regex to match from `const itemColWidths = ` to the end of table drawing loop.
+  // It's easier to use replace block by block.
 
-  const newJudgeRows = `  const judgesArray = Array.isArray(ev.contacts?.judges) ? ev.contacts.judges : (ev.contacts?.judge ? [ev.contacts.judge] : (ev.judge ? [ev.judge] : []));
-  const validJudges = judgesArray.filter(j => j && j.name && j.name.trim());
-  const hasMultipleJudges = validJudges.length > 1;
-  const judgeRows = hasMultipleJudges
-    ? validJudges.map((j, idx) => [\`Judge \${idx + 1}\`, j.name || '', j.designation || '', j.mobile || j.phone || ''])
-    : validJudges.map(j => [j.name || '', j.designation || '', j.mobile || j.phone || '']);`;
+  const oldHeaders = `    const itemColWidths = [35, 230.28, 45, 85, 100];
+    const tableWidth = itemColWidths.reduce((a, b) => a + b, 0);
+    const itemHeaders = ['S.No', 'Item Name', 'Qty', 'Unit Price', 'Amount'];`;
 
-  content = content.replace(oldJudgeRows, newJudgeRows);
+  const newHeaders = `    const itemColWidths = [35, 185.28, 45, 45, 85, 100];
+    const tableWidth = itemColWidths.reduce((a, b) => a + b, 0);
+    const itemHeaders = ['S.No', 'Item Name', 'Return', 'Qty', 'Unit Price', 'Amount'];`;
+    
+  content = content.replace(oldHeaders, newHeaders);
 
-  // Replace drawing logic
-  const oldDrawJudge = `  if (judgeRows.length > 0) {
-    drawPage3Section('Judge Details', p3ColWidths3, ['Name', 'Designation', 'Contact Details'], judgeRows);
-  }`;
+  const oldHeaderDraw = `        if (idx === 0) {
+          xPos = cellX + (w - textW) / 2;
+        } else if (idx === 1) {
+          xPos = cellX + 8;
+        } else if (idx === 2) {
+          xPos = cellX + (w - textW) / 2;
+        } else if (idx === 3) {
+          xPos = cellX + w - textW - 8;
+        } else {
+          xPos = cellX + w - textW - 10;
+        }`;
 
-  const newDrawJudge = `  if (judgeRows.length > 0) {
-    if (hasMultipleJudges) {
-      const p3ColWidthsJudge = [75, 140, 140, 140.28];
-      drawPage3Section('Judge Details', p3ColWidthsJudge, ['Judge', 'Name', 'Designation', 'Contact Details'], judgeRows);
-    } else {
-      drawPage3Section('Judge Details', p3ColWidths3, ['Name', 'Designation', 'Contact Details'], judgeRows);
-    }
-  }`;
+  const newHeaderDraw = `        if (idx === 0) {
+          xPos = cellX + (w - textW) / 2;
+        } else if (idx === 1) {
+          xPos = cellX + 8;
+        } else if (idx === 2) {
+          xPos = cellX + (w - textW) / 2; // Return
+        } else if (idx === 3) {
+          xPos = cellX + (w - textW) / 2; // Qty
+        } else if (idx === 4) {
+          xPos = cellX + w - textW - 8; // Unit Price
+        } else {
+          xPos = cellX + w - textW - 10; // Amount
+        }`;
+        
+  content = content.replace(oldHeaderDraw, newHeaderDraw);
 
-  content = content.replace(oldDrawJudge, newDrawJudge);
+  const oldItemNameLogic = `      const returnableTag = it.is_returnable ? ' (Returnable)' : (it.is_custom ? '' : ' (Not Returnable)');
+      const itemName = String(it.item_name || it.name || 'Unknown Item').trim() + returnableTag;`;
+      
+  const newItemNameLogic = `      const itemName = String(it.item_name || it.name || 'Unknown Item').trim();`;
+  content = content.replace(oldItemNameLogic, newItemNameLogic);
+
+  // Replace Qty, Price, Amount drawing to shift index by 1 and insert Return
+  const oldColsDraw = `      // Col 2: Qty (centered)
+      const qtyX = tX + itemColWidths[0] + itemColWidths[1];
+      const qtyStr = String(qty);
+      const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9);
+      currentPage.drawText(qtyStr, {
+        x: qtyX + (itemColWidths[2] - qtyW) / 2,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      // Col 3: Unit Price (right aligned)
+      const priceX = qtyX + itemColWidths[2];
+      const priceStr = \`Rs. \${unitPrice.toFixed(2)}\`;
+      const priceW = fontRegular.widthOfTextAtSize(priceStr, 9);
+      currentPage.drawText(priceStr, {
+        x: priceX + itemColWidths[3] - priceW - 8,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      // Col 4: Amount (right aligned)
+      const amtX = priceX + itemColWidths[3];
+      const amtStr = \`Rs. \${total.toFixed(2)}\`;
+      const amtW = fontRegular.widthOfTextAtSize(amtStr, 9);
+      currentPage.drawText(amtStr, {
+        x: amtX + itemColWidths[4] - amtW - 10,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });`;
+
+  const newColsDraw = `      // Col 2: Return (centered)
+      const retX = tX + itemColWidths[0] + itemColWidths[1];
+      const retStr = it.is_custom ? '-' : (it.is_returnable ? 'YES' : 'NO');
+      const retW = fontRegular.widthOfTextAtSize(retStr, 9);
+      currentPage.drawText(retStr, {
+        x: retX + (itemColWidths[2] - retW) / 2,
+        y: firstLineY,
+        size: 9,
+        font: fontBold, // making it bold for visibility
+        color: it.is_returnable ? rgb(0, 0.6, 0) : rgb(0.8, 0, 0), // green for yes, red for no
+      });
+
+      // Col 3: Qty (centered)
+      const qtyX = retX + itemColWidths[2];
+      const qtyStr = String(qty);
+      const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9);
+      currentPage.drawText(qtyStr, {
+        x: qtyX + (itemColWidths[3] - qtyW) / 2,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      // Col 4: Unit Price (right aligned)
+      const priceX = qtyX + itemColWidths[3];
+      const priceStr = \`Rs. \${unitPrice.toFixed(2)}\`;
+      const priceW = fontRegular.widthOfTextAtSize(priceStr, 9);
+      currentPage.drawText(priceStr, {
+        x: priceX + itemColWidths[4] - priceW - 8,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+
+      // Col 5: Amount (right aligned)
+      const amtX = priceX + itemColWidths[4];
+      const amtStr = \`Rs. \${total.toFixed(2)}\`;
+      const amtW = fontRegular.widthOfTextAtSize(amtStr, 9);
+      currentPage.drawText(amtStr, {
+        x: amtX + itemColWidths[5] - amtW - 10,
+        y: firstLineY,
+        size: 9,
+        font: fontRegular,
+        color: rgb(0.1, 0.1, 0.1),
+      });`;
+
+  content = content.replace(oldColsDraw, newColsDraw);
   fs.writeFileSync(path, content);
 }
 
-patchPdf('admin/src/utils/generateEventPdf.js');
-patchPdf('EmsFormsUser_Frontend/src/utils/generateEventPdf.js');
+patch('admin/src/utils/generateEventPdf.js');
+patch('EmsFormsUser_Frontend/src/utils/generateEventPdf.js');
 
-console.log('PDFs patched for multiple judge columns!');
+console.log('PDF column patched!');

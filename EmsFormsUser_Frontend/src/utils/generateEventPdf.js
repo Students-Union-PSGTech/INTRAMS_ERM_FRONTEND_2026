@@ -1221,9 +1221,9 @@ export async function generateEventPdf(eventData = {}) {
     currentY -= 40;
 
     const tX = margin + 15;
-    const itemColWidths = [35, 230.28, 45, 85, 100];
+    const itemColWidths = [35, 185.28, 45, 45, 85, 100];
     const tableWidth = itemColWidths.reduce((a, b) => a + b, 0);
-    const itemHeaders = ['S.No', 'Item Name', 'Qty', 'Unit Price', 'Amount'];
+    const itemHeaders = ['S.No', 'Item Name', 'Return', 'Qty', 'Unit Price', 'Amount'];
 
     let tableY = currentY;
 
@@ -1246,11 +1246,13 @@ export async function generateEventPdf(eventData = {}) {
         } else if (idx === 1) {
           xPos = cellX + 8;
         } else if (idx === 2) {
-          xPos = cellX + (w - textW) / 2;
+          xPos = cellX + (w - textW) / 2; // Return
         } else if (idx === 3) {
-          xPos = cellX + w - textW - 8;
+          xPos = cellX + (w - textW) / 2; // Qty
+        } else if (idx === 4) {
+          xPos = cellX + w - textW - 8; // Unit Price
         } else {
-          xPos = cellX + w - textW - 10;
+          xPos = cellX + w - textW - 10; // Amount
         }
         currentPage.drawText(h, {
           x: xPos,
@@ -1282,8 +1284,7 @@ export async function generateEventPdf(eventData = {}) {
       const total = qty * unitPrice;
       subTotal += total;
 
-      const returnableTag = it.is_returnable ? ' (Returnable)' : (it.is_custom ? '' : ' (Not Returnable)');
-      const itemName = String(it.item_name || it.name || 'Unknown Item').trim() + returnableTag;
+      const itemName = String(it.item_name || it.name || 'Unknown Item').trim();
       const maxNameWidth = itemColWidths[1] - 16;
       let nameLines = wrapText(itemName, maxNameWidth, fontRegular, 9);
       if (nameLines.length === 0) nameLines = ['Unknown Item'];
@@ -1321,36 +1322,48 @@ export async function generateEventPdf(eventData = {}) {
         });
       });
 
-      // Col 2: Qty (centered)
-      const qtyX = tX + itemColWidths[0] + itemColWidths[1];
+      // Col 2: Return (centered)
+      const retX = tX + itemColWidths[0] + itemColWidths[1];
+      const retStr = it.is_custom ? '-' : (it.is_returnable ? 'YES' : 'NO');
+      const retW = fontRegular.widthOfTextAtSize(retStr, 9);
+      currentPage.drawText(retStr, {
+        x: retX + (itemColWidths[2] - retW) / 2,
+        y: firstLineY,
+        size: 9,
+        font: fontBold, // making it bold for visibility
+        color: it.is_returnable ? rgb(0, 0.6, 0) : rgb(0.8, 0, 0), // green for yes, red for no
+      });
+
+      // Col 3: Qty (centered)
+      const qtyX = retX + itemColWidths[2];
       const qtyStr = String(qty);
       const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9);
       currentPage.drawText(qtyStr, {
-        x: qtyX + (itemColWidths[2] - qtyW) / 2,
+        x: qtyX + (itemColWidths[3] - qtyW) / 2,
         y: firstLineY,
         size: 9,
         font: fontRegular,
         color: rgb(0.1, 0.1, 0.1),
       });
 
-      // Col 3: Unit Price (right aligned)
-      const priceX = qtyX + itemColWidths[2];
+      // Col 4: Unit Price (right aligned)
+      const priceX = qtyX + itemColWidths[3];
       const priceStr = `Rs. ${unitPrice.toFixed(2)}`;
       const priceW = fontRegular.widthOfTextAtSize(priceStr, 9);
       currentPage.drawText(priceStr, {
-        x: priceX + itemColWidths[3] - priceW - 8,
+        x: priceX + itemColWidths[4] - priceW - 8,
         y: firstLineY,
         size: 9,
         font: fontRegular,
         color: rgb(0.1, 0.1, 0.1),
       });
 
-      // Col 4: Amount (right aligned)
-      const amtX = priceX + itemColWidths[3];
+      // Col 5: Amount (right aligned)
+      const amtX = priceX + itemColWidths[4];
       const amtStr = `Rs. ${total.toFixed(2)}`;
       const amtW = fontRegular.widthOfTextAtSize(amtStr, 9);
       currentPage.drawText(amtStr, {
-        x: amtX + itemColWidths[4] - amtW - 10,
+        x: amtX + itemColWidths[5] - amtW - 10,
         y: firstLineY,
         size: 9,
         font: fontRegular,
