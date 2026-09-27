@@ -210,6 +210,7 @@ function EventPreview({ formData }) {
               <THead>
                 <tr>
                   <Th>ITEM NAME</Th>
+                  <Th>RETURN</Th>
                   <Th numeric>QTY</Th>
                   <Th numeric>UNIT PRICE</Th>
                   <Th numeric>TOTAL</Th>
@@ -220,6 +221,9 @@ function EventPreview({ formData }) {
                 {formData.items.map((it, idx) => (
                   <Tr key={idx}>
                     <Td className="font-medium text-white">{it.item_name}</Td>
+                    <Td className={it.is_returnable ? "text-emerald-400 font-bold" : (it.is_custom ? "text-slate-500 font-bold" : "text-red-400 font-bold")}>
+                      {it.is_custom ? '-' : (it.is_returnable ? 'YES' : 'NO')}
+                    </Td>
                     <Td numeric>{it.quantity}</Td>
                     <Td numeric>₹{it.price_per_unit || 0}</Td>
                     <Td numeric>₹{calculateItemTotal(it).toFixed(2)}</Td>

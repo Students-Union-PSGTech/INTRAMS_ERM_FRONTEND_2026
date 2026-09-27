@@ -208,7 +208,7 @@ function EventPreview({ formData }) {
             {formData.items.map((it, idx) => (
               <div key={idx} className="flex justify-between gap-2 py-1 border-b last:border-0 border-slate-800">
                 <span className="font-medium text-white">{it.item_name}</span>
-                <span className="text-slate-400 text-right">Qty: {it.quantity} | ₹{it.price_per_unit || 0}/unit | Total: ₹{calculateItemTotal(it).toFixed(2)} | Inc GST: ₹{(calculateItemTotal(it) * 1.18).toFixed(2)}</span>
+                <span className="text-slate-400 text-right">Return: <span className={it.is_custom ? "text-slate-500" : (it.is_returnable ? "text-emerald-400 font-bold" : "text-red-400 font-bold")}>{it.is_custom ? '-' : (it.is_returnable ? 'YES' : 'NO')}</span> | Qty: {it.quantity} | ₹{it.price_per_unit || 0}/unit | Total: ₹{calculateItemTotal(it).toFixed(2)} | Inc GST: ₹{(calculateItemTotal(it) * 1.18).toFixed(2)}</span>
               </div>
             ))}
             <div className="mt-3 pt-3 border-t border-slate-800 flex justify-between items-center text-sm">
