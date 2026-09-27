@@ -130,41 +130,7 @@ export default function EventDetail() {
         </div>
 
         <div className="space-y-4">
-          <Card className="overflow-hidden border border-[#252525] bg-[#050505]/50 backdrop-blur-md shadow-2xl">
-            <div className="px-5 py-4 border-b border-[#252525] bg-[#000000]/80">
-              <h2 className="font-heading font-bold text-sm uppercase tracking-wider text-[#FFFFFF] flex items-center gap-2">
-                REQUESTED EQUIPMENT ITEMS
-              </h2>
-            </div>
-            {itemsList.length === 0 ? (
-              <EmptyState title="NO REQUESTED ITEMS" />
-            ) : (
-              <Table>
-                <THead>
-                  <tr>
-                    <Th>ITEM NAME</Th>
-                    <Th numeric>REQUESTED</Th>
-                    <Th numeric>ALLOCATED</Th>
-                    <Th numeric>REMAINING</Th>
-                  </tr>
-                </THead>
-                <tbody>
-                  {itemsList.map((item) => {
-                    const requested = getRequested(item);
-                    const allocated = getAllocated(item);
-                    return (
-                      <Tr key={item._id || item.item_name}>
-                        <Td className="text-[#FFFFFF] font-bold">{item.item_name}</Td>
-                        <Td numeric>{requested}</Td>
-                        <Td numeric>{allocated}</Td>
-                        <Td numeric className="text-[#00AEEF] font-bold">{Math.max(0, requested - allocated)}</Td>
-                      </Tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            )}
-          </Card>
+
 
           {Array.isArray(event.annexures) && event.annexures.length > 0 && (
             <Card className="p-6 border border-[#252525] bg-[#050505]/50 backdrop-blur-md shadow-2xl">
