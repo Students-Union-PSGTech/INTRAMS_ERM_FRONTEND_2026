@@ -5,6 +5,7 @@ import { calculateGrandTotal, calculateItemTotal } from '../../utils/proposalHel
 
 function ItemsPage({ formData, setFormData }) {
   const [masterItems, setMasterItems] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchMasterItems = async () => {
@@ -53,6 +54,16 @@ function ItemsPage({ formData, setFormData }) {
         </h2>
         <p className="text-sky-300/70 text-sm mt-1">Select items from Students Union inventory catalog</p>
       </div>
+      
+      <div className="mb-4">
+        <input 
+          type="text" 
+          placeholder="Search items..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full bg-slate-900/60 border border-slate-700/50 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-sky-500/50 transition-colors"
+        />
+      </div>
 
       <div className="space-y-8">
         {/* Catalog Section */}
@@ -63,7 +74,7 @@ function ItemsPage({ formData, setFormData }) {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {masterItems.map(m => {
+              {masterItems.filter(m => (m.item_name || m.name || '').toLowerCase().includes(searchTerm.toLowerCase())).map(m => {
                 const id = m._id || m.id;
                 const selectedItem = (formData.items || []).find(i => i.item_id === id);
                 const quantity = selectedItem ? selectedItem.quantity : 0;
