@@ -97,7 +97,17 @@ function ItemsPage({ formData, setFormData }) {
                         >
                           <Minus size={16} />
                         </button>
-                        <span className="w-10 text-center text-sm font-bold text-white tabular-nums">{quantity}</span>
+                        <input 
+                          type="number"
+                          min="0"
+                          value={quantity === 0 ? '' : quantity}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            updateMasterQuantity(m, isNaN(val) ? 0 : val);
+                          }}
+                          className="w-12 text-center text-sm font-bold text-white bg-slate-800 border border-slate-700/50 rounded focus:outline-none focus:border-sky-500 tabular-nums py-1"
+                        />
                         <button 
                           type="button"
                           onClick={() => updateMasterQuantity(m, quantity + 1)}
