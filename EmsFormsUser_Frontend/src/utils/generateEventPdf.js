@@ -1322,7 +1322,7 @@ export async function generateEventPdf(eventData = {}) {
 
       // Col 2: Return (centered)
       const retX = tX + itemColWidths[0] + itemColWidths[1];
-      const retStr = it.is_custom ? '-' : (it.is_returnable ? 'YES' : 'NO');
+      const retStr = it.is_returnable ? 'YES' : 'NO';
       const retW = fontRegular.widthOfTextAtSize(retStr, 9);
       currentPage.drawText(retStr, {
         x: retX + (itemColWidths[2] - retW) / 2,

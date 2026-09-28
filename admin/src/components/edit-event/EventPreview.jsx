@@ -231,8 +231,8 @@ function EventPreview({ formData }) {
                   <tr key={idx} className="hover:bg-slate-900/50">
                     <td className="p-3 font-medium text-white">{it.item_name}</td>
                     <td className="p-3 text-center">
-                      <span className={it.is_custom ? "text-slate-500" : (it.is_returnable ? "text-emerald-400 font-bold" : "text-red-400 font-bold")}>
-                        {it.is_custom ? '-' : (it.is_returnable ? 'YES' : 'NO')}
+                      <span className={it.is_returnable ? "text-emerald-400 font-bold" : "text-red-400 font-bold"}>
+                        {it.is_returnable ? 'YES' : 'NO'}
                       </span>
                     </td>
                     <td className="p-3 text-center">{it.quantity}</td>
