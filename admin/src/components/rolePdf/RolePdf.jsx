@@ -7,10 +7,12 @@ import { getApiErrorMessage } from '../../utils/apiError';
 import { useToast } from '../../context/ToastContext';
 import { handlePdfBlob } from '../../utils/pdf';
 import { generateRolePdf } from '../../utils/generateRolePdf';
+import { generateEventsPdf } from '../../utils/generateEventsPdf';
 import Button from '../ui/Button';
 import PageHeader from '../ui/PageHeader';
 
 const ROLES = [
+  { id: 'event', label: 'Events' },
   { id: 'secretary', label: 'Secretary' },
   { id: 'convenor', label: 'Convenor' },
   { id: 'volunteer', label: 'Volunteer' },
@@ -28,10 +30,19 @@ export default function RolePdf() {
   const generateExactPdfBlob = async () => {
     let rawData = [];
     try {
-      const res = await adminAPI.getRoleMembers(selected);
-      rawData = res.data?.data || res.data || {};
+      if (selected === 'event') {
+        const res = await adminAPI.getEvents();
+        const events = res.data?.data || res.data || [];
+        rawData = events.filter(e => e.status === 'submitted');
+      } else {
+        const res = await adminAPI.getRoleMembers(selected);
+        rawData = res.data?.data || res.data || {};
+      }
     } catch (_) {
-      rawData = [];
+      rawData = selected === 'event' ? {} : [];
+    }
+    if (selected === 'event') {
+      return await generateEventsPdf({ data: rawData });
     }
     return await generateRolePdf({ role: selected, data: rawData });
   };
@@ -68,12 +79,28 @@ export default function RolePdf() {
     try {
       setBusy('export');
       let flattenRows = [];
-      const res = await adminAPI.getRoleMembers(selected);
-      const rawData = res?.data?.data || res?.data || {};
+      let rawData;
+      if (selected === 'event') {
+        const eventRes = await adminAPI.getEvents();
+        const events = eventRes.data?.data || eventRes.data || [];
+        rawData = events.filter(e => e.status === 'submitted');
+      } else {
+        const res = await adminAPI.getRoleMembers(selected);
+        rawData = res?.data?.data || res?.data || {};
+      }
 
       if (Array.isArray(rawData)) {
-        flattenRows = rawData;
-      } else if (typeof rawData === 'object' && rawData !== null) {
+        if (selected === 'event') {
+          flattenRows = rawData.map((e, index) => ({
+            SNo: index + 1,
+            Club: e.club_id?.club_name || e.club_name || 'General',
+            EventID: e.event_id || '',
+            EventName: e.event_name || ''
+          }));
+        } else {
+          flattenRows = rawData;
+        }
+      } else {
         Object.entries(rawData).forEach(([clubName, members]) => {
           if (Array.isArray(members)) {
             members.forEach(m => {
