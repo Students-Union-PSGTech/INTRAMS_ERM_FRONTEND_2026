@@ -112,7 +112,7 @@ function UpdateEventController() {
       }
     } catch (err) {
       alert('Failed to load event data');
-      navigate('/view-events');
+      navigate('/events');
     } finally {
       setLoading(false);
     }
@@ -137,7 +137,11 @@ function UpdateEventController() {
     try {
       await adminAPI.updateEvent(id, updatedData || formData);
       alert('✅ Event Proposal Updated Successfully!');
-      navigate('/view-events');
+      if (window.history.length > 2) {
+        navigate(-1);
+      } else {
+        navigate(`/events/${id}`);
+      }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update event');
     } finally {

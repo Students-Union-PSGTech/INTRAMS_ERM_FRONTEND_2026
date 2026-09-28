@@ -8,11 +8,13 @@ import { useToast } from '../../context/ToastContext';
 import { handlePdfBlob } from '../../utils/pdf';
 import { generateRolePdf } from '../../utils/generateRolePdf';
 import { generateEventsPdf } from '../../utils/generateEventsPdf';
+import { generateItemsPdf } from '../../utils/generateItemsPdf';
 import Button from '../ui/Button';
 import PageHeader from '../ui/PageHeader';
 
 const ROLES = [
   { id: 'event', label: 'Events' },
+  { id: 'items', label: 'Requested Items' },
   { id: 'secretary', label: 'Secretary' },
   { id: 'convenor', label: 'Convenor' },
   { id: 'volunteer', label: 'Volunteer' },
@@ -30,7 +32,7 @@ export default function RolePdf() {
   const generateExactPdfBlob = async () => {
     let rawData = [];
     try {
-      if (selected === 'event') {
+      if (selected === 'event' || selected === 'items') {
         const res = await adminAPI.getEvents();
         const events = res.data?.data || res.data || [];
         rawData = events.filter(e => e.status === 'submitted');
@@ -39,7 +41,10 @@ export default function RolePdf() {
         rawData = res.data?.data || res.data || {};
       }
     } catch (_) {
-      rawData = selected === 'event' ? {} : [];
+      rawData = (selected === 'event' || selected === 'items') ? [] : {};
+    }
+    if (selected === 'items') {
+      return await generateItemsPdf({ data: rawData });
     }
     if (selected === 'event') {
       return await generateEventsPdf({ data: rawData });
@@ -80,7 +85,7 @@ export default function RolePdf() {
       setBusy('export');
       let flattenRows = [];
       let rawData;
-      if (selected === 'event') {
+      if (selected === 'event' || selected === 'items') {
         const eventRes = await adminAPI.getEvents();
         const events = eventRes.data?.data || eventRes.data || [];
         rawData = events.filter(e => e.status === 'submitted');
@@ -97,6 +102,22 @@ export default function RolePdf() {
             EventID: e.event_id || '',
             EventName: e.event_name || ''
           }));
+        } else if (selected === 'items') {
+          let sn = 1;
+          rawData.forEach(e => {
+            const club = e.club_id?.club_name || e.club_name || 'General';
+            const eventName = e.event_name || '';
+            const items = e.items || [];
+            items.forEach(it => {
+              flattenRows.push({
+                SNo: sn++,
+                Club: club,
+                EventName: eventName,
+                ItemName: it.item_name || it.name || '',
+                Quantity: it.quantity || it.requested_quantity || 1
+              });
+            });
+          });
         } else {
           flattenRows = rawData;
         }
