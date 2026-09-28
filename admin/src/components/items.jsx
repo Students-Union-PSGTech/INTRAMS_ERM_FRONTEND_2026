@@ -158,16 +158,7 @@ export default function Items() {
     }
   };
 
-  const removeMasterItem = async (id) => {
-    if (!window.confirm('Delete this master item?')) return;
-    try {
-      await adminAPI.deleteItem(id);
-      showToast('Master item deleted.', 'success');
-      fetchMasterItems();
-    } catch (err) {
-      showToast(getApiErrorMessage(err, 'Unable to delete item.'), 'error');
-    }
-  };
+
 
   // Open breakdown modal for a specific item
   const openBreakdown = (item) => {
@@ -521,14 +512,7 @@ export default function Items() {
                             <Edit3 className="w-3.5 h-3.5" />
                             EDIT
                           </button>
-                          <button
-                            onClick={() => removeMasterItem(item._id)}
-                            title="Delete Item"
-                            className="px-2.5 py-1.5 bg-[#050505] text-[#FF4D67] hover:bg-[#FF4D67]/10 border border-[#FF4D67]/40 rounded-none text-[11px] font-bold uppercase transition-all flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            DELETE
-                          </button>
+
                         </div>
                       </td>
                     </tr>
