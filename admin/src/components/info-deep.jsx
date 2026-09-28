@@ -101,7 +101,7 @@ export default function EventDetail() {
   const contacts = event.contacts || {};
 
   return (
-    <div>
+    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-950 to-black p-4 sm:p-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <Button variant="ghost" className="mb-4 px-0 border-none" onClick={() => navigate('/events')}>
         ← BACK TO EVENTS
       </Button>
@@ -110,15 +110,17 @@ export default function EventDetail() {
         subtitle={`${(event.club_name || 'ASSOCIATION').toUpperCase()} · ${event.event_id || ''}`}
         actions={
           <>
-            <Button onClick={() => navigate(`/grant-allocation/${event._id}`)}>ALLOCATE ITEMS</Button>
+            <Button variant="secondary" onClick={() => navigate(`/update-event/${event._id}`, { state: event })}>
+              EDIT EVENT
+            </Button>
+            <Button variant="secondary" onClick={() => navigate(`/grant-allocation/${event._id}`)}>
+              ALLOCATE ITEMS
+            </Button>
             <Button variant="secondary" loading={pdfLoading === 'event'} onClick={() => handlePdf('event')}>
               EVENT PDF
             </Button>
             <Button variant="secondary" loading={pdfLoading === 'items'} onClick={() => handlePdf('items')}>
               ITEMS PDF
-            </Button>
-            <Button variant="secondary" loading={pdfLoading === 'procurement'} onClick={() => handlePdf('procurement')}>
-              PROCUREMENT PDF
             </Button>
           </>
         }

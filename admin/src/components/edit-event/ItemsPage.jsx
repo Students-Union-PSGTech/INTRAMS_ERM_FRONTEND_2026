@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Package, Plus, Minus } from 'lucide-react';
-import { userAPI } from '../api/api';
-import { calculateGrandTotal, calculateItemTotal } from '../utils/proposalHelpers';
+import { adminAPI } from '../../api';
+import { calculateGrandTotal, calculateItemTotal } from '../../utils/proposalHelpers';
 
 function ItemsPage({ formData, setFormData }) {
   const [masterItems, setMasterItems] = useState([]);
@@ -9,7 +9,7 @@ function ItemsPage({ formData, setFormData }) {
   useEffect(() => {
     const fetchMasterItems = async () => {
       try {
-        const res = await userAPI.getItems();
+        const res = await adminAPI.getItems();
         const list = res.data?.data || res.data || [];
         setMasterItems(Array.isArray(list) ? list : []);
       } catch (_) {

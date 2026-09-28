@@ -11,6 +11,7 @@ const EventsList = lazy(() => import('./components/events'));
 const AssociationsList = lazy(() => import('./components/associations'));
 const AssociationDetail = lazy(() => import('./components/associationDetail'));
 const EventDetail = lazy(() => import('./components/info-deep'));
+const UpdateEventController = lazy(() => import('./components/edit-event/UpdateEventController'));
 const Items = lazy(() => import('./components/items'));
 const CustomItems = lazy(() => import('./components/customItems'));
 const Inventory = lazy(() => import('./components/stocks'));
@@ -49,6 +50,7 @@ function AppRoutes() {
 
         <Route path="/events" element={<Guard roles={['admin', 'member', 'procurement']}><EventsList /></Guard>} />
         <Route path="/events/:id" element={<Guard roles={['admin', 'member', 'procurement']}><EventDetail /></Guard>} />
+        <Route path="/update-event/:id" element={<Guard roles={['admin', 'member']}><UpdateEventController /></Guard>} />
         <Route path="/info-deep/:id" element={<RedirectTo to="/events/:id" />} />
 
         <Route path="/associations" element={<Guard roles={['admin', 'member']}><AssociationsList /></Guard>} />

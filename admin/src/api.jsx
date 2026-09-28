@@ -70,6 +70,7 @@ export const adminAPI = {
   // Events & Access
   getEvents: () => api.get('/admin/events'),
   getEventById: (id) => api.get(`/admin/events/${id}`),
+  updateEvent: (id, data) => api.put(`/admin/events/${id}`, data),
   updateEventStatus: (id, status, reason) => api.put(`/admin/events/${id}/status`, { status, reason }),
   updateLabStatus: (id, data) => api.put(`/admin/events/${id}/lab-status`, data),
   getRequestedEvents: () => api.get('/admin/edit-requests'),
