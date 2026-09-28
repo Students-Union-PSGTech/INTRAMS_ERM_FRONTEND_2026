@@ -131,37 +131,42 @@ export async function generateEventItemsPdf(event) {
     });
   };
 
-  const drawHeader = (page) => {
+  const drawHeader = (page, isFirstPage = false) => {
     drawPageBorder(page);
-    let titleY = pageHeight - 45;
-    const titleText1 = 'PSG COLLEGE OF TECHNOLOGY';
-    const w1 = fontBold.widthOfTextAtSize(titleText1, 16);
-    page.drawText(titleText1, { x: (pageWidth - w1) / 2, y: titleY, size: 16, font: fontBold, color: rgb(0, 0, 0) });
-    titleY -= 23;
+    if (isFirstPage) {
+      let titleY = pageHeight - 65;
+      const titleText1 = 'PSG COLLEGE OF TECHNOLOGY';
+      const w1 = fontBold.widthOfTextAtSize(titleText1, 16);
+      page.drawText(titleText1, { x: (pageWidth - w1) / 2, y: titleY, size: 16, font: fontBold, color: rgb(0, 0, 0) });
+      titleY -= 23;
 
-    const titleText2 = 'STUDENTS UNION 2026-2027';
-    const w2 = fontBold.widthOfTextAtSize(titleText2, 12);
-    page.drawText(titleText2, { x: (pageWidth - w2) / 2, y: titleY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
-    titleY -= 22;
+      const titleText2 = 'STUDENTS UNION 2026-2027';
+      const w2 = fontBold.widthOfTextAtSize(titleText2, 12);
+      page.drawText(titleText2, { x: (pageWidth - w2) / 2, y: titleY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+      titleY -= 22;
 
-    const titleText3 = 'ITEM REQUEST & LOGISTICS INVOICE';
-    const w3 = fontBold.widthOfTextAtSize(titleText3, 13);
-    page.drawText(titleText3, { x: (pageWidth - w3) / 2, y: titleY, size: 13, font: fontBold, color: rgb(0, 0, 0) });
-    page.drawLine({
-      start: { x: (pageWidth - w3) / 2, y: titleY - 2 },
-      end: { x: (pageWidth + w3) / 2, y: titleY - 2 },
-      thickness: 1, color: rgb(0, 0, 0)
-    });
-    titleY -= 20;
+      const titleText3 = 'ITEM REQUEST & LOGISTICS INVOICE';
+      const w3 = fontBold.widthOfTextAtSize(titleText3, 13);
+      page.drawText(titleText3, { x: (pageWidth - w3) / 2, y: titleY, size: 13, font: fontBold, color: rgb(0, 0, 0) });
+      page.drawLine({
+        start: { x: (pageWidth - w3) / 2, y: titleY - 2 },
+        end: { x: (pageWidth + w3) / 2, y: titleY - 2 },
+        thickness: 1, color: rgb(0, 0, 0)
+      });
+    }
 
-    const titleText4 = `Generated on: ${genTime}`;
-    const w4 = fontItalic.widthOfTextAtSize(titleText4, 9.5);
-    page.drawText(titleText4, { x: (pageWidth - w4) / 2, y: titleY, size: 9.5, font: fontItalic, color: rgb(0, 0, 0) });
+    // Add footer
+    const footerY = 20;
+    page.drawText(`Updated on: ${genTime}`, { x: 45, y: footerY, size: 9, font: fontItalic, color: rgb(0.3, 0.3, 0.3) });
+    
+    const eventIdText = `Event ID: ${eventId}`;
+    const wEId = fontItalic.widthOfTextAtSize(eventIdText, 9);
+    page.drawText(eventIdText, { x: pageWidth - 45 - wEId, y: footerY, size: 9, font: fontItalic, color: rgb(0.3, 0.3, 0.3) });
   };
 
-  drawHeader(currentPage);
+  drawHeader(currentPage, true);
 
-  let currentY = pageHeight - 135;
+  let currentY = pageHeight - 155;
   const tX = 50;
   const tableWidth = pageWidth - 100;
 
@@ -248,8 +253,8 @@ export async function generateEventItemsPdf(event) {
 
       if (currentY - rowH < 70) {
         currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-        drawHeader(currentPage);
-        currentY = pageHeight - 120;
+        drawHeader(currentPage, false);
+        currentY = pageHeight - 60; // start higher since no big header
         drawTableHeader();
       }
 
