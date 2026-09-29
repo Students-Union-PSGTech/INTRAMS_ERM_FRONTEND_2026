@@ -181,12 +181,12 @@ export async function generateEventsPdf({ data }) {
   let currentY = pageHeight - 105;
   
   const eventsList = (Array.isArray(data) ? [...data] : []).sort((a, b) => {
-    const clubA = (a.club_id?.club_name || a.club_name || '').trim();
-    const clubB = (b.club_id?.club_name || b.club_name || '').trim();
+    const clubA = (a.club_id?.club_name || a.club_name || a.association || a.clubName || 'General').trim();
+    const clubB = (b.club_id?.club_name || b.club_name || b.association || b.clubName || 'General').trim();
     const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
     if (comp !== 0) return comp;
-    const nameA = (a.event_name || a.name || '').trim();
-    const nameB = (b.event_name || b.name || '').trim();
+    const nameA = (a.event_name || a.name || a.eventName || '').trim();
+    const nameB = (b.event_name || b.name || b.eventName || '').trim();
     return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
   });
 
@@ -282,9 +282,9 @@ export async function generateEventsPdf({ data }) {
 
       const values = [
         String(memberIndex + 1),
-        String(member.club_id?.club_name || member.club_name || 'General'),
-        String(member.event_id || '—'),
-        String(member.event_name || '—')
+        String(member.club_id?.club_name || member.club_name || member.association || member.clubName || 'General'),
+        String(member.event_id || member.id || member._id || '—'),
+        String(member.event_name || member.name || member.eventName || '—')
       ];
 
       let cellX = tableX;

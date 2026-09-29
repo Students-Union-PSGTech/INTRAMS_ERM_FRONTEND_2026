@@ -117,19 +117,19 @@ export default function RolePdf() {
         if (Array.isArray(rawData)) {
           if (selected === 'event') {
             const sortedEvents = [...rawData].sort((a, b) => {
-              const clubA = (a.club_id?.club_name || a.club_name || '').trim();
-              const clubB = (b.club_id?.club_name || b.club_name || '').trim();
+              const clubA = (a.club_id?.club_name || a.club_name || a.association || a.clubName || 'General').trim();
+              const clubB = (b.club_id?.club_name || b.club_name || b.association || b.clubName || 'General').trim();
               const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
               if (comp !== 0) return comp;
-              const nameA = (a.event_name || a.name || '').trim();
-              const nameB = (b.event_name || b.name || '').trim();
+              const nameA = (a.event_name || a.name || a.eventName || '').trim();
+              const nameB = (b.event_name || b.name || b.eventName || '').trim();
               return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
             });
             flattenRows = sortedEvents.map((e, index) => ({
               SNo: index + 1,
-              Club: e.club_id?.club_name || e.club_name || 'General',
-              EventID: e.event_id || '',
-              EventName: e.event_name || ''
+              Club: e.club_id?.club_name || e.club_name || e.association || e.clubName || 'General',
+              EventID: e.event_id || e.id || e._id || '',
+              EventName: e.event_name || e.name || e.eventName || ''
             }));
           } else if (selected === 'items') {
             let sn = 1;
