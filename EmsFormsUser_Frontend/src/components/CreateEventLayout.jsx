@@ -139,7 +139,13 @@ function CreateEventLayout() {
   const handleSubmit = async (dataToSubmit) => {
     setIsSubmitting(true);
     try {
-      await userAPI.createEvent(dataToSubmit);
+      const sanitizedData = {
+        ...dataToSubmit,
+        items: (dataToSubmit.items || []).filter(
+          (i) => (parseInt(i.quantity !== undefined ? i.quantity : i.requested_quantity, 10) > 0)
+        )
+      };
+      await userAPI.createEvent(sanitizedData);
       sessionManager.clearDraft();
       alert('✅ Event Proposal Created Successfully!');
       navigate('/home');

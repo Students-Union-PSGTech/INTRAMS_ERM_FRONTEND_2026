@@ -135,7 +135,14 @@ function UpdateEventController() {
     setErrors({});
     setIsSubmitting(true);
     try {
-      await adminAPI.updateEvent(id, updatedData || formData);
+      const rawData = updatedData || formData;
+      const sanitizedData = {
+        ...rawData,
+        items: (rawData.items || []).filter(
+          (i) => (parseInt(i.quantity !== undefined ? i.quantity : i.requested_quantity, 10) > 0)
+        )
+      };
+      await adminAPI.updateEvent(id, sanitizedData);
       alert('✅ Event Proposal Updated Successfully!');
       if (window.history.length > 2) {
         navigate(-1);

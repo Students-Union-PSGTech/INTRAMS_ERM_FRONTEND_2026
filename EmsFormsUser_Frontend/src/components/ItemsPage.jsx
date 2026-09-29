@@ -146,13 +146,22 @@ function ItemsPage({ formData, setFormData }) {
           const updateCustomQuantity = (item, newQty) => {
             const validQty = Math.max(0, newQty);
             setFormData(prev => {
-              const newItems = [...(prev.items || [])];
-              const idx = newItems.findIndex(i => {
-                if (item._id && i._id) return i._id === item._id;
-                return i.item_name === item.item_name;
-              });
-              if (idx !== -1) {
-                newItems[idx] = { ...newItems[idx], quantity: validQty, requested_quantity: validQty };
+              let newItems = [...(prev.items || [])];
+              if (validQty <= 0) {
+                newItems = newItems.filter(i => {
+                  if (item._id && i._id) return i._id !== item._id;
+                  if (item.item_id && i.item_id) return i.item_id !== item.item_id;
+                  return i.item_name !== item.item_name;
+                });
+              } else {
+                const idx = newItems.findIndex(i => {
+                  if (item._id && i._id) return i._id === item._id;
+                  if (item.item_id && i.item_id) return i.item_id === item.item_id;
+                  return i.item_name === item.item_name;
+                });
+                if (idx !== -1) {
+                  newItems[idx] = { ...newItems[idx], quantity: validQty, requested_quantity: validQty };
+                }
               }
               return { ...prev, items: newItems };
             });

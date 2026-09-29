@@ -135,7 +135,14 @@ function UpdateEventController() {
     setErrors({});
     setIsSubmitting(true);
     try {
-      await userAPI.updateEvent(id, updatedData || formData);
+      const rawData = updatedData || formData;
+      const sanitizedData = {
+        ...rawData,
+        items: (rawData.items || []).filter(
+          (i) => (parseInt(i.quantity !== undefined ? i.quantity : i.requested_quantity, 10) > 0)
+        )
+      };
+      await userAPI.updateEvent(id, sanitizedData);
       alert('✅ Event Proposal Updated Successfully!');
       navigate('/view-events');
     } catch (err) {
