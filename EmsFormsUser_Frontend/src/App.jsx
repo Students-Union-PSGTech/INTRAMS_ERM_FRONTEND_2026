@@ -10,6 +10,10 @@ import UpdateEventController from './components/UpdateEventController';
 import EditRequestsPage from './components/EditRequestsPage';
 import LabConfirmationPage from './components/LabConfirmationPage';
 import NotFound from './components/NotFound';
+import MaintenancePage from './components/MaintenancePage';
+
+// Set to false to restore normal portal operations
+const IS_MAINTENANCE_MODE = true;
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -54,7 +58,18 @@ function AppRoutes() {
 }
 
 function App() {
-  return <AuthProvider><Router><ScrollToTop /><AppRoutes /></Router></AuthProvider>;
+  if (IS_MAINTENANCE_MODE) {
+    return <MaintenancePage />;
+  }
+
+  return (
+    <AuthProvider>
+      <Router>
+        <ScrollToTop />
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
+  );
 }
 
 export default App;
