@@ -162,7 +162,15 @@ export async function generateItemsPdf({ data }) {
     }
   };
 
-  const eventsList = Array.isArray(data) ? data : [];
+  const eventsList = (Array.isArray(data) ? [...data] : []).sort((a, b) => {
+    const clubA = (a.club_id?.club_name || a.club_name || a.association || a.clubName || 'General').trim();
+    const clubB = (b.club_id?.club_name || b.club_name || b.association || b.clubName || 'General').trim();
+    const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+    if (comp !== 0) return comp;
+    const nameA = (a.event_name || a.name || a.eventName || '').trim();
+    const nameB = (b.event_name || b.name || b.eventName || '').trim();
+    return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+  });
   drawHeader(currentPage, true, eventsList.length > 0 ? (eventsList[0].event_id || eventsList[0].id || eventsList[0]._id || '') : '');
 
   let currentY = pageHeight - 155;

@@ -41,8 +41,8 @@ export default function EventsList() {
   }, []);
 
   const associations = useMemo(() => {
-    const names = new Set(events.map((e) => e.club_name).filter(Boolean));
-    return [...names];
+    const names = new Set(events.map((e) => e.club_name || e.club_id?.club_name).filter(Boolean));
+    return [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   }, [events]);
 
   const statuses = useMemo(() => {
@@ -50,19 +50,31 @@ export default function EventsList() {
     return ['all', ...set];
   }, [events]);
 
-  const filtered = events.filter((ev) => {
+  const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase();
-    const name = (ev.name || ev.event_name || '').toLowerCase();
-    const club = (ev.club_name || '').toLowerCase();
-    const status = String(ev.status || 'submitted').toLowerCase();
-    const submitted = ['submitted', 'approved', 'under_review', 'edit_requested'].includes(status);
-    return (
-      (name.includes(term) || club.includes(term)) &&
-      (statusFilter === 'all' || status === statusFilter) &&
-      (associationFilter === 'all' || ev.club_name === associationFilter) &&
-      (submittedFilter === 'all' || (submittedFilter === 'submitted' ? submitted : !submitted))
-    );
-  });
+    return events
+      .filter((ev) => {
+        const name = (ev.name || ev.event_name || '').toLowerCase();
+        const club = (ev.club_name || ev.club_id?.club_name || '').toLowerCase();
+        const status = String(ev.status || 'submitted').toLowerCase();
+        const submitted = ['submitted', 'approved', 'under_review', 'edit_requested'].includes(status);
+        return (
+          (name.includes(term) || club.includes(term)) &&
+          (statusFilter === 'all' || status === statusFilter) &&
+          (associationFilter === 'all' || (ev.club_name || ev.club_id?.club_name) === associationFilter) &&
+          (submittedFilter === 'all' || (submittedFilter === 'submitted' ? submitted : !submitted))
+        );
+      })
+      .sort((a, b) => {
+        const clubA = (a.club_name || a.club_id?.club_name || '').trim();
+        const clubB = (b.club_name || b.club_id?.club_name || '').trim();
+        const clubCompare = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+        if (clubCompare !== 0) return clubCompare;
+        const nameA = (a.name || a.event_name || '').trim();
+        const nameB = (b.name || b.event_name || '').trim();
+        return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+      });
+  }, [events, searchTerm, statusFilter, associationFilter, submittedFilter]);
 
   return (
     <div>

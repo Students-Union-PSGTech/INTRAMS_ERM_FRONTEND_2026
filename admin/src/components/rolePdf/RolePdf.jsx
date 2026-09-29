@@ -116,7 +116,16 @@ export default function RolePdf() {
       if (selected !== 'consolidated') {
         if (Array.isArray(rawData)) {
           if (selected === 'event') {
-            flattenRows = rawData.map((e, index) => ({
+            const sortedEvents = [...rawData].sort((a, b) => {
+              const clubA = (a.club_id?.club_name || a.club_name || '').trim();
+              const clubB = (b.club_id?.club_name || b.club_name || '').trim();
+              const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+              if (comp !== 0) return comp;
+              const nameA = (a.event_name || a.name || '').trim();
+              const nameB = (b.event_name || b.name || '').trim();
+              return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+            });
+            flattenRows = sortedEvents.map((e, index) => ({
               SNo: index + 1,
               Club: e.club_id?.club_name || e.club_name || 'General',
               EventID: e.event_id || '',
@@ -124,7 +133,16 @@ export default function RolePdf() {
             }));
           } else if (selected === 'items') {
             let sn = 1;
-            rawData.forEach(e => {
+            const sortedEvents = [...rawData].sort((a, b) => {
+              const clubA = (a.club_id?.club_name || a.club_name || 'General').trim();
+              const clubB = (b.club_id?.club_name || b.club_name || 'General').trim();
+              const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+              if (comp !== 0) return comp;
+              const nameA = (a.event_name || a.name || '').trim();
+              const nameB = (b.event_name || b.name || '').trim();
+              return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+            });
+            sortedEvents.forEach(e => {
               const club = e.club_id?.club_name || e.club_name || 'General';
               const eventName = e.event_name || '';
               const items = e.items || [];

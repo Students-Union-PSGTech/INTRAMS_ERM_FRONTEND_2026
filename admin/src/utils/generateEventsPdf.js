@@ -180,7 +180,15 @@ export async function generateEventsPdf({ data }) {
 
   let currentY = pageHeight - 105;
   
-  const eventsList = Array.isArray(data) ? data : [];
+  const eventsList = (Array.isArray(data) ? [...data] : []).sort((a, b) => {
+    const clubA = (a.club_id?.club_name || a.club_name || '').trim();
+    const clubB = (b.club_id?.club_name || b.club_name || '').trim();
+    const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+    if (comp !== 0) return comp;
+    const nameA = (a.event_name || a.name || '').trim();
+    const nameB = (b.event_name || b.name || '').trim();
+    return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+  });
 
   const checkAddPage = (requiredHeight) => {
     if (currentY - requiredHeight < outerMargin + 25) {
