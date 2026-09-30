@@ -13,7 +13,7 @@ import NotFound from './components/NotFound';
 import MaintenancePage from './components/MaintenancePage';
 
 // Set to false to restore normal portal operations
-const IS_MAINTENANCE_MODE = true;
+const IS_MAINTENANCE_MODE = false;
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
