@@ -41,13 +41,34 @@ export async function generateEventPdf(eventData = {}) {
     return String(str)
       .replace(/\r\n/g, '\n')
       .replace(/\r/g, '\n')
-      .replace(/[\u2018\u2019]/g, "'")
-      .replace(/[\u201C\u201D]/g, '"')
-      .replace(/[\u2013\u2014]/g, '-')
-      .replace(/[\u2022\u25CF\u00B7]/g, '-')
-      .replace(/\u00A0/g, ' ')
+      .replace(/₹/g, 'Rs. ')
+      .replace(/[→➝➞➜➔]/g, '->')
+      .replace(/[←]/g, '<-')
+      .replace(/[↔]/g, '<->')
+      .replace(/[⇒]/g, '=>')
+      .replace(/[⇐]/g, '<=')
+      .replace(/[⇔]/g, '<=>')
+      .replace(/[↑]/g, '^')
+      .replace(/[↓]/g, 'v')
+      .replace(/[\u2212\u2012\u2013\u2014\u2015\uFE58\uFE63\uFF0D]/g, '-')
+      .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')
+      .replace(/[\u2022\u25CF\u00B7\u25E6\u2219\u25AA\u25AB\u25FE\u25FD]/g, '-')
+      .replace(/[\u2026]/g, '...')
+      .replace(/[\u2713\u2714]/g, '[OK]')
+      .replace(/[\u2715\u2716\u2717\u2718]/g, '[X]')
+      .replace(/[\u2264]/g, '<=')
+      .replace(/[\u2265]/g, '>=')
+      .replace(/[\u2260]/g, '!=')
+      .replace(/[\u00D7]/g, 'x')
+      .replace(/[\u00F7]/g, '/')
+      .replace(/[\u00B1]/g, '+/-')
+      .replace(/[\u2248]/g, '~')
+      .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+      .replace(/[\u200B\u200C\u200D\uFEFF\u200E\u200F]/g, '')
       .replace(/\t/g, '    ');
   };
+
 
   const drawQueue = [];
 
@@ -115,7 +136,8 @@ export async function generateEventPdf(eventData = {}) {
         drawQueue.push({ type: 'tamil', origDrawText, origDrawImage, text: cleanStr, options });
       } else {
         const actualOptions = { ...options };
-        drawQueue.push({ type: 'text', method: origDrawText, args: [cleanStr, actualOptions] });
+        const safeStr = cleanStr.replace(/[^\x20-\x7E\xA0-\xFF]/g, ' ');
+        drawQueue.push({ type: 'text', method: origDrawText, args: [safeStr, actualOptions] });
       }
     };
     
@@ -1524,7 +1546,17 @@ export async function generateEventPdf(eventData = {}) {
         }
       }
     } else {
-      try { op.method(...op.args); } catch(e) {}
+      try {
+        op.method(...op.args);
+      } catch (err) {
+        console.warn('PDF draw text error fallback:', err);
+        try {
+          if (op.type === 'text' && op.args && op.args.length > 0) {
+            const pureAscii = String(op.args[0]).replace(/[^\x20-\x7E]/g, ' ');
+            op.method(pureAscii, op.args[1]);
+          }
+        } catch (_) {}
+      }
     }
   }
 
