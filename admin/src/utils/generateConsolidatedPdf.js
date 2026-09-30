@@ -433,7 +433,7 @@ export async function generateConsolidatedPdf({ data }) {
       cellX += colWidths[2];
 
       // 3: Total Requested
-      const reqStr = `${reqQty} ${item.unit || 'pcs'}`;
+      const reqStr = String(reqQty);
       const reqW = fontBold.widthOfTextAtSize(reqStr, 9);
       currentPage.drawText(reqStr, {
         x: cellX + (colWidths[3] - reqW) / 2,

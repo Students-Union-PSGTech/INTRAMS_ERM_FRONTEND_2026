@@ -100,7 +100,7 @@ export default function RolePdf() {
           SNo: index + 1,
           ItemName: it.item_name || '',
           Category: it.is_returnable ? 'RETURNABLE' : 'CONSUMABLE',
-          TotalRequested: `${it.total_requested_quantity || 0} ${it.unit || 'pcs'}`,
+          TotalRequested: Number(it.total_requested_quantity || 0),
           UnitPrice: Number(it.price_per_unit || 0).toFixed(2),
           EstimatedTotal: Number(it.total_estimated_cost || 0).toFixed(2)
         }));
