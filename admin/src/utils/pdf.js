@@ -1,5 +1,9 @@
-﻿export async function handlePdfBlob(response, { filename, preview = false } = {}) {
-  const blob = new Blob([response.data], { type: 'application/pdf' });
+export async function handlePdfBlob(response, { filename, preview = false } = {}) {
+  const blob = (response && response.data instanceof Blob)
+    ? response.data
+    : (response instanceof Blob
+      ? response
+      : new Blob([response?.data || response], { type: 'application/pdf' }));
   const url = URL.createObjectURL(blob);
 
   if (preview) {

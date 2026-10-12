@@ -11,6 +11,7 @@ import Card from './ui/Card';
 import Badge from './ui/Badge';
 import EmptyState from './ui/EmptyState';
 import { TableSkeleton } from './ui/LoadingState';
+import PdfPreviewModal from './ui/PdfPreviewModal';
 
 export default function Procurements() {
   const { showToast } = useToast();
@@ -20,6 +21,9 @@ export default function Procurements() {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [pdfLoading, setPdfLoading] = useState('');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewFilename, setPreviewFilename] = useState('');
 
   const fetchProcurements = async () => {
     try {
@@ -48,7 +52,13 @@ export default function Procurements() {
     try {
       setPdfLoading(eventId);
       const res = await adminAPI.getProcurementPDF(eventId);
-      await handlePdfBlob(res, { filename: `Procurement_${eventId}.pdf`, preview });
+      const filename = `Procurement_${eventId}.pdf`;
+      const url = await handlePdfBlob(res, { filename, preview });
+      if (preview && url) {
+        setPreviewUrl(url);
+        setPreviewFilename(filename);
+        setPreviewOpen(true);
+      }
     } catch (err) {
       showToast(getApiErrorMessage(err, 'Unable to generate procurement PDF.'), 'error');
     } finally {
@@ -144,6 +154,13 @@ export default function Procurements() {
           );
         })}
       </div>
+
+      <PdfPreviewModal
+        open={previewOpen}
+        url={previewUrl}
+        filename={previewFilename || 'Procurement.pdf'}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }

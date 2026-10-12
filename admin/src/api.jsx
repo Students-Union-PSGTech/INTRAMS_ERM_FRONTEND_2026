@@ -107,6 +107,7 @@ export const adminAPI = {
   getEventPDF: (eventId) => api.get(`/admin/pdf/event/${eventId}`, { responseType: 'blob' }),
   getEventItemsPDF: (eventId) => api.get(`/admin/pdf/items/${eventId}`, { responseType: 'blob' }),
   getProcurementPDF: (eventId) => api.get(`/admin/pdf/procurement/${eventId}`, { responseType: 'blob' }),
+  getAllocationPDF: (eventId) => api.get(`/admin/pdf/allocation/${eventId}`, { responseType: 'blob' }),
   getEventsSummaryPDF: () => api.get('/admin/pdf/summary', { responseType: 'blob' }),
   getRoleWisePDF: (role) => api.get(`/admin/pdf/role/${role}`, { responseType: 'blob' }),
 

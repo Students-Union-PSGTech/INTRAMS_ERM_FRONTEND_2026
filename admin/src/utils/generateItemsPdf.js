@@ -153,12 +153,12 @@ export async function generateItemsPdf({ data }) {
 
     // Add footer
     const footerY = 20;
-    page.drawText(`Updated on: ${genTime}`, { x: 45, y: footerY, size: 9, font: fontItalic, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText(`Generated on: ${genTime}`, { x: 45, y: footerY, size: 7.5, font: fontItalic, color: rgb(0.4, 0.4, 0.4) });
     
     if (currentEventId) {
       const eventIdText = `Event ID: ${currentEventId}`;
-      const wEId = fontItalic.widthOfTextAtSize(eventIdText, 9);
-      page.drawText(eventIdText, { x: pageWidth - 45 - wEId, y: footerY, size: 9, font: fontItalic, color: rgb(0.3, 0.3, 0.3) });
+      const wEId = fontItalic.widthOfTextAtSize(eventIdText, 7.5);
+      page.drawText(eventIdText, { x: pageWidth - 45 - wEId, y: footerY, size: 7.5, font: fontItalic, color: rgb(0.4, 0.4, 0.4) });
     }
   };
 

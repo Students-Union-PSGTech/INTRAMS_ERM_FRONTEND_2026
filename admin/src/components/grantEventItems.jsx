@@ -12,9 +12,11 @@ import Input from './ui/Input';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
 import Modal from './ui/Modal';
+import PdfPreviewModal from './ui/PdfPreviewModal';
 import EmptyState from './ui/EmptyState';
 import { Table, THead, Th, Td, Tr } from './ui/Table';
 import { TableSkeleton } from './ui/LoadingState';
+import { generateEventItemsPdf } from '../utils/generateEventItemsPdf';
 
 export default function GrantEventItems() {
   const { id } = useParams();
@@ -34,6 +36,9 @@ export default function GrantEventItems() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [previewFilename, setPreviewFilename] = useState('');
 
   const getMaster = (name) =>
     availableItems.find((i) => (i.item_name || '').toLowerCase() === (name || '').toLowerCase());
@@ -152,10 +157,44 @@ export default function GrantEventItems() {
               onClick={async () => {
                 try {
                   setPdfLoading(true);
-                  const res = await adminAPI.getProcurementPDF(id);
-                  await handlePdfBlob(res, { filename: `Procurement_${eventName}.pdf`, preview: true });
+                  let res;
+                  let docName = `Allocation_${eventName}.pdf`;
+                  try {
+                    res = await adminAPI.getAllocationPDF(id);
+                  } catch (_) {
+                    try {
+                      res = await adminAPI.getProcurementPDF(id);
+                      docName = `Procurement_${eventName}.pdf`;
+                    } catch (__) {
+                      res = await adminAPI.getEventItemsPDF(id);
+                      docName = `Items_${eventName}.pdf`;
+                    }
+                  }
+                  const url = await handlePdfBlob(res, { filename: docName, preview: true });
+                  if (url) {
+                    setPreviewUrl(url);
+                    setPreviewFilename(docName);
+                    setPreviewOpen(true);
+                  }
                 } catch (err) {
-                  showToast(getApiErrorMessage(err, 'Unable to generate PDF.'), 'error');
+                  try {
+                    const fallbackBlob = await generateEventItemsPdf(
+                      eventData?.event || {
+                        event_name: eventName,
+                        _id: id,
+                        items: itemsList,
+                        club_name: eventData?.eventDetails?.associationName || eventData?.event?.club_name
+                      }
+                    );
+                    const url = await handlePdfBlob(fallbackBlob, { filename: `Items_${eventName}.pdf`, preview: true });
+                    if (url) {
+                      setPreviewUrl(url);
+                      setPreviewFilename(`Items_${eventName}.pdf`);
+                      setPreviewOpen(true);
+                      return;
+                    }
+                  } catch (_) {}
+                  showToast(getApiErrorMessage(err, 'Unable to generate PDF preview.'), 'error');
                 } finally {
                   setPdfLoading(false);
                 }
@@ -333,6 +372,13 @@ export default function GrantEventItems() {
           </Table>
         )}
       </Modal>
+
+      <PdfPreviewModal
+        open={previewOpen}
+        url={previewUrl}
+        filename={previewFilename || `Allocation_${eventName}.pdf`}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   );
 }
