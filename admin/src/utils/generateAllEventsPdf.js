@@ -1,0 +1,1519 @@
+import "regenerator-runtime/runtime";
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import { PSG_LOGO_BASE64 } from './psgLogoBase64.js';
+import { INTRAMS_LOGO_BASE64 } from './intramsLogoBase64.js';
+
+/**
+ * Generates consolidated official EVENT RESOURCE FORMS for all submitted events.
+ * - Arranges events in alphabetical order of Club / Association Name, then Event Name.
+ * - Shows PSG crest and INTRAMS festival logos ONCE (on the first event's cover page).
+ * - Each event starts on a brand new page.
+ * - Uses the EXACT official layout, margins, styling, tables, boxes, colors, and signatures
+ *   matching the official user portal Event PDF (generateEventPdf.js).
+ * - Full bilingual support for English and Tamil via canvas font rendering.
+ */
+export async function generateAllEventsPdf({ data = [] } = {}) {
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
+  // 1. Embed Tamil Font
+  let tamilFont = null;
+  try {
+    const tamilRes = await fetch('/fonts/NotoSansTamil-Regular.ttf');
+    if (tamilRes.ok) {
+      const tamilBytes = await tamilRes.arrayBuffer();
+      tamilFont = await pdfDoc.embedFont(tamilBytes);
+
+      if (!window.__pdfTamilFontLoaded) {
+        try {
+          const font = new FontFace('Noto Sans Tamil', tamilBytes);
+          await font.load();
+          document.fonts.add(font);
+          window.__pdfTamilFontLoaded = true;
+        } catch (e) {
+          console.warn("Could not load FontFace", e);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Could not load Tamil font", err);
+  }
+
+  // 2. Embed Standard Times Roman Fonts
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const fontBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+  const fontItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+
+  // 3. Clean Text Helper (matching generateEventPdf)
+  const cleanText = (str) => {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/₹/g, 'Rs. ')
+      .replace(/[→➝➞➜➔]/g, '->')
+      .replace(/[←]/g, '<-')
+      .replace(/[↔]/g, '<->')
+      .replace(/[⇒]/g, '=>')
+      .replace(/[⇐]/g, '<=')
+      .replace(/[⇔]/g, '<=>')
+      .replace(/[↑]/g, '^')
+      .replace(/[↓]/g, 'v')
+      .replace(/[\u2212\u2012\u2013\u2014\u2015\uFE58\uFE63\uFF0D]/g, '-')
+      .replace(/[\u2018\u2019\u201A\u201B\u2032]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u201F\u2033]/g, '"')
+      .replace(/[\u2022\u25CF\u00B7\u25E6\u2219\u25AA\u25AB\u25FE\u25FD]/g, '-')
+      .replace(/[\u2026]/g, '...')
+      .replace(/[\u2713\u2714]/g, '[OK]')
+      .replace(/[\u2715\u2716\u2717\u2718]/g, '[X]')
+      .replace(/[\u2264]/g, '<=')
+      .replace(/[\u2265]/g, '>=')
+      .replace(/[\u2260]/g, '!=')
+      .replace(/[\u00D7]/g, 'x')
+      .replace(/[\u00F7]/g, '/')
+      .replace(/[\u00B1]/g, '+/-')
+      .replace(/[\u2248]/g, '~')
+      .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+      .replace(/[\u200B\u200C\u200D\uFEFF\u200E\u200F]/g, '')
+      .replace(/\t/g, '    ');
+  };
+
+  // 4. Wrap Font Measurement with Tamil Support
+  const wrapFontWidth = (font) => {
+    const origWidth = font.widthOfTextAtSize.bind(font);
+    font.widthOfTextAtSize = (text, size) => {
+      if (!text) return 0;
+      const cleanStr = cleanText(text).replace(/\n/g, ' ');
+      const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
+      if (hasTamil) {
+        if (!window.__pdfCanvasCtx) {
+          const cvs = document.createElement('canvas');
+          window.__pdfCanvasCtx = cvs.getContext('2d');
+        }
+        const ctx = window.__pdfCanvasCtx;
+        const isBold = font === fontBold;
+        ctx.font = (isBold ? 'bold ' : '') + size + 'px "Noto Sans Tamil", Arial, sans-serif';
+
+        const chunks = cleanStr.match(/[\u0B80-\u0BFF\u200C\u200D]+(?:[\s]+[\u0B80-\u0BFF\u200C\u200D]+)*|[^\u0B80-\u0BFF\u200C\u200D]+/g) || [];
+        let totalWidth = 0;
+        for (const chunk of chunks) {
+          if (!chunk) continue;
+          const isTamilChunk = /[\u0B80-\u0BFF]/.test(chunk);
+          if (isTamilChunk) {
+            totalWidth += ctx.measureText(chunk).width;
+          } else {
+            try { totalWidth += origWidth(chunk, size); }
+            catch (e) { totalWidth += chunk.length * size * 0.55; }
+          }
+        }
+        return totalWidth;
+      }
+      try {
+        return origWidth(cleanStr, size);
+      } catch (_) {
+        const asciiOnly = cleanStr.replace(/[^\x20-\x7E\u0B80-\u0BFF]/g, ' ');
+        try {
+          return origWidth(asciiOnly, size);
+        } catch (_) {
+          return cleanStr.length * size * 0.55;
+        }
+      }
+    };
+  };
+
+  wrapFontWidth(fontRegular);
+  wrapFontWidth(fontBold);
+  wrapFontWidth(fontItalic);
+
+  // 5. Intercept Page Calls for Tamil Canvas Queue
+  const drawQueue = [];
+  const originalAddPage = pdfDoc.addPage.bind(pdfDoc);
+  pdfDoc.addPage = (...args) => {
+    const page = originalAddPage(...args);
+    const origDrawText = page.drawText.bind(page);
+    const origDrawRectangle = page.drawRectangle.bind(page);
+    const origDrawLine = page.drawLine.bind(page);
+    const origDrawImage = page.drawImage.bind(page);
+    const origDrawCircle = page.drawCircle.bind(page);
+
+    page.drawText = (text, options) => {
+      if (!text && text !== 0 && text !== '0') return;
+      const cleanStr = cleanText(text).replace(/\n/g, ' ');
+      const hasTamil = /[\u0B80-\u0BFF]/.test(cleanStr);
+
+      if (hasTamil) {
+        drawQueue.push({ type: 'tamil', origDrawText, origDrawImage, text: cleanStr, options });
+      } else {
+        const actualOptions = { ...options };
+        const safeStr = cleanStr.replace(/[^\x20-\x7E\xA0-\xFF]/g, ' ');
+        drawQueue.push({ type: 'text', method: origDrawText, args: [safeStr, actualOptions] });
+      }
+    };
+
+    page.drawRectangle = (opts) => drawQueue.push({ type: 'op', method: origDrawRectangle, args: [opts] });
+    page.drawLine = (opts) => drawQueue.push({ type: 'op', method: origDrawLine, args: [opts] });
+    page.drawImage = (img, opts) => drawQueue.push({ type: 'op', method: origDrawImage, args: [img, opts] });
+    page.drawCircle = (opts) => drawQueue.push({ type: 'op', method: origDrawCircle, args: [opts] });
+
+    return page;
+  };
+
+  const pageWidth = 595.28; // A4 Portrait width
+  const pageHeight = 841.89; // A4 Portrait height
+  const margin = 35;
+  const contentWidth = pageWidth - margin * 2; // 525.28 pt
+
+  // Embed PSG Logo
+  let psgLogo = null;
+  try {
+    const cleanBase64 = PSG_LOGO_BASE64.replace(/^data:image\/png;base64,/, '');
+    const bytes = Uint8Array.from(atob(cleanBase64), (c) => c.charCodeAt(0));
+    psgLogo = await pdfDoc.embedPng(bytes);
+  } catch (_) {
+    try {
+      const res = await fetch('/psg_logo.png');
+      if (res.ok) {
+        const bytes = await res.arrayBuffer();
+        psgLogo = await pdfDoc.embedPng(bytes);
+      }
+    } catch (_) {}
+  }
+
+  // Embed INTRAMS Logo
+  let intramsLogo = null;
+  try {
+    const cleanBase64 = INTRAMS_LOGO_BASE64.replace(/^data:image\/[a-z]+;base64,/, '');
+    const bytes = Uint8Array.from(atob(cleanBase64), (c) => c.charCodeAt(0));
+    try {
+      intramsLogo = await pdfDoc.embedJpg(bytes);
+    } catch (_) {
+      intramsLogo = await pdfDoc.embedPng(bytes);
+    }
+  } catch (_) {
+    try {
+      const res = await fetch('/intrams_logo.jpg');
+      if (res.ok) {
+        const bytes = await res.arrayBuffer();
+        intramsLogo = await pdfDoc.embedJpg(bytes);
+      }
+    } catch (_) {
+      try {
+        const resPng = await fetch('/intrams_logo.png');
+        if (resPng.ok) {
+          const bytes = await resPng.arrayBuffer();
+          intramsLogo = await pdfDoc.embedPng(bytes);
+        }
+      } catch (_) {}
+    }
+  }
+
+  // Draw Page Border Frame (Exactly matching generateEventPdf)
+  const drawPageBorder = (page) => {
+    page.drawRectangle({
+      x: margin,
+      y: margin,
+      width: contentWidth,
+      height: pageHeight - margin * 2,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.5,
+    });
+  };
+
+  // Draw Bottom Signature Lines (Exactly matching generateEventPdf)
+  const drawFooterSignatures = (page, showColon = false) => {
+    const colonStr = showColon ? ':' : '';
+    const secText = `Signature of the Secretary${colonStr}`;
+    const facText = `Signature of the Faculty Advisor${colonStr}`;
+    const secWidth = fontRegular.widthOfTextAtSize(secText, 10.5);
+    const facWidth = fontRegular.widthOfTextAtSize(facText, 10.5);
+
+    page.drawText(secText, {
+      x: (pageWidth / 4) - (secWidth / 2),
+      y: margin + 25,
+      size: 10.5,
+      font: fontRegular,
+      color: rgb(0, 0, 0),
+    });
+    page.drawText(facText, {
+      x: (3 * pageWidth / 4) - (facWidth / 2),
+      y: margin + 25,
+      size: 10.5,
+      font: fontRegular,
+      color: rgb(0, 0, 0),
+    });
+  };
+
+  // Helper to shrink text to fit
+  const getShrinkSize = (text, maxW, defaultSize, font) => {
+    let size = defaultSize;
+    let w = font.widthOfTextAtSize(text, size);
+    while (w > maxW && size > 5) {
+      size -= 0.5;
+      w = font.widthOfTextAtSize(text, size);
+    }
+    return size;
+  };
+
+  // Helper to wrap text cleanly
+  const wrapText = (text, maxWidth, font, fontSize) => {
+    if (!text) return [];
+    const cleaned = cleanText(text);
+    const paragraphs = cleaned.split('\n');
+    const lines = [];
+
+    for (const para of paragraphs) {
+      const trimmedPara = para.trim();
+      if (!trimmedPara) continue;
+
+      const words = trimmedPara.split(/\s+/).filter(Boolean);
+      let currentLine = '';
+
+      for (let i = 0; i < words.length; i++) {
+        let word = words[i];
+        while (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+          let fitCount = word.length - 1;
+          while (fitCount > 0 && font.widthOfTextAtSize(word.substring(0, fitCount), fontSize) > maxWidth) {
+            fitCount--;
+          }
+          if (fitCount > 0) {
+            if (currentLine) {
+              lines.push(currentLine);
+              currentLine = '';
+            }
+            lines.push(word.substring(0, fitCount));
+            word = word.substring(fitCount);
+          } else {
+            break;
+          }
+        }
+
+        if (!currentLine) {
+          currentLine = word;
+        } else {
+          const testLine = currentLine + ' ' + word;
+          if (font.widthOfTextAtSize(testLine, fontSize) <= maxWidth) {
+            currentLine = testLine;
+          } else {
+            lines.push(currentLine);
+            currentLine = word;
+          }
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+    }
+    return lines;
+  };
+
+  // Format Year Helper (matching generateEventPdf)
+  const formatYear = (yearStr, rollNo = '') => {
+    if (yearStr) {
+      const y = String(yearStr).trim().toUpperCase();
+      const cleanY = y.replace(/\s*YEAR\s*/g, '').trim();
+      if (cleanY.includes('MSC')) return cleanY + ' YEAR';
+      if (cleanY === '1' || cleanY === '1ST' || cleanY === 'I') return 'I YEAR';
+      if (cleanY === '2' || cleanY === '2ND' || cleanY === 'II') return 'II YEAR';
+      if (cleanY === '3' || cleanY === '3RD' || cleanY === 'III') return 'III YEAR';
+      if (cleanY === '4' || cleanY === '4TH' || cleanY === 'IV') return 'IV YEAR';
+      if (cleanY === '5' || cleanY === '5TH' || cleanY === 'V') return 'V YEAR';
+      if (cleanY) return `${cleanY} YEAR`;
+    }
+    if (rollNo) {
+      const rollMatch = String(rollNo).trim().match(/^(\d{2})/);
+      if (rollMatch) {
+        const batch = parseInt(rollMatch[1], 10);
+        if (batch === 25) return 'I YEAR';
+        if (batch === 24) return 'II YEAR';
+        if (batch === 23) return 'III YEAR';
+        if (batch === 22) return 'IV YEAR';
+        if (batch === 21) return 'V YEAR';
+      }
+    }
+    return '—';
+  };
+
+  const formatSlot = (val) => {
+    if (String(val) === '1') return 'Slot 1 (9:30 to 12:30)';
+    if (String(val) === '2') return 'Slot 2 (1:30 to 4:30)';
+    if (String(val) === '3') return 'Slot 3 (4:30 to 7:00)';
+    if (String(val).toLowerCase() === 'both') return 'Full Day';
+    return val || 'Slot 1 (9:30 to 12:30)';
+  };
+
+  // Helper to draw radio circle (open or filled)
+  const drawRadioCircle = (page, cx, cy, isSelected) => {
+    page.drawCircle({
+      x: cx,
+      y: cy,
+      size: 6,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+      color: rgb(1, 1, 1),
+    });
+    if (isSelected) {
+      page.drawCircle({
+        x: cx,
+        y: cy,
+        size: 3.5,
+        color: rgb(0, 0, 0),
+      });
+    }
+  };
+
+  // Section Header Drawer (Navy Blue Box matching generateEventPdf)
+  const drawSectionHeader = (pageObj, text, yPos) => {
+    const boxH = 24;
+    pageObj.drawRectangle({
+      x: 50,
+      y: yPos - boxH + 6,
+      width: 495.28,
+      height: boxH,
+      color: rgb(0.15, 0.22, 0.32),
+    });
+    pageObj.drawText(text.toUpperCase(), {
+      x: 60,
+      y: yPos - 8,
+      size: 12,
+      font: fontBold,
+      color: rgb(1, 1, 1),
+    });
+    return yPos - boxH - 10;
+  };
+
+  // SubHeader Drawer (matching generateEventPdf)
+  const drawSubHeader = (pageObj, text, yPos) => {
+    pageObj.drawText(text.toUpperCase(), {
+      x: 55,
+      y: yPos,
+      size: 11,
+      font: fontBold,
+      color: rgb(0.4, 0.4, 0.4),
+    });
+    return yPos - 16;
+  };
+
+  // 6. Sort Events: Alphabetical by Club Name, then Event Name
+  const rawEvents = Array.isArray(data) ? [...data] : [];
+  const eventsList = rawEvents.sort((a, b) => {
+    const clubA = (a.club_id?.club_name || a.club_name || a.associationName || a.clubName || '').trim();
+    const clubB = (b.club_id?.club_name || b.club_name || b.associationName || b.clubName || '').trim();
+    const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+    if (comp !== 0) return comp;
+    const nameA = (a.event_name || a.name || a.eventName || '').trim();
+    const nameB = (b.event_name || b.name || b.eventName || '').trim();
+    return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+  });
+
+  const pageEventIdMap = new Map(); // pageIndex => eventId
+
+  // ========================================================
+  // RENDER EACH EVENT USING THE EXACT USER PORTAL PDF LAYOUT
+  // ========================================================
+
+  for (let eventIdx = 0; eventIdx < eventsList.length; eventIdx++) {
+    const eventData = eventsList[eventIdx];
+    const isFirstEvent = eventIdx === 0;
+
+    const ev = eventData || {};
+    const formSpecs = ev.form || ev.form_specs || {};
+    const clubName = ev.associationName || ev.club_name || ev.clubName || ev.association || formSpecs.associationName || ev.club_id?.club_name || 'Students Union';
+    const eventId = ev.event_id || ev.id || ev._id || `EVNT${eventIdx + 1}`;
+    const rawEventName = ev.name || ev.event_name || ev.eventName || formSpecs.eventName || 'sample_event';
+    const eventName = eventId && !rawEventName.includes(eventId) ? `${rawEventName} (${eventId})` : rawEventName;
+    const tagline = ev.tagline || formSpecs.tagline || '—';
+    const about = ev.about || ev.description || formSpecs.about || '—';
+
+    // Contacts Parsing
+    const rawSec = ev.contacts?.secretaries || ev.secretaries || ev.contacts?.secretary || ev.secretary;
+    const secretarialList = rawSec ? (Array.isArray(rawSec) ? rawSec : [rawSec]) : [];
+    const validSecs = secretarialList.filter(s => s && ((s.name && s.name.trim()) || (s.roll_number && String(s.roll_number).trim())));
+    const secRows = validSecs.length > 0
+      ? validSecs.map(s => [s.name || '', s.roll_number || s.rollNo || '', s.mobile || s.phone || '', s.department || '', formatYear(s.year, s.roll_number || s.rollNo)])
+      : [['', '', '', '', '']];
+
+    const rawConv = ev.contacts?.convenors || ev.convenors || ev.contacts?.convenor || ev.convenor;
+    const convenorList = rawConv ? (Array.isArray(rawConv) ? rawConv : [rawConv]) : [];
+    const validConvs = convenorList.filter(c => c && ((c.name && c.name.trim()) || (c.roll_number && String(c.roll_number).trim())));
+    const convRows = validConvs.length > 0
+      ? validConvs.map(c => [c.name || '', c.roll_number || c.rollNo || '', c.mobile || c.phone || '', c.department || '', formatYear(c.year, c.roll_number || c.rollNo)])
+      : [['', '', '', '', '']];
+
+    const rawVol = ev.contacts?.volunteers || ev.volunteers || ev.contacts?.volunteer || ev.volunteer;
+    const volunteerList = rawVol ? (Array.isArray(rawVol) ? rawVol : [rawVol]) : [];
+    const validVols = volunteerList.filter(v => v && ((v.name && v.name.trim()) || (v.roll_number && String(v.roll_number).trim())));
+    const volRows = validVols.length > 0
+      ? validVols.map(v => [v.name || '', v.roll_number || v.rollNo || '', v.mobile || v.phone || '', v.department || '', formatYear(v.year, v.roll_number || v.rollNo)])
+      : [['', '', '', '', '']];
+
+    const facultyObj = ev.contacts?.faculty_advisor || ev.facultyAdvisor || ev.contacts?.facultyAdvisor || {};
+    const facRows = (facultyObj.name && facultyObj.name.trim()) ? [
+      [facultyObj.name || '', facultyObj.designation || '', facultyObj.mobile || facultyObj.phone || '']
+    ] : [['', '', '']];
+
+    const judgesArray = Array.isArray(ev.contacts?.judges) ? ev.contacts.judges : (ev.contacts?.judge ? [ev.contacts.judge] : (ev.judge ? [ev.judge] : []));
+    const validJudges = judgesArray.filter(j => j && j.name && j.name.trim());
+    const hasMultipleJudges = validJudges.length > 1;
+    const judgeRows = hasMultipleJudges
+      ? validJudges.map((j, idx) => [`Judge ${idx + 1}`, j.name || '', j.designation || '', j.mobile || j.phone || ''])
+      : validJudges.map(j => [j.name || '', j.designation || '', j.mobile || j.phone || '']);
+
+    const chiefGuestsArray = Array.isArray(ev.contacts?.chief_guests) ? ev.contacts.chief_guests : (ev.contacts?.chief_guest ? [ev.contacts.chief_guest] : (ev.chief_guest ? [ev.chief_guest] : []));
+    const chiefGuestRows = chiefGuestsArray.filter(cg => cg && cg.name && cg.name.trim()).map(cg => [
+      cg.name || '',
+      cg.designation || '',
+      String(cg.remuneration || '—'),
+      cg.accommodation_required ? 'Yes' : 'No',
+      cg.travel_required ? 'Yes' : 'No',
+      cg.short_note || '—'
+    ]);
+
+    let currentPage = null;
+    let currentY = 0;
+
+    const createNewPage = () => {
+      if (currentPage) {
+        drawFooterSignatures(currentPage, true);
+      }
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      drawPageBorder(currentPage);
+      pageEventIdMap.set(pdfDoc.getPageCount() - 1, eventId);
+      currentY = pageHeight - margin - 35;
+    };
+
+    const ensureSpace = (requiredSpace) => {
+      if (currentY - requiredSpace < 95) {
+        createNewPage();
+      }
+    };
+
+    // Helper to draw bordered table supporting dynamic pagination (Exact user portal logic)
+    const drawPage3Table = (startX, colWidths, headers, rows) => {
+      const tableWidth = colWidths.reduce((a, b) => a + b, 0);
+      const headerH = 22;
+      const rowH = 22;
+
+      const renderHeader = () => {
+        currentPage.drawRectangle({
+          x: startX,
+          y: currentY - headerH,
+          width: tableWidth,
+          height: headerH,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 1.2,
+          color: rgb(0.89, 0.95, 0.98),
+        });
+
+        let cellX = startX;
+        headers.forEach((h, idx) => {
+          const w = colWidths[idx];
+          const textW = fontBold.widthOfTextAtSize(h, 9.5);
+          currentPage.drawText(h, {
+            x: cellX + (w - textW) / 2,
+            y: currentY - 15,
+            size: 9.5,
+            font: fontBold,
+            color: rgb(0, 0, 0),
+          });
+          if (idx < headers.length - 1) {
+            currentPage.drawLine({
+              start: { x: cellX + w, y: currentY },
+              end: { x: cellX + w, y: currentY - headerH },
+              thickness: 1,
+              color: rgb(0, 0, 0),
+            });
+          }
+          cellX += w;
+        });
+
+        currentY -= headerH;
+      };
+
+      ensureSpace(headerH + rowH);
+      renderHeader();
+
+      rows.forEach((row) => {
+        if (currentY - rowH < 95) {
+          createNewPage();
+          renderHeader();
+        }
+
+        currentPage.drawRectangle({
+          x: startX,
+          y: currentY - rowH,
+          width: tableWidth,
+          height: rowH,
+          borderColor: rgb(0, 0, 0),
+          borderWidth: 1.2,
+        });
+
+        let cellXData = startX;
+        row.forEach((val, idx) => {
+          const w = colWidths[idx];
+          let strVal = String(val || '');
+          let size = 9;
+          let textW = fontRegular.widthOfTextAtSize(strVal, size);
+          while (textW > (w - 8) && size > 5) {
+            size -= 0.5;
+            textW = fontRegular.widthOfTextAtSize(strVal, size);
+          }
+          if (textW > w - 8) {
+            while (textW > w - 8 && strVal.length > 3) {
+              strVal = strVal.slice(0, -1);
+              textW = fontRegular.widthOfTextAtSize(strVal + '...', size);
+            }
+            strVal = strVal + '...';
+            textW = fontRegular.widthOfTextAtSize(strVal, size);
+          }
+          const xPos = Math.max(cellXData + 4, cellXData + (w - textW) / 2);
+          currentPage.drawText(strVal, {
+            x: xPos,
+            y: currentY - 15,
+            size: size,
+            font: fontRegular,
+            color: rgb(0, 0, 0),
+          });
+          if (idx < row.length - 1) {
+            currentPage.drawLine({
+              start: { x: cellXData + w, y: currentY },
+              end: { x: cellXData + w, y: currentY - rowH },
+              thickness: 1,
+              color: rgb(0, 0, 0),
+            });
+          }
+          cellXData += w;
+        });
+
+        currentY -= rowH;
+      });
+    };
+
+    // ==========================================
+    // PAGE 1: COVER PAGE
+    // ==========================================
+    createNewPage();
+
+    // LOGOS: SHOWN ONLY ONCE (ON THE FIRST EVENT'S COVER PAGE)
+    if (isFirstEvent) {
+      if (psgLogo) {
+        currentPage.drawImage(psgLogo, {
+          x: 160,
+          y: 728,
+          width: 48,
+          height: 60,
+        });
+      }
+
+      currentPage.drawText('PSG College of', { x: 218, y: 760, size: 17, font: fontRegular, color: rgb(0, 0, 0) });
+      currentPage.drawText('Technology, Coimbatore', { x: 218, y: 738, size: 17, font: fontRegular, color: rgb(0, 0, 0) });
+
+      const unionText = 'STUDENTS UNION 2026-2027';
+      const unionW = fontBold.widthOfTextAtSize(unionText, 20);
+      currentPage.drawText(unionText, {
+        x: (pageWidth - unionW) / 2,
+        y: 675,
+        size: 20,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+
+      if (intramsLogo) {
+        const logoW = 210;
+        const logoH = 140;
+        currentPage.drawImage(intramsLogo, {
+          x: (pageWidth - logoW) / 2,
+          y: 518,
+          width: logoW,
+          height: logoH,
+        });
+      }
+
+      const intramsText = 'INTRAMS 2026';
+      const intramsW = fontBold.widthOfTextAtSize(intramsText, 18);
+      currentPage.drawText(intramsText, {
+        x: (pageWidth - intramsW) / 2,
+        y: 485,
+        size: 18,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+
+      const formSub = 'Event Resource Form';
+      const formSubW = fontBold.widthOfTextAtSize(formSub, 16);
+      currentPage.drawText(formSub, {
+        x: (pageWidth - formSubW) / 2,
+        y: 450,
+        size: 16,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+    } else {
+      // Subsequent Events: Clean, prestigious Header without repeating the logos!
+      const psgText = 'PSG College of Technology, Coimbatore';
+      const psgW = fontBold.widthOfTextAtSize(psgText, 17);
+      currentPage.drawText(psgText, {
+        x: (pageWidth - psgW) / 2,
+        y: 735,
+        size: 17,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+
+      const unionText = 'STUDENTS UNION 2026-2027';
+      const unionW = fontBold.widthOfTextAtSize(unionText, 20);
+      currentPage.drawText(unionText, {
+        x: (pageWidth - unionW) / 2,
+        y: 690,
+        size: 20,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+
+      const intramsText = 'INTRAMS 2026';
+      const intramsW = fontBold.widthOfTextAtSize(intramsText, 22);
+      currentPage.drawText(intramsText, {
+        x: (pageWidth - intramsW) / 2,
+        y: 635,
+        size: 22,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+
+      const formSub = 'Event Resource Form';
+      const formSubW = fontBold.widthOfTextAtSize(formSub, 16);
+      currentPage.drawText(formSub, {
+        x: (pageWidth - formSubW) / 2,
+        y: 590,
+        size: 16,
+        font: fontBold,
+        color: rgb(0, 0, 0),
+      });
+
+      // Elegant divider rule
+      currentPage.drawLine({
+        start: { x: margin + 30, y: 560 },
+        end: { x: pageWidth - margin - 30, y: 560 },
+        thickness: 1,
+        color: rgb(0.2, 0.2, 0.2),
+      });
+    }
+
+    // Cover Page Details Block
+    const assocStr = `CLUB NAME : ${clubName}`;
+    const assocSize = getShrinkSize(assocStr, 480, 13.5, fontBold);
+    currentPage.drawText(assocStr, {
+      x: 55,
+      y: isFirstEvent ? 380 : 490,
+      size: assocSize,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
+    const eventStr = `EVENT NAME : ${eventName}`;
+    const eventSize = getShrinkSize(eventStr, 480, 13.5, fontBold);
+    currentPage.drawText(eventStr, {
+      x: 55,
+      y: isFirstEvent ? 340 : 435,
+      size: eventSize,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
+    const eventIdStr = `EVENT ID : ${eventId}`;
+    const eventIdSize = getShrinkSize(eventIdStr, 480, 13.5, fontBold);
+    currentPage.drawText(eventIdStr, {
+      x: 55,
+      y: isFirstEvent ? 300 : 380,
+      size: eventIdSize,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
+    const updatedTime = ev.updatedAt || ev.updated_at ? new Date(ev.updatedAt || ev.updated_at).toLocaleString('en-IN') : 'N/A';
+    const updatedTimeStr = `UPDATED TIME : ${updatedTime}`;
+    const updatedTimeSize = getShrinkSize(updatedTimeStr, 480, 13.5, fontBold);
+    currentPage.drawText(updatedTimeStr, {
+      x: 55,
+      y: isFirstEvent ? 260 : 325,
+      size: updatedTimeSize,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
+    // ==========================================
+    // PAGE 2: PERSONNEL & CONTACT TABLES
+    // ==========================================
+    createNewPage();
+
+    const prevTitle = `Event Preview: ${eventId}`;
+    const prevTitleW = fontBold.widthOfTextAtSize(prevTitle, 16);
+    currentPage.drawText(prevTitle, {
+      x: (pageWidth - prevTitleW) / 2,
+      y: currentY,
+      size: 16,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
+    currentY -= 40;
+
+    const tX = margin + 15;
+    const p3ColWidths5 = [105, 85, 95, 125, 85.28];
+    const p3ColWidths3 = [165, 165, 165.28];
+    const p3ColWidths6 = [85, 95, 80, 50, 50, 135.28];
+
+    const drawPage3Section = (title, colWidths, headers, rows) => {
+      if (!rows || rows.length === 0) return;
+      const headerH = 22;
+      const rowH = 22;
+      const titleGap = 14;
+      const postGap = 16;
+      const neededSpace = titleGap + headerH + (rows.length * rowH) + postGap;
+
+      if (currentY - neededSpace < 95) {
+        createNewPage();
+      }
+
+      currentPage.drawText(title, { x: tX, y: currentY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
+      currentY -= titleGap;
+      drawPage3Table(tX, colWidths, headers, rows);
+      currentY -= postGap;
+    };
+
+    drawPage3Section('Secretary Details', p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], secRows);
+    drawPage3Section('Convenor Details', p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], convRows);
+    drawPage3Section('Volunteer Details', p3ColWidths5, ['Name', 'Roll Number', 'Mobile No', 'Department', 'Year'], volRows);
+    drawPage3Section('Faculty Advisor Details', p3ColWidths3, ['Name', 'Designation', 'Contact Details'], facRows);
+
+    if (judgeRows.length > 0) {
+      if (hasMultipleJudges) {
+        const p3ColWidthsJudge = [75, 140, 140, 140.28];
+        drawPage3Section('Judge Details', p3ColWidthsJudge, ['Judge', 'Name', 'Designation', 'Contact Details'], judgeRows);
+      } else {
+        drawPage3Section('Judge Details', p3ColWidths3, ['Name', 'Designation', 'Contact Details'], judgeRows);
+      }
+    }
+
+    if (chiefGuestRows.length > 0) {
+      drawPage3Section('Chief Guest Details', p3ColWidths6, ['Name', 'Designation', 'Remuneration', 'Accomm.', 'Travel', 'Note'], chiefGuestRows);
+    }
+
+    // ==========================================
+    // PAGE 3: EVENT DETAILS & RESOURCE MATRIX
+    // ==========================================
+    createNewPage();
+
+    const detTitle = 'Event Details';
+    const detTitleW = fontBold.widthOfTextAtSize(detTitle, 16);
+    currentPage.drawText(detTitle, {
+      x: (pageWidth - detTitleW) / 2,
+      y: currentY,
+      size: 16,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
+    currentY -= 35;
+
+    const gridBoxX = margin + 15;
+    const gridBoxWidth = 495.28;
+
+    // Box 1: Event Day
+    const box1H = 38;
+    ensureSpace(box1H + 10);
+    currentPage.drawRectangle({
+      x: gridBoxX,
+      y: currentY - box1H,
+      width: gridBoxWidth,
+      height: box1H,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+    });
+
+    const eventDayText = formSpecs.is_two_day ? '2 Days Event' : (formSpecs.day || formSpecs.event_day || 'Day 1');
+    currentPage.drawText(`Event Day: ${eventDayText}`, { x: gridBoxX + 15, y: currentY - 24, size: 11, font: fontBold, color: rgb(0, 0, 0) });
+    currentY -= box1H;
+
+    // Box 2: Parameters
+    const box2H = 75;
+    ensureSpace(box2H + 10);
+    currentPage.drawRectangle({
+      x: gridBoxX,
+      y: currentY - box2H,
+      width: gridBoxWidth,
+      height: box2H,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+    });
+
+    const roundsCount = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds.length : (formSpecs.num_rounds || 1);
+    const getExpectedParticipants = () => {
+      if (ev.expectedParticipants && ev.expectedParticipants !== '—' && ev.expectedParticipants !== 0) return ev.expectedParticipants;
+      if (formSpecs.expectedParticipants && formSpecs.expectedParticipants !== '—' && formSpecs.expectedParticipants !== 0) return formSpecs.expectedParticipants;
+      if (ev.expected_participants && ev.expected_participants !== '—' && ev.expected_participants !== 0) return ev.expected_participants;
+      if (formSpecs.expected_participants && formSpecs.expected_participants !== '—' && formSpecs.expected_participants !== 0) return formSpecs.expected_participants;
+      if (formSpecs.participant_count && formSpecs.participant_count > 0) return formSpecs.participant_count;
+      if (ev.participant_count && ev.participant_count > 0) return ev.participant_count;
+      if (Array.isArray(ev.rounds) && ev.rounds.length > 0) {
+        const maxR = ev.rounds.reduce((m, r) => Math.max(m, parseInt(r.participant_count, 10) || 0), 0);
+        if (maxR > 0) return maxR;
+      }
+      return '—';
+    };
+    const expectedParticipants = getExpectedParticipants();
+    const durationText = formSpecs.duration || ev.duration || formSpecs.duration_in_hrs || '—';
+
+    currentPage.drawText(`No. of Rounds: ${roundsCount}`, { x: gridBoxX + 15, y: currentY - 22, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentPage.drawText(`Expected no of Participants: ${expectedParticipants}`, { x: gridBoxX + 15, y: currentY - 42, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentPage.drawText(`Duration of the event: ${durationText}`, { x: gridBoxX + 15, y: currentY - 62, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentY -= box2H;
+
+    // Box 3: Individual vs Team
+    const box3H = 50;
+    ensureSpace(box3H + 10);
+    currentPage.drawRectangle({
+      x: gridBoxX,
+      y: currentY - box3H,
+      width: gridBoxWidth,
+      height: box3H,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+    });
+
+    currentPage.drawLine({
+      start: { x: gridBoxX + 240, y: currentY },
+      end: { x: gridBoxX + 240, y: currentY - box3H },
+      thickness: 1.2,
+      color: rgb(0, 0, 0),
+    });
+
+    const pType = String(formSpecs.participant_type || ev.participant_type || ev.event_type || 'Solo').toLowerCase();
+    const isTeam = pType.includes('team');
+    currentPage.drawText('Individual:', { x: gridBoxX + 15, y: currentY - 30, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    drawRadioCircle(currentPage, gridBoxX + 85, currentY - 26, !isTeam);
+
+    currentPage.drawText('Team:', { x: gridBoxX + 255, y: currentY - 20, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    drawRadioCircle(currentPage, gridBoxX + 310, currentY - 16, isTeam);
+    currentPage.drawText(`Min Size: ${formSpecs.team_min || formSpecs.minimum_team_size || (isTeam ? 2 : 1)}`, { x: gridBoxX + 255, y: currentY - 35, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentPage.drawText(`Max Size: ${formSpecs.team_max || formSpecs.maximum_team_size || (isTeam ? 3 : 1)}`, { x: gridBoxX + 255, y: currentY - 47, size: 9.5, font: fontRegular, color: rgb(0, 0, 0) });
+    currentY -= box3H;
+
+    // Box 4: Halls Required
+    const hallsCount = formSpecs.halls_required || formSpecs.hallsRequired || 1;
+    const preferredHalls = formSpecs.preferred_halls || ev.preferred_halls || (Array.isArray(formSpecs.preferredHalls) ? formSpecs.preferredHalls.join(', ') : '—');
+    const reasonForHalls = formSpecs.reason_for_halls || formSpecs.hall_requirement_reason || formSpecs.reasonForHalls || '—';
+
+    const maxBoxContentW = gridBoxWidth - 30;
+    const prefLines = wrapText(`Preferred Halls: ${preferredHalls}`, maxBoxContentW, fontRegular, 10);
+    const reasonLines = wrapText(`Reason: ${reasonForHalls}`, maxBoxContentW, fontRegular, 10);
+
+    const lineStep = 13.5;
+    const box4ContentH = 12 + 15 + 4 + (prefLines.length * lineStep) + 4 + (reasonLines.length * lineStep) + 10;
+    const box4H = Math.max(75, box4ContentH);
+
+    ensureSpace(box4H + 10);
+    currentPage.drawRectangle({
+      x: gridBoxX,
+      y: currentY - box4H,
+      width: gridBoxWidth,
+      height: box4H,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+    });
+
+    let curY = currentY - 12;
+    currentPage.drawText(`No of Halls Required: ${hallsCount}`, { x: gridBoxX + 15, y: curY - 8, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    curY -= (15 + 4);
+
+    prefLines.forEach((pLine) => {
+      currentPage.drawText(pLine, { x: gridBoxX + 15, y: curY - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+      curY -= lineStep;
+    });
+    curY -= 4;
+
+    reasonLines.forEach((rLine) => {
+      currentPage.drawText(rLine, { x: gridBoxX + 15, y: curY - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+      curY -= lineStep;
+    });
+
+    currentY -= box4H;
+
+    // Box 5: Slot Details
+    const box5H = 65;
+    ensureSpace(box5H + 10);
+    currentPage.drawRectangle({
+      x: gridBoxX,
+      y: currentY - box5H,
+      width: gridBoxWidth,
+      height: box5H,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+    });
+
+    currentPage.drawText('Slot Details:', { x: gridBoxX + 15, y: currentY - 20, size: 11, font: fontBold, color: rgb(0, 0, 0) });
+
+    if (formSpecs.is_two_day) {
+      currentPage.drawText(`Day 1 Slot: ${formSpecs.day1_slot || formSpecs.day1Slot || 'N/A'}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+      currentPage.drawText(`Day 2 Slot: ${formSpecs.day2_slot || formSpecs.day2Slot || 'N/A'}`, { x: gridBoxX + 250, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    } else {
+      const dStr = formSpecs.day || formSpecs.event_day || '';
+      const sStr = formSpecs.slot || formSpecs.time_slot || formSpecs.timeSlot || 'N/A';
+      currentPage.drawText(`Time Slot: ${dStr ? dStr + ' - ' : ''}${sStr}`, { x: gridBoxX + 35, y: currentY - 40, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    }
+
+    currentY -= box5H;
+
+    // Box 6: Extension Boxes
+    const extBoxesCount = formSpecs.extension_boxes || formSpecs.extension_box_count || formSpecs.extensionBoxes || 0;
+    const reasonExt = formSpecs.reason_for_extension_boxes || formSpecs.extension_requirement_reason || formSpecs.reasonForExtensionBoxes || (extBoxesCount > 0 ? 'Required for event equipment' : '—');
+    const reasonExtLines = wrapText(`Reason: ${reasonExt}`, maxBoxContentW, fontRegular, 10);
+
+    const box6ContentH = 12 + 15 + 4 + (reasonExtLines.length * lineStep) + 10;
+    const box6H = Math.max(55, box6ContentH);
+
+    ensureSpace(box6H + 10);
+    currentPage.drawRectangle({
+      x: gridBoxX,
+      y: currentY - box6H,
+      width: gridBoxWidth,
+      height: box6H,
+      borderColor: rgb(0, 0, 0),
+      borderWidth: 1.2,
+    });
+
+    let curY6 = currentY - 12;
+    currentPage.drawText(`Extension Boxes: ${extBoxesCount > 0 ? extBoxesCount : '0'}`, { x: gridBoxX + 15, y: curY6 - 8, size: 10.5, font: fontRegular, color: rgb(0, 0, 0) });
+    curY6 -= (15 + 4);
+
+    reasonExtLines.forEach((rLine) => {
+      currentPage.drawText(rLine, { x: gridBoxX + 15, y: curY6 - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+      curY6 -= lineStep;
+    });
+
+    currentY -= box6H;
+
+    // Box 7: Lab Requirements (Optional)
+    if (formSpecs.labs_required || formSpecs.lab_name || formSpecs.lab_allocated_venue || formSpecs.labsRequired) {
+      const lName = formSpecs.lab_name || formSpecs.lab_allocated_venue || formSpecs.labName;
+      const labNameStr = lName ? `${lName} (${formSpecs.lab_block || formSpecs.labBlock || ''}, Floor: ${formSpecs.lab_floor || formSpecs.labFloor || 'N/A'}, Lab No: ${formSpecs.lab_no || formSpecs.labNo || 'N/A'})` : 'Yes';
+      const labSlotStr = (formSpecs.is_two_day_lab || formSpecs.isTwoDayLab)
+        ? `Day 1: ${formatSlot(formSpecs.lab_session_slot || formSpecs.labSessionSlot)}, Day 2: ${formatSlot(formSpecs.lab_session_slot_day2 || formSpecs.labSessionSlotDay2)}`
+        : `${formSpecs.lab_day || formSpecs.labDay || 'Day 1'} - ${formatSlot(formSpecs.lab_session_slot || formSpecs.labSessionSlot)}`;
+
+      const labLines = wrapText(`Allotted Lab: ${labNameStr}`, maxBoxContentW - 20, fontRegular, 10);
+      const slotLines = wrapText(`Lab Schedule: ${labSlotStr}`, maxBoxContentW - 20, fontRegular, 10);
+
+      const box7ContentH = 12 + 15 + 4 + (labLines.length * lineStep) + 4 + (slotLines.length * lineStep) + 10;
+      const box7H = Math.max(65, box7ContentH);
+
+      ensureSpace(box7H + 10);
+      currentPage.drawRectangle({
+        x: gridBoxX,
+        y: currentY - box7H,
+        width: gridBoxWidth,
+        height: box7H,
+        borderColor: rgb(0, 0, 0),
+        borderWidth: 1.2,
+      });
+
+      let curY7 = currentY - 12;
+      currentPage.drawText('Lab Requirements:', { x: gridBoxX + 15, y: curY7 - 8, size: 11, font: fontBold, color: rgb(0, 0, 0) });
+      curY7 -= (15 + 4);
+
+      labLines.forEach((lLine) => {
+        currentPage.drawText(lLine, { x: gridBoxX + 35, y: curY7 - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+        curY7 -= lineStep;
+      });
+      curY7 -= 4;
+
+      slotLines.forEach((sLine) => {
+        currentPage.drawText(sLine, { x: gridBoxX + 35, y: curY7 - 8, size: 10, font: fontRegular, color: rgb(0, 0, 0) });
+        curY7 -= lineStep;
+      });
+
+      currentY -= box7H;
+    }
+
+    // ==========================================
+    // PAGE 4: EVENT DESCRIPTION & ROUND RULES
+    // ==========================================
+    createNewPage();
+
+    const descHeader = 'EVENT DESCRIPTION';
+    const descHeaderW = fontBold.widthOfTextAtSize(descHeader, 16);
+    currentPage.drawText(descHeader, {
+      x: (pageWidth - descHeaderW) / 2,
+      y: currentY,
+      size: 16,
+      font: fontBold,
+      color: rgb(0, 0, 0),
+    });
+
+    currentPage.drawLine({
+      start: { x: (pageWidth - descHeaderW) / 2, y: currentY - 3 },
+      end: { x: (pageWidth + descHeaderW) / 2, y: currentY - 3 },
+      thickness: 1.2,
+      color: rgb(0, 0, 0),
+    });
+
+    currentY -= 35;
+
+    ensureSpace(40);
+    currentY = drawSectionHeader(currentPage, 'EVENT PROFILE', currentY);
+
+    ensureSpace(40);
+    currentY = drawSubHeader(currentPage, 'Event Name', currentY);
+    const evNameLines = wrapText(eventName, 480, fontBold, 14);
+    evNameLines.forEach(line => {
+      ensureSpace(20);
+      currentPage.drawText(line, { x: 55, y: currentY, size: 14, font: fontBold, color: rgb(0, 0, 0) });
+      currentY -= 18;
+    });
+    currentY -= 10;
+
+    ensureSpace(40);
+    currentY = drawSubHeader(currentPage, 'Tagline', currentY);
+    const tagLines = wrapText(tagline, 480, fontRegular, 12);
+    tagLines.forEach(line => {
+      ensureSpace(20);
+      currentPage.drawText(line, { x: 55, y: currentY, size: 12, font: fontRegular, color: rgb(0, 0, 0) });
+      currentY -= 16;
+    });
+    currentY -= 10;
+
+    ensureSpace(40);
+    currentY = drawSubHeader(currentPage, 'Event Description', currentY);
+    const aboutLines = wrapText(about, 480, fontRegular, 12);
+    aboutLines.forEach(line => {
+      ensureSpace(20);
+      currentPage.drawText(line, { x: 55, y: currentY, size: 12, font: fontRegular, color: rgb(0, 0, 0) });
+      currentY -= 16;
+    });
+    currentY -= 20;
+
+    const roundsList = Array.isArray(ev.rounds) && ev.rounds.length > 0 ? ev.rounds : [
+      { name: 'Round 1', description: '—', rules: ['Rules to be announced'] }
+    ];
+
+    roundsList.forEach((rd, rIdx) => {
+      ensureSpace(100);
+      currentY -= 10;
+      currentY = drawSectionHeader(currentPage, `ROUND ${rIdx + 1} : ${rd.name || rd.round_name || rd.title || `Round ${rIdx + 1}`}`, currentY);
+
+      if (rd.description) {
+        ensureSpace(40);
+        currentY = drawSubHeader(currentPage, 'Description', currentY);
+        const descLines = wrapText(rd.description, 480, fontRegular, 11);
+        descLines.forEach(line => {
+          ensureSpace(18);
+          currentPage.drawText(line, { x: 55, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+          currentY -= 16;
+        });
+        currentY -= 10;
+      }
+
+      ensureSpace(40);
+      currentY = drawSubHeader(currentPage, 'Round Rules', currentY);
+      const rules = Array.isArray(rd.rules) && rd.rules.length > 0 ? rd.rules : ['None'];
+      rules.forEach((rl) => {
+        const rlLines = wrapText(rl, 470, fontRegular, 11);
+        rlLines.forEach((line, lIdx) => {
+          ensureSpace(18);
+          if (lIdx === 0) {
+            currentPage.drawCircle({ x: 58, y: currentY + 3.5, size: 2.2, color: rgb(0.2, 0.2, 0.2) });
+          }
+          currentPage.drawText(line, { x: 68, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+          currentY -= 16;
+        });
+      });
+      currentY -= 15;
+
+      if (rd.has_tie_breaker) {
+        ensureSpace(60);
+        currentPage.drawRectangle({
+          x: 50,
+          y: currentY - 18,
+          width: 495.28,
+          height: 20,
+          color: rgb(0.92, 0.94, 0.96),
+        });
+        currentPage.drawText(`TIE-BREAKER : ${rd.tie_breaker_name || 'Sudden Death'}`, { x: 60, y: currentY - 12, size: 11, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+        if (rd.tie_breaker_participants) {
+          currentPage.drawText(`(Participants: ${rd.tie_breaker_participants})`, { x: 300, y: currentY - 12, size: 10, font: fontItalic, color: rgb(0.3, 0.3, 0.3) });
+        }
+        currentY -= 30;
+
+        if (rd.tie_breaker_description) {
+          const tbDescLines = wrapText(rd.tie_breaker_description, 480, fontRegular, 11);
+          tbDescLines.forEach(line => {
+            ensureSpace(18);
+            currentPage.drawText(line, { x: 55, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+            currentY -= 16;
+          });
+          currentY -= 10;
+        }
+
+        const tbRules = Array.isArray(rd.tie_breaker_rules) && rd.tie_breaker_rules.length > 0 ? rd.tie_breaker_rules : [];
+        if (tbRules.length > 0) {
+          ensureSpace(40);
+          currentY = drawSubHeader(currentPage, 'Tie-Breaker Rules', currentY);
+          tbRules.forEach((rl) => {
+            const tbrLines = wrapText(rl, 470, fontRegular, 11);
+            tbrLines.forEach((line, lIdx) => {
+              ensureSpace(18);
+              if (lIdx === 0) {
+                currentPage.drawCircle({ x: 58, y: currentY + 3.5, size: 2.2, color: rgb(0.2, 0.2, 0.2) });
+              }
+              currentPage.drawText(line, { x: 68, y: currentY, size: 11, font: fontRegular, color: rgb(0, 0, 0) });
+              currentY -= 16;
+            });
+          });
+        }
+      }
+      currentY -= 15;
+    });
+
+    // ==========================================
+    // PAGE 5: INVOICE / REQUESTED LOGISTICS
+    // ==========================================
+    if (Array.isArray(ev.items) && ev.items.length > 0) {
+      createNewPage();
+
+      const reqText = 'INVOICE / REQUESTED LOGISTICS';
+      const reqW = fontBold.widthOfTextAtSize(reqText, 16);
+      currentPage.drawText(reqText, { x: (pageWidth - reqW) / 2, y: currentY, size: 16, font: fontBold, color: rgb(0.1, 0.1, 0.1) });
+
+      currentY -= 40;
+
+      const itemColWidths = [35, 185.28, 45, 45, 85, 100];
+      const tableWidth = itemColWidths.reduce((a, b) => a + b, 0);
+      const itemHeaders = ['S.No', 'Item Name', 'Return', 'Qty', 'Unit Price', 'Amount'];
+
+      let tableY = currentY;
+
+      const drawTableHeader = () => {
+        currentPage.drawRectangle({
+          x: tX,
+          y: tableY - 24,
+          width: tableWidth,
+          height: 24,
+          color: rgb(0.95, 0.95, 0.95),
+        });
+
+        let cellX = tX;
+        itemHeaders.forEach((h, idx) => {
+          const w = itemColWidths[idx];
+          const textW = fontBold.widthOfTextAtSize(h, 9.5);
+          let xPos;
+          if (idx === 0) {
+            xPos = cellX + (w - textW) / 2;
+          } else if (idx === 1) {
+            xPos = cellX + 8;
+          } else if (idx === 2) {
+            xPos = cellX + (w - textW) / 2;
+          } else if (idx === 3) {
+            xPos = cellX + (w - textW) / 2;
+          } else if (idx === 4) {
+            xPos = cellX + w - textW - 8;
+          } else {
+            xPos = cellX + w - textW - 10;
+          }
+          currentPage.drawText(h, {
+            x: xPos,
+            y: tableY - 16,
+            size: 9.5,
+            font: fontBold,
+            color: rgb(0.2, 0.2, 0.2),
+          });
+          cellX += w;
+        });
+
+        currentPage.drawLine({
+          start: { x: tX, y: tableY - 24 },
+          end: { x: tX + tableWidth, y: tableY - 24 },
+          thickness: 1,
+          color: rgb(0.8, 0.8, 0.8),
+        });
+        tableY -= 24;
+      };
+
+      drawTableHeader();
+
+      let subTotal = 0;
+      const lineHeight = 12;
+
+      ev.items.forEach((it, iIdx) => {
+        const qty = it.quantity || it.requested_quantity || 1;
+        const unitPrice = Number(it.price_per_unit || 0);
+        const total = qty * unitPrice;
+        subTotal += total;
+
+        const itemName = String(it.item_name || it.name || 'Unknown Item').trim();
+        const maxNameWidth = itemColWidths[1] - 16;
+        let nameLines = wrapText(itemName, maxNameWidth, fontRegular, 9);
+        if (nameLines.length === 0) nameLines = ['Unknown Item'];
+
+        const dynamicRowH = Math.max(24, nameLines.length * lineHeight + 10);
+
+        if (tableY - dynamicRowH < 100) {
+          createNewPage();
+          tableY = currentY;
+          drawTableHeader();
+        }
+
+        const firstLineY = tableY - 15;
+
+        // Col 0: S.No (centered)
+        const snoStr = String(iIdx + 1);
+        const snoW = fontRegular.widthOfTextAtSize(snoStr, 9);
+        currentPage.drawText(snoStr, {
+          x: tX + (itemColWidths[0] - snoW) / 2,
+          y: firstLineY,
+          size: 9,
+          font: fontRegular,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+
+        // Col 1: Item Name (left aligned)
+        const nameX = tX + itemColWidths[0] + 8;
+        nameLines.forEach((line, lIdx) => {
+          currentPage.drawText(line, {
+            x: nameX,
+            y: firstLineY - (lIdx * lineHeight),
+            size: 9,
+            font: fontRegular,
+            color: rgb(0.1, 0.1, 0.1),
+          });
+        });
+
+        // Col 2: Return (centered, bold green/red)
+        const retX = tX + itemColWidths[0] + itemColWidths[1];
+        const retStr = it.is_returnable ? 'YES' : 'NO';
+        const retW = fontRegular.widthOfTextAtSize(retStr, 9);
+        currentPage.drawText(retStr, {
+          x: retX + (itemColWidths[2] - retW) / 2,
+          y: firstLineY,
+          size: 9,
+          font: fontBold,
+          color: it.is_returnable ? rgb(0, 0.6, 0) : rgb(0.8, 0, 0),
+        });
+
+        // Col 3: Qty (centered)
+        const qtyX = retX + itemColWidths[2];
+        const qtyStr = String(qty);
+        const qtyW = fontRegular.widthOfTextAtSize(qtyStr, 9);
+        currentPage.drawText(qtyStr, {
+          x: qtyX + (itemColWidths[3] - qtyW) / 2,
+          y: firstLineY,
+          size: 9,
+          font: fontRegular,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+
+        // Col 4: Unit Price (right aligned)
+        const priceX = qtyX + itemColWidths[3];
+        const priceStr = `Rs. ${unitPrice.toFixed(2)}`;
+        const priceW = fontRegular.widthOfTextAtSize(priceStr, 9);
+        currentPage.drawText(priceStr, {
+          x: priceX + itemColWidths[4] - priceW - 8,
+          y: firstLineY,
+          size: 9,
+          font: fontRegular,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+
+        // Col 5: Amount (right aligned)
+        const amtX = priceX + itemColWidths[4];
+        const amtStr = `Rs. ${total.toFixed(2)}`;
+        const amtW = fontRegular.widthOfTextAtSize(amtStr, 9);
+        currentPage.drawText(amtStr, {
+          x: amtX + itemColWidths[5] - amtW - 10,
+          y: firstLineY,
+          size: 9,
+          font: fontRegular,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+
+        currentPage.drawLine({
+          start: { x: tX, y: tableY - dynamicRowH },
+          end: { x: tX + tableWidth, y: tableY - dynamicRowH },
+          thickness: 0.5,
+          color: rgb(0.9, 0.9, 0.9),
+        });
+
+        tableY -= dynamicRowH;
+      });
+
+      const gstAmount = subTotal * 0.18;
+      const grandTotal = subTotal + gstAmount;
+
+      const summaryRows = [
+        { label: 'Subtotal:', value: `Rs. ${subTotal.toFixed(2)}`, color: rgb(0.1, 0.1, 0.1), isGrand: false },
+        { label: 'GST (18%):', value: `Rs. ${gstAmount.toFixed(2)}`, color: rgb(0.1, 0.1, 0.1), isGrand: false },
+        { label: 'Grand Total:', value: `Rs. ${grandTotal.toFixed(2)}`, color: rgb(0.05, 0.45, 0.75), isGrand: true },
+      ];
+
+      if (tableY - 70 < 100) {
+        createNewPage();
+        tableY = currentY;
+      }
+
+      const priceColX = tX + itemColWidths[0] + itemColWidths[1] + itemColWidths[2];
+      const amtColX = priceColX + itemColWidths[3];
+
+      summaryRows.forEach((sRow, sIdx) => {
+        const sRowH = sRow.isGrand ? 24 : 20;
+        const sFont = fontBold;
+        const sSize = sRow.isGrand ? 10.5 : 9.5;
+        const sY = tableY - (sRow.isGrand ? 16 : 14);
+
+        const lblW = sFont.widthOfTextAtSize(sRow.label, sSize);
+        currentPage.drawText(sRow.label, {
+          x: priceColX + itemColWidths[3] - lblW - 8,
+          y: sY,
+          size: sSize,
+          font: sFont,
+          color: rgb(0.1, 0.1, 0.1),
+        });
+
+        const valW = sFont.widthOfTextAtSize(sRow.value, sSize);
+        currentPage.drawText(sRow.value, {
+          x: amtColX + itemColWidths[4] - valW - 10,
+          y: sY,
+          size: sSize,
+          font: sFont,
+          color: sRow.color,
+        });
+
+        if (sIdx === 1) {
+          currentPage.drawLine({
+            start: { x: priceColX, y: tableY - sRowH },
+            end: { x: tX + tableWidth, y: tableY - sRowH },
+            thickness: 1,
+            color: rgb(0.8, 0.8, 0.8),
+          });
+        }
+
+        tableY -= sRowH;
+      });
+
+      currentY = tableY - 15;
+    }
+
+    // Ensure signatures fit on the final page of this event
+    ensureSpace(80);
+    drawFooterSignatures(currentPage, true);
+  }
+
+  // ========================================================
+  // RUNNING FOOTERS & RUNNING EVENT ID ON EVERY PAGE
+  // ========================================================
+  const pages = pdfDoc.getPages();
+  const genTime = new Date().toLocaleString('en-IN');
+
+  pages.forEach((page, pIdx) => {
+    const eId = pageEventIdMap.get(pIdx) || 'INTRAMS26';
+
+    page.drawText(eId, {
+      x: 35,
+      y: 20,
+      size: 8,
+      font: fontRegular,
+      color: rgb(0, 0, 0),
+    });
+
+    const timeWidth = fontRegular.widthOfTextAtSize(genTime, 8);
+    page.drawText(genTime, {
+      x: pageWidth - 35 - timeWidth,
+      y: 20,
+      size: 8,
+      font: fontRegular,
+      color: rgb(0, 0, 0),
+    });
+  });
+
+  // ========================================================
+  // PROCESS CANVAS TEXT QUEUE (HIGH-FIDELITY TAMIL SUPPORT)
+  // ========================================================
+  for (const op of drawQueue) {
+    if (op.type === 'tamil') {
+      const { origDrawText, origDrawImage, text, options } = op;
+      const chunks = text.match(/[\u0B80-\u0BFF\u200C\u200D]+(?:[\s]+[\u0B80-\u0BFF\u200C\u200D]+)*|[^\u0B80-\u0BFF\u200C\u200D]+/g) || [];
+      let currentX = options.x || 0;
+      const size = options.size || 12;
+
+      for (const chunk of chunks) {
+        if (!chunk) continue;
+        const isTamilChunk = /[\u0B80-\u0BFF]/.test(chunk);
+
+        if (isTamilChunk) {
+          if (!window.__pdfCanvasCtx) {
+            const cvs = document.createElement('canvas');
+            window.__pdfCanvasCtx = cvs.getContext('2d');
+          }
+          const ctx = window.__pdfCanvasCtx;
+          const isBold = options.font === fontBold;
+          const fontStr = (isBold ? 'bold ' : '') + size + 'px "Noto Sans Tamil", Arial, sans-serif';
+          ctx.font = fontStr;
+
+          const padding = 2;
+          const scale = 4;
+          const textW = Math.max(1, ctx.measureText(chunk).width);
+
+          const cvs = document.createElement('canvas');
+          cvs.width = Math.ceil(textW * scale) + padding * 2;
+          cvs.height = Math.ceil(size * 1.8 * scale) + padding * 2;
+          const cvsCtx = cvs.getContext('2d');
+          cvsCtx.scale(scale, scale);
+          cvsCtx.font = fontStr;
+          cvsCtx.textBaseline = 'alphabetic';
+
+          let r = 0, g = 0, b = 0;
+          if (options.color) {
+            r = Math.round((options.color.red || 0) * 255);
+            g = Math.round((options.color.green || 0) * 255);
+            b = Math.round((options.color.blue || 0) * 255);
+          }
+          cvsCtx.fillStyle = `rgb(${r},${g},${b})`;
+          cvsCtx.fillText(chunk, padding / scale, size * 1.4);
+
+          const dataUrl = cvs.toDataURL('image/png');
+          const pngImage = await pdfDoc.embedPng(dataUrl);
+
+          origDrawImage(pngImage, {
+            x: currentX - (padding / scale),
+            y: (options.y || 0) - (size * 0.4) - (padding / scale),
+            width: cvs.width / scale,
+            height: cvs.height / scale,
+          });
+
+          currentX += textW;
+        } else {
+          const currentFont = options.font || fontRegular;
+          const actualOptions = { ...options, font: currentFont, x: currentX };
+          try { origDrawText(chunk, actualOptions); } catch (e) {}
+
+          try {
+            currentX += currentFont.widthOfTextAtSize(chunk, size);
+          } catch (e) {
+            currentX += chunk.length * size * 0.55;
+          }
+        }
+      }
+    } else {
+      try {
+        op.method(...op.args);
+      } catch (err) {
+        console.warn('PDF draw text error fallback:', err);
+        try {
+          if (op.type === 'text' && op.args && op.args.length > 0) {
+            const pureAscii = String(op.args[0]).replace(/[^\x20-\x7E]/g, ' ');
+            op.method(pureAscii, op.args[1]);
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  const pdfBytes = await pdfDoc.save();
+  return new Blob([pdfBytes], { type: 'application/pdf' });
+}

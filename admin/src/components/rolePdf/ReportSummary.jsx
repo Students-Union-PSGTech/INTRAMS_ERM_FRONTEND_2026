@@ -2,6 +2,7 @@ import React from 'react';
 
 export default function ReportSummary({ role, memberCount = 0 }) {
   const getRoleDisplayName = () => {
+    if (role === 'all_event_pdfs') return 'ALL EVENT PDFS';
     if (role === 'consolidated') return 'CONSOLIDATED EVENT REQUESTS';
     if (role === 'items') return 'REQUESTED ITEMS';
     if (role === 'event') return 'EVENTS';
@@ -9,6 +10,9 @@ export default function ReportSummary({ role, memberCount = 0 }) {
   };
 
   const getRoleDescription = () => {
+    if (role === 'all_event_pdfs') {
+      return 'Comprehensive official compilation of all event resource forms arranged alphabetically by club. Each event starts on a new page with complete logistics matrix, contacts, descriptions, round rules, and items with full English and Tamil support.';
+    }
     if (role === 'consolidated') {
       return 'Consolidated event item requirements report aggregating total quantities requested, unit prices, and estimated budget totals across all club proposals.';
     }
@@ -18,8 +22,10 @@ export default function ReportSummary({ role, memberCount = 0 }) {
     if (role === 'event') {
       return 'Official list of submitted club events with unique event identifiers and association details.';
     }
-    return 'Generated reports group personnel by association header banners (#1F4E79) with structured table data (#D9E1F2 column headers and black grid borders).';
+    return '';
   };
+
+  const description = getRoleDescription();
 
   return (
     <div className="space-y-4">
@@ -31,13 +37,17 @@ export default function ReportSummary({ role, memberCount = 0 }) {
         </div>
         <div className="p-4 bg-[#000000] border border-[#252525]">
           <div className="text-[11px] font-bold uppercase tracking-wider text-[#A0A0A0]">FORMAT SPECIFICATION</div>
-          <div className="mt-1 text-xs font-bold text-[#00D084] uppercase">INTRAMS OFFICIAL LANDSCAPE REPORT</div>
+          <div className="mt-1 text-xs font-bold text-[#00D084] uppercase">
+            {role === 'all_event_pdfs' ? 'INTRAMS COMPLETE EVENT DOSSIERS (PORTRAIT)' : 'INTRAMS OFFICIAL LANDSCAPE REPORT'}
+          </div>
         </div>
       </div>
 
-      <p className="text-xs text-[#A0A0A0] leading-relaxed uppercase">
-        {getRoleDescription()}
-      </p>
+      {description ? (
+        <p className="text-xs text-[#A0A0A0] leading-relaxed uppercase">
+          {description}
+        </p>
+      ) : null}
     </div>
   );
 }

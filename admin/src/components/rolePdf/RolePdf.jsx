@@ -8,6 +8,7 @@ import { useToast } from '../../context/ToastContext';
 import { handlePdfBlob } from '../../utils/pdf';
 import { generateRolePdf } from '../../utils/generateRolePdf';
 import { generateEventsPdf } from '../../utils/generateEventsPdf';
+import { generateAllEventsPdf } from '../../utils/generateAllEventsPdf';
 import { generateItemsPdf } from '../../utils/generateItemsPdf';
 import { generateConsolidatedPdf } from '../../utils/generateConsolidatedPdf';
 import Button from '../ui/Button';
@@ -15,6 +16,7 @@ import PageHeader from '../ui/PageHeader';
 
 const ROLES = [
   { id: 'event', label: 'Events' },
+  { id: 'all_event_pdfs', label: 'All Event PDFs' },
   { id: 'items', label: 'Requested Items' },
   { id: 'consolidated', label: 'Consolidated Event Requests' },
   { id: 'secretary', label: 'Secretary' },
@@ -32,6 +34,14 @@ export default function RolePdf() {
   const onSelect = (role) => setSelected(role);
 
   const generateExactPdfBlob = async () => {
+    if (selected === 'all_event_pdfs') {
+      const res = await adminAPI.getEvents();
+      const events = res.data?.data || res.data || [];
+      const submitted = events.filter(e => e.status === 'submitted');
+      const targetData = submitted.length > 0 ? submitted : events;
+      return await generateAllEventsPdf({ data: targetData });
+    }
+
     if (selected === 'consolidated') {
       const res = await adminAPI.getConsolidatedItems();
       const items = res.data?.data || [];
@@ -104,10 +114,11 @@ export default function RolePdf() {
           UnitPrice: Number(it.price_per_unit || 0).toFixed(2),
           EstimatedTotal: Number(it.total_estimated_cost || 0).toFixed(2)
         }));
-      } else if (selected === 'event' || selected === 'items') {
+      } else if (selected === 'all_event_pdfs' || selected === 'event' || selected === 'items') {
         const eventRes = await adminAPI.getEvents();
         const events = eventRes.data?.data || eventRes.data || [];
-        rawData = events.filter(e => e.status === 'submitted');
+        const submitted = events.filter(e => e.status === 'submitted');
+        rawData = submitted.length > 0 ? submitted : events;
       } else {
         const res = await adminAPI.getRoleMembers(selected);
         rawData = res?.data?.data || res?.data || {};
@@ -115,7 +126,33 @@ export default function RolePdf() {
 
       if (selected !== 'consolidated') {
         if (Array.isArray(rawData)) {
-          if (selected === 'event') {
+          if (selected === 'all_event_pdfs') {
+            const sortedEvents = [...rawData].sort((a, b) => {
+              const clubA = (a.club_id?.club_name || a.club_name || a.associationName || a.clubName || '').trim();
+              const clubB = (b.club_id?.club_name || b.club_name || b.associationName || b.clubName || '').trim();
+              const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+              if (comp !== 0) return comp;
+              const nameA = (a.event_name || a.name || a.eventName || '').trim();
+              const nameB = (b.event_name || b.name || b.eventName || '').trim();
+              return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+            });
+            flattenRows = sortedEvents.map((e, index) => {
+              const sec = Array.isArray(e.contacts?.secretaries) ? e.contacts.secretaries[0] : (e.contacts?.secretary || {});
+              const fac = e.contacts?.faculty_advisor || e.facultyAdvisor || {};
+              return {
+                SNo: index + 1,
+                Club: e.club_id?.club_name || e.club_name || e.associationName || 'General',
+                EventID: e.event_id || '',
+                EventName: e.event_name || e.name || '',
+                Day: e.form?.is_two_day ? '2 Days' : (e.form?.day || e.form?.event_day || 'Day 1'),
+                RoundsCount: Array.isArray(e.rounds) ? e.rounds.length : 1,
+                ExpectedParticipants: e.participant_count || e.expectedParticipants || '—',
+                Secretary: sec?.name || '',
+                FacultyAdvisor: fac?.name || '',
+                ItemsCount: Array.isArray(e.items) ? e.items.length : 0
+              };
+            });
+          } else if (selected === 'event') {
             const sortedEvents = [...rawData].sort((a, b) => {
               const clubA = (a.club_id?.club_name || a.club_name || '').trim();
               const clubB = (b.club_id?.club_name || b.club_name || '').trim();
