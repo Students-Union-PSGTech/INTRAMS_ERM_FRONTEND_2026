@@ -138,7 +138,7 @@ export async function generateAllAllocatedPdf({ data }) {
       page.drawText(titleText2, { x: (pageWidth - w2) / 2, y: titleY, size: 11, font: fontBold, color: rgb(0, 0, 0) });
       titleY -= 22;
 
-      const titleText3 = 'ALL CLUBS ALLOCATED ITEMS REPORT';
+      const titleText3 = 'ALLOCATION SUMMARY REPORT';
       const w3 = fontBold.widthOfTextAtSize(titleText3, 12);
       page.drawText(titleText3, { x: (pageWidth - w3) / 2, y: titleY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
       page.drawLine({
@@ -148,7 +148,7 @@ export async function generateAllAllocatedPdf({ data }) {
       });
     } else {
       let titleY = pageHeight - 55;
-      const contText = 'ALL CLUBS ALLOCATED ITEMS REPORT (CONTINUED)';
+      const contText = 'ALLOCATION SUMMARY REPORT (CONTINUED)';
       const wc = fontBold.widthOfTextAtSize(contText, 11);
       page.drawText(contText, { x: (pageWidth - wc) / 2, y: titleY, size: 11, font: fontBold, color: rgb(0, 0, 0) });
     }
@@ -195,85 +195,168 @@ export async function generateAllAllocatedPdf({ data }) {
     return y - 24;
   };
 
-  let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-  drawHeader(currentPage, true);
-  let currentY = pageHeight - 140;
-  const tX = margin;
+  const drawSignatureBlock = (page, y) => {
+    const tX = margin;
+    const rightBlockWidth = 190;
+    const rightX = tX + contentWidth - rightBlockWidth;
+    const bottomY = Math.min(y - 45, 125);
+    const lineY = Math.max(bottomY, 100);
 
-  // Group items by club (exclude clubs with zero allocated items)
+    // Left End: Receiver details with dashes
+    page.drawText('Receiver Name: ___________________________', {
+      x: tX,
+      y: lineY,
+      size: 10,
+      font: fontBold,
+      color: rgb(0, 0, 0)
+    });
+    page.drawText('Roll Number    : ___________________________', {
+      x: tX,
+      y: lineY - 18,
+      size: 10,
+      font: fontBold,
+      color: rgb(0, 0, 0)
+    });
+    page.drawText('Phone No         : ___________________________', {
+      x: tX,
+      y: lineY - 36,
+      size: 10,
+      font: fontBold,
+      color: rgb(0, 0, 0)
+    });
+
+    // Right End: Receiver signature with date and time
+    page.drawLine({
+      start: { x: rightX, y: lineY },
+      end: { x: rightX + rightBlockWidth, y: lineY },
+      thickness: 1,
+      color: rgb(0, 0, 0)
+    });
+
+    const authText = 'Receiver Signature';
+    const authW = fontBold.widthOfTextAtSize(authText, 10);
+    page.drawText(authText, {
+      x: rightX + (rightBlockWidth - authW) / 2,
+      y: lineY - 14,
+      size: 10,
+      font: fontBold,
+      color: rgb(0, 0, 0)
+    });
+
+    const dateText = 'Date: ____ / ____ / ________';
+    const dateW = fontRegular.widthOfTextAtSize(dateText, 9.5);
+    page.drawText(dateText, {
+      x: rightX + (rightBlockWidth - dateW) / 2,
+      y: lineY - 30,
+      size: 9.5,
+      font: fontRegular,
+      color: rgb(0, 0, 0)
+    });
+
+    const timeText = 'Time: ____ : ____';
+    const timeW = fontRegular.widthOfTextAtSize(timeText, 9.5);
+    page.drawText(timeText, {
+      x: rightX + (rightBlockWidth - timeW) / 2,
+      y: lineY - 46,
+      size: 9.5,
+      font: fontRegular,
+      color: rgb(0, 0, 0)
+    });
+  };
+
+  // 1. Exclude clubs that have no allocated items
   const clubGroups = (Array.isArray(data) ? data : []).filter(c => Array.isArray(c.items) && c.items.length > 0);
 
   if (clubGroups.length === 0) {
-    currentPage.drawText('No allocated item records found.', {
+    const emptyPage = pdfDoc.addPage([pageWidth, pageHeight]);
+    drawHeader(emptyPage, true);
+    emptyPage.drawText('No allocated item records found.', {
       x: margin,
-      y: currentY - 30,
+      y: pageHeight - 180,
       size: 11,
       font: fontItalic,
       color: rgb(0.5, 0.5, 0.5)
     });
   }
 
-  clubGroups.forEach((club, cIdx) => {
-    const clubName = String(club.club_name || club.name || 'Unknown Club').trim();
-    const clubItems = Array.isArray(club.items) ? club.items : [];
+  // 2. ONE CLUB PER PAGE: Each club starts on a fresh page. Never place two different clubs on the same page.
+  clubGroups.forEach((club) => {
+    let currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+    drawHeader(currentPage, true);
 
-    // Check if we need a new page for the club card and table header
-    const neededSpace = 120 + Math.min(clubItems.length, 3) * 25;
-    if (currentY - neededSpace < 80) {
-      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-      drawHeader(currentPage, false);
-      currentY = pageHeight - 80;
-    }
+    let currentY = pageHeight - 150;
+    const tX = margin;
 
-    // Club Header Banner
-    const bannerHeight = 26;
+    const clubName = String(club.club_name || club.name || 'Students Union').trim();
+    const rawItems = Array.isArray(club.items) ? club.items : [];
+
+    const totalAllocated = rawItems.reduce((sum, it) => sum + (Number(it.approved !== undefined ? it.approved : it.approved_quantity) || 0), 0);
+
+    // Metadata Card for this club
+    const clubNameLines = wrapText('Club Name: ' + clubName, 230, fontBold, 10);
+    const summaryLines = wrapText(`Total Allocated Qty: ${totalAllocated} (Items: ${rawItems.length})`, 230, fontBold, 10);
+
+    const leftLines = clubNameLines.length;
+    const rightLines = summaryLines.length;
+    const maxLines = Math.max(leftLines, rightLines);
+
+    const lineHeight = 15;
+    const boxHeight = (maxLines * lineHeight) + 20;
+
     currentPage.drawRectangle({
-      x: tX,
-      y: currentY - bannerHeight,
-      width: contentWidth,
-      height: bannerHeight,
-      color: rgb(0.1, 0.1, 0.1),
-      borderColor: rgb(0, 0, 0),
-      borderWidth: 1
+      x: tX, y: currentY - boxHeight, width: contentWidth, height: boxHeight,
+      borderColor: rgb(0.2, 0.2, 0.2), borderWidth: 1
     });
 
-    const clubTitle = `${cIdx + 1}. CLUB: ${clubName.toUpperCase()}`;
-    currentPage.drawText(clubTitle, {
-      x: tX + 10,
-      y: currentY - 18,
-      size: 10.5,
-      font: fontBold,
-      color: rgb(1, 1, 1)
+    let leftY = currentY - 12 - 10;
+    clubNameLines.forEach(line => {
+      currentPage.drawText(line, { x: tX + 15, y: leftY, size: 10, font: fontBold, color: rgb(0, 0, 0) });
+      leftY -= lineHeight;
     });
 
-    const totalAllocated = clubItems.reduce((sum, it) => sum + (Number(it.approved || it.approved_quantity || 0) || 0), 0);
-    const countText = `Total Allocated Qty: ${totalAllocated}   |   Items: ${clubItems.length}`;
-    const countW = fontRegular.widthOfTextAtSize(countText, 9);
-    currentPage.drawText(countText, {
-      x: tX + contentWidth - countW - 10,
-      y: currentY - 17,
-      size: 9,
-      font: fontRegular,
-      color: rgb(0.85, 0.85, 0.85)
+    let rightY = currentY - 12 - 10;
+    summaryLines.forEach(line => {
+      currentPage.drawText(line, { x: tX + 260, y: rightY, size: 10, font: fontBold, color: rgb(0, 0, 0) });
+      rightY -= lineHeight;
     });
 
-    currentY -= (bannerHeight + 4);
+    currentY -= (boxHeight + 20);
 
-    // Draw Table Header for this club
+    // Table Header
     currentY = drawTableHeader(currentPage, currentY);
 
-    if (clubItems.length === 0) {
-      return;
+    const items = rawItems.map((item, index) => {
+      const isRetVal = item.returnability !== undefined ? item.returnability : item.is_returnable;
+      const isRet = (
+        isRetVal === true ||
+        String(isRetVal).toUpperCase() === 'YES' ||
+        String(isRetVal).toUpperCase() === 'TRUE' ||
+        String(isRetVal).toUpperCase() === 'RETURNABLE'
+      );
+      return {
+        sno: `${index + 1}`,
+        name: String(item.name || item.item_name || 'Unknown Item').trim() + (item.event_name ? ` (${item.event_name})` : ''),
+        requested: String(item.requested !== undefined ? item.requested : (item.requested_quantity || 0)),
+        approved: String(item.approved !== undefined ? item.approved : (item.approved_quantity || 0)),
+        returnability: isRet
+      };
+    });
+
+    // Ensure at least 8 rows for visual consistency with individual allocation PDF
+    if (items.length < 8) {
+      while (items.length < 8) {
+        items.push({ sno: '', name: '', requested: '', approved: '' });
+      }
     }
 
-    // Render items for this club
-    clubItems.forEach((it, iIdx) => {
+    // Render items belonging to this club
+    items.forEach((it) => {
       const maxNameWidth = colWidths[1] - 16;
-      const displayName = String(it.name || it.item_name || 'Unknown Item').trim() + (it.event_name ? ` (${it.event_name})` : '');
-      const itemLines = displayName ? wrapText(displayName, maxNameWidth, fontRegular, 9) : [''];
+      const itemLines = it.name ? wrapText(it.name, maxNameWidth, fontRegular, 9) : [''];
       const rowH = Math.max(22, (itemLines.length * 12) + 8);
 
-      if (currentY - rowH < 80) {
+      // If rows exceed page, continue this same club on subsequent page
+      if (currentY - rowH < 120) {
         currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
         drawHeader(currentPage, false);
         currentY = pageHeight - 80;
@@ -305,100 +388,55 @@ export async function generateAllAllocatedPdf({ data }) {
       const topY = currentY - 14;
 
       // S.No
-      const snoStr = String(it.sno || iIdx + 1);
-      const snoW = fontRegular.widthOfTextAtSize(snoStr, 9);
-      currentPage.drawText(snoStr, { x: tX + (colWidths[0] - snoW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      if (it.sno) {
+        const snoW = fontRegular.widthOfTextAtSize(it.sno, 9);
+        currentPage.drawText(it.sno, { x: tX + (colWidths[0] - snoW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      }
 
-      // Item Name
-      const nameX = tX + colWidths[0] + 8;
-      let currentItemY = topY;
-      itemLines.forEach(line => {
-        currentPage.drawText(line, { x: nameX, y: currentItemY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
-        currentItemY -= 12;
-      });
+      // Name
+      if (it.name) {
+        const nameX = tX + colWidths[0] + 8;
+        let currentItemY = topY;
+        itemLines.forEach(line => {
+          currentPage.drawText(line, { x: nameX, y: currentItemY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+          currentItemY -= 12;
+        });
+      }
 
-      // Requested Qty
-      const reqStr = String(it.requested !== undefined ? it.requested : (it.requested_quantity || 0));
-      const reqW = fontRegular.widthOfTextAtSize(reqStr, 9);
-      currentPage.drawText(reqStr, { x: tX + colWidths[0] + colWidths[1] + (colWidths[2] - reqW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      // Requested
+      if (it.requested) {
+        const reqX = tX + colWidths[0] + colWidths[1];
+        const reqW = fontRegular.widthOfTextAtSize(it.requested, 9);
+        currentPage.drawText(it.requested, { x: reqX + (colWidths[2] - reqW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      }
 
-      // Approved Qty
-      const appStr = String(it.approved !== undefined ? it.approved : (it.approved_quantity || 0));
-      const appW = fontRegular.widthOfTextAtSize(appStr, 9);
-      currentPage.drawText(appStr, { x: tX + colWidths[0] + colWidths[1] + colWidths[2] + (colWidths[3] - appW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      // Approved
+      if (it.approved) {
+        const appX = tX + colWidths[0] + colWidths[1] + colWidths[2];
+        const appW = fontRegular.widthOfTextAtSize(it.approved, 9);
+        currentPage.drawText(it.approved, { x: appX + (colWidths[3] - appW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      }
 
       // Returnability
-      const isRet = Boolean(
-        it.returnability === true ||
-        it.is_returnable === true ||
-        String(it.returnability || it.is_returnable).toUpperCase() === 'YES' ||
-        String(it.returnability || it.is_returnable).toUpperCase() === 'TRUE' ||
-        String(it.returnability || it.is_returnable).toUpperCase() === 'RETURNABLE'
-      );
-      const retX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3];
-      const retStr = isRet ? 'Returnable' : 'Non-Returnable';
-      const retColor = isRet ? rgb(0.18, 0.49, 0.20) : rgb(0.78, 0.16, 0.16);
-      const retW = fontBold.widthOfTextAtSize(retStr, 9);
-      currentPage.drawText(retStr, { x: retX + (colWidths[4] - retW) / 2, y: topY, size: 9, font: fontBold, color: retColor });
+      if (it.name) {
+        const retX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3];
+        const retStr = it.returnability ? 'Returnable' : 'Non-Returnable';
+        const retColor = it.returnability ? rgb(0.18, 0.49, 0.20) : rgb(0.78, 0.16, 0.16);
+        const retW = fontBold.widthOfTextAtSize(retStr, 9);
+        currentPage.drawText(retStr, { x: retX + (colWidths[4] - retW) / 2, y: topY, size: 9, font: fontBold, color: retColor });
+      }
 
       currentY -= rowH;
     });
 
-    currentY -= 20; // spacing between clubs
-  });
+    // 2. Add signature dashes and layout to EVERY club's section (on its final page)
+    if (currentY - 95 < 70) {
+      currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+      drawHeader(currentPage, false);
+      currentY = pageHeight - 80;
+    }
 
-  // End of Report Acknowledgment / Signature block
-  if (currentY - 95 < 70) {
-    currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
-    drawHeader(currentPage, false);
-    currentY = pageHeight - 80;
-  }
-
-  const rightBlockWidth = 190;
-  const rightX = tX + contentWidth - rightBlockWidth;
-  const bottomY = Math.min(currentY - 30, 125);
-  const lineY = Math.max(bottomY, 95);
-
-  currentPage.drawText('Verified By: ___________________________', {
-    x: tX,
-    y: lineY,
-    size: 10,
-    font: fontBold,
-    color: rgb(0, 0, 0)
-  });
-  currentPage.drawText('Designation: ___________________________', {
-    x: tX,
-    y: lineY - 18,
-    size: 10,
-    font: fontBold,
-    color: rgb(0, 0, 0)
-  });
-
-  currentPage.drawLine({
-    start: { x: rightX, y: lineY },
-    end: { x: rightX + rightBlockWidth, y: lineY },
-    thickness: 1,
-    color: rgb(0, 0, 0)
-  });
-
-  const authText = 'Authorized Signature';
-  const authW = fontBold.widthOfTextAtSize(authText, 10);
-  currentPage.drawText(authText, {
-    x: rightX + (rightBlockWidth - authW) / 2,
-    y: lineY - 14,
-    size: 10,
-    font: fontBold,
-    color: rgb(0, 0, 0)
-  });
-
-  const dateText = 'Date: ____ / ____ / ________';
-  const dateW = fontRegular.widthOfTextAtSize(dateText, 9.5);
-  currentPage.drawText(dateText, {
-    x: rightX + (rightBlockWidth - dateW) / 2,
-    y: lineY - 30,
-    size: 9.5,
-    font: fontRegular,
-    color: rgb(0, 0, 0)
+    drawSignatureBlock(currentPage, currentY);
   });
 
   // Process Tamil font drawQueue
