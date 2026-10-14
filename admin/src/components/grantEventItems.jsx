@@ -160,16 +160,25 @@ export default function GrantEventItems() {
                   let res;
                   let docName = `Allocation_${eventName}.pdf`;
                   try {
-                    res = await adminAPI.getAllocationPDF(id);
+                    const mappedItems = itemsList.map(it => {
+                      const master = getMaster(it.item_name);
+                      return {
+                        ...it,
+                        item_name: it.item_name,
+                        requested_quantity: it.quantity || it.requested_quantity || 0,
+                        approved_quantity: it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (it.approved_quantity !== undefined ? it.approved_quantity : 0)),
+                        is_returnable: it.is_returnable !== undefined ? it.is_returnable : (master?.is_returnable ?? false)
+                      };
+                    });
+                    res = await generateAllocationPdf({
+                      ...(eventData?.event || {}),
+                      event_name: eventName,
+                      _id: id,
+                      club_name: eventData?.eventDetails?.associationName || eventData?.event?.club_name || '',
+                      items: mappedItems
+                    });
                   } catch (_) {
-                    res = await generateAllocationPdf(
-                      eventData?.event || {
-                        event_name: eventName,
-                        _id: id,
-                        items: itemsList,
-                        club_name: eventData?.eventDetails?.associationName || eventData?.event?.club_name
-                      }
-                    );
+                    res = await adminAPI.getAllocationPDF(id);
                   }
                   const url = await handlePdfBlob(res, { filename: docName, preview: true });
                   if (url) {

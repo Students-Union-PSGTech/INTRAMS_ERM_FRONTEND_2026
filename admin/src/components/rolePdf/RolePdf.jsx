@@ -11,12 +11,14 @@ import { generateEventsPdf } from '../../utils/generateEventsPdf';
 import { generateAllEventsPdf } from '../../utils/generateAllEventsPdf';
 import { generateItemsPdf } from '../../utils/generateItemsPdf';
 import { generateConsolidatedPdf } from '../../utils/generateConsolidatedPdf';
+import { generateAllAllocatedPdf } from '../../utils/generateAllAllocatedPdf';
 import Button from '../ui/Button';
 import PageHeader from '../ui/PageHeader';
 
 const ROLES = [
   { id: 'event', label: 'Events' },
   { id: 'all_event_pdfs', label: 'All Event PDFs' },
+  { id: 'all_allocated_items', label: 'All Allocated Items' },
   { id: 'items', label: 'Requested Items' },
   { id: 'consolidated', label: 'Consolidated Event Requests' },
   { id: 'secretary', label: 'Secretary' },
@@ -46,6 +48,71 @@ export default function RolePdf() {
       const res = await adminAPI.getConsolidatedItems();
       const items = res.data?.data || [];
       return await generateConsolidatedPdf({ data: items });
+    }
+
+    if (selected === 'all_allocated_items') {
+      const [eventsRes, itemsRes, assocRes] = await Promise.all([
+        adminAPI.getEvents().catch(() => ({ data: { data: [] } })),
+        adminAPI.getItems().catch(() => ({ data: { data: [] } })),
+        adminAPI.getAssociations().catch(() => ({ data: { data: [] } }))
+      ]);
+      const events = eventsRes.data?.data || eventsRes.data || [];
+      const masterItems = itemsRes.data?.data || itemsRes.data || [];
+      const associations = assocRes.data?.data || assocRes.data || [];
+
+      const masterMap = {};
+      masterItems.forEach(mi => {
+        if (mi.item_name) masterMap[mi.item_name.trim().toLowerCase()] = mi;
+      });
+
+      const clubMap = {};
+      associations.forEach(a => {
+        const cName = (a.club_name || a.association_name || '').trim();
+        if (cName && !clubMap[cName]) {
+          clubMap[cName] = { club_name: cName, items: [] };
+        }
+      });
+
+      events.forEach(ev => {
+        const cName = (ev.club_id?.club_name || ev.club_name || ev.association || ev.associationName || ev.clubName || 'General').trim();
+        if (!clubMap[cName]) {
+          clubMap[cName] = { club_name: cName, items: [] };
+        }
+        const evItems = Array.isArray(ev.items) ? ev.items : [];
+        evItems.forEach(it => {
+          const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (it.allocated_quantity !== undefined ? it.allocated_quantity : 0)));
+          const reqQty = Number(it.requested_quantity || it.quantity || 0);
+          if (appQty > 0 || reqQty > 0) {
+            const master = masterMap[(it.item_name || it.name || '').trim().toLowerCase()];
+            const isRetVal = it.is_returnable !== undefined ? it.is_returnable : master?.is_returnable;
+            const isRet = (
+              isRetVal === true ||
+              String(isRetVal).toUpperCase() === 'YES' ||
+              String(isRetVal).toUpperCase() === 'TRUE' ||
+              String(isRetVal).toUpperCase() === 'RETURNABLE'
+            );
+            clubMap[cName].items.push({
+              name: String(it.item_name || it.name || 'Unknown Item').trim(),
+              event_name: ev.event_name || ev.name || '',
+              requested: reqQty,
+              approved: appQty,
+              returnability: isRet
+            });
+          }
+        });
+      });
+
+      const sortedClubs = Object.values(clubMap).sort((a, b) => a.club_name.localeCompare(b.club_name, undefined, { sensitivity: 'base' }));
+
+      sortedClubs.forEach(c => {
+        const allocatedOnly = c.items.filter(it => it.approved > 0);
+        c.items = (allocatedOnly.length > 0 ? allocatedOnly : c.items).map((it, idx) => ({
+          ...it,
+          sno: `${idx + 1}`
+        }));
+      });
+
+      return await generateAllAllocatedPdf({ data: sortedClubs });
     }
 
     let rawData = [];
@@ -114,7 +181,7 @@ export default function RolePdf() {
           UnitPrice: Number(it.price_per_unit || 0).toFixed(2),
           EstimatedTotal: Number(it.total_estimated_cost || 0).toFixed(2)
         }));
-      } else if (selected === 'all_event_pdfs' || selected === 'event' || selected === 'items') {
+      } else if (selected === 'all_event_pdfs' || selected === 'event' || selected === 'items' || selected === 'all_allocated_items') {
         const eventRes = await adminAPI.getEvents();
         const events = eventRes.data?.data || eventRes.data || [];
         const submitted = events.filter(e => e.status === 'submitted');
@@ -191,6 +258,45 @@ export default function RolePdf() {
                   ItemName: it.item_name || it.name || '',
                   Quantity: it.quantity || it.requested_quantity || 1
                 });
+              });
+            });
+          } else if (selected === 'all_allocated_items') {
+            let sn = 1;
+            const itemsRes = await adminAPI.getItems().catch(() => ({ data: { data: [] } }));
+            const masterItems = itemsRes.data?.data || itemsRes.data || [];
+            const masterMap = {};
+            masterItems.forEach(mi => {
+              if (mi.item_name) masterMap[mi.item_name.trim().toLowerCase()] = mi;
+            });
+            const sortedEvents = [...rawData].sort((a, b) => {
+              const clubA = (a.club_id?.club_name || a.club_name || 'General').trim();
+              const clubB = (b.club_id?.club_name || b.club_name || 'General').trim();
+              const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+              if (comp !== 0) return comp;
+              const nameA = (a.event_name || a.name || '').trim();
+              const nameB = (b.event_name || b.name || '').trim();
+              return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+            });
+            sortedEvents.forEach(e => {
+              const club = e.club_id?.club_name || e.club_name || 'General';
+              const eventName = e.event_name || '';
+              const items = e.items || [];
+              items.forEach(it => {
+                const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (it.allocated_quantity !== undefined ? it.allocated_quantity : 0)));
+                const reqQty = Number(it.requested_quantity || it.quantity || 0);
+                if (appQty > 0) {
+                  const master = masterMap[(it.item_name || it.name || '').trim().toLowerCase()];
+                  const isRetVal = it.is_returnable !== undefined ? it.is_returnable : master?.is_returnable;
+                  flattenRows.push({
+                    SNo: sn++,
+                    Club: club,
+                    EventName: eventName,
+                    ItemName: it.item_name || it.name || '',
+                    RequestedQuantity: reqQty,
+                    ApprovedQuantity: appQty,
+                    Returnability: isRetVal ? 'Returnable' : 'Non-Returnable'
+                  });
+                }
               });
             });
           } else {

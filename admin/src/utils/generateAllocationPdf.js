@@ -1,4 +1,4 @@
-import "regenerator-runtime/runtime";
+
 import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
@@ -206,8 +206,8 @@ export async function generateAllocationPdf(event) {
 
   currentY -= (boxHeight + 20);
 
-  const colWidths = [45, 270.28, 90, 90];
-  const headers = ['S.No', 'Item Name', 'Requested Qty', 'Approved Qty'];
+  const colWidths = [45, 200, 90, 90, 70];
+  const headers = ['S.No', 'Item Name', 'Requested Qty', 'Approved Qty', 'Returnability'];
 
   const drawTableHeader = () => {
     currentPage.drawRectangle({
@@ -241,12 +241,22 @@ export async function generateAllocationPdf(event) {
   drawTableHeader();
 
   const rawItems = Array.isArray(ev.items) ? ev.items : [];
-  const items = rawItems.map((item, index) => ({
-    sno: `${index + 1}`,
-    name: String(item.item_name || item.name || 'Unknown Item').trim(),
-    requested: String(item.requested_quantity || item.quantity || 0),
-    approved: String(item.approved_quantity !== undefined ? item.approved_quantity : (item.quantity_provided || item.quantity || 0))
-  }));
+  const items = rawItems.map((item, index) => {
+    const isRetVal = item.is_returnable !== undefined ? item.is_returnable : item.item_id?.is_returnable;
+    const isRet = (
+      isRetVal === true ||
+      String(isRetVal).toUpperCase() === 'YES' ||
+      String(isRetVal).toUpperCase() === 'TRUE' ||
+      String(isRetVal).toUpperCase() === 'RETURNABLE'
+    );
+    return {
+      sno: `${index + 1}`,
+      name: String(item.item_name || item.name || 'Unknown Item').trim(),
+      requested: String(item.requested_quantity || item.quantity || 0),
+      approved: String(item.approved_quantity !== undefined ? item.approved_quantity : (item.quantity_provided !== undefined ? item.quantity_provided : (item.quantity || 0))),
+      returnability: isRet
+    };
+  });
 
   if (items.length < 8) {
     while (items.length < 8) {
@@ -318,6 +328,14 @@ export async function generateAllocationPdf(event) {
       const appX = tX + colWidths[0] + colWidths[1] + colWidths[2];
       const appW = fontRegular.widthOfTextAtSize(it.approved, 9);
       currentPage.drawText(it.approved, { x: appX + (colWidths[3] - appW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+    }
+    // Returnability column
+    if (it.name) {
+      const retX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3];
+      const retStr = it.returnability ? 'Returnable' : 'Non-Returnable';
+      const retColor = it.returnability ? rgb(0.18, 0.49, 0.20) : rgb(0.78, 0.16, 0.16);
+      const retW = fontBold.widthOfTextAtSize(retStr, 9);
+      currentPage.drawText(retStr, { x: retX + (colWidths[4] - retW) / 2, y: topY, size: 9, font: fontBold, color: retColor });
     }
 
     currentY -= rowH;
