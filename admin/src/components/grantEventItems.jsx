@@ -16,7 +16,7 @@ import PdfPreviewModal from './ui/PdfPreviewModal';
 import EmptyState from './ui/EmptyState';
 import { Table, THead, Th, Td, Tr } from './ui/Table';
 import { TableSkeleton } from './ui/LoadingState';
-import { generateEventItemsPdf } from '../utils/generateEventItemsPdf';
+import { generateAllocationPdf } from '../utils/generateAllocationPdf';
 
 export default function GrantEventItems() {
   const { id } = useParams();
@@ -162,13 +162,14 @@ export default function GrantEventItems() {
                   try {
                     res = await adminAPI.getAllocationPDF(id);
                   } catch (_) {
-                    try {
-                      res = await adminAPI.getProcurementPDF(id);
-                      docName = `Procurement_${eventName}.pdf`;
-                    } catch (__) {
-                      res = await adminAPI.getEventItemsPDF(id);
-                      docName = `Items_${eventName}.pdf`;
-                    }
+                    res = await generateAllocationPdf(
+                      eventData?.event || {
+                        event_name: eventName,
+                        _id: id,
+                        items: itemsList,
+                        club_name: eventData?.eventDetails?.associationName || eventData?.event?.club_name
+                      }
+                    );
                   }
                   const url = await handlePdfBlob(res, { filename: docName, preview: true });
                   if (url) {
@@ -177,23 +178,6 @@ export default function GrantEventItems() {
                     setPreviewOpen(true);
                   }
                 } catch (err) {
-                  try {
-                    const fallbackBlob = await generateEventItemsPdf(
-                      eventData?.event || {
-                        event_name: eventName,
-                        _id: id,
-                        items: itemsList,
-                        club_name: eventData?.eventDetails?.associationName || eventData?.event?.club_name
-                      }
-                    );
-                    const url = await handlePdfBlob(fallbackBlob, { filename: `Items_${eventName}.pdf`, preview: true });
-                    if (url) {
-                      setPreviewUrl(url);
-                      setPreviewFilename(`Items_${eventName}.pdf`);
-                      setPreviewOpen(true);
-                      return;
-                    }
-                  } catch (_) {}
                   showToast(getApiErrorMessage(err, 'Unable to generate PDF preview.'), 'error');
                 } finally {
                   setPdfLoading(false);
