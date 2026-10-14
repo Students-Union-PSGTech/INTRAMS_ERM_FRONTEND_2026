@@ -200,9 +200,8 @@ export async function generateAllAllocatedPdf({ data }) {
   let currentY = pageHeight - 140;
   const tX = margin;
 
-  // Group items by club
-  // `data` can be an array of club groups: { club_name, items: [{ sno, name, requested, approved, returnability, event_name }] }
-  const clubGroups = Array.isArray(data) ? data : [];
+  // Group items by club (exclude clubs with zero allocated items)
+  const clubGroups = (Array.isArray(data) ? data : []).filter(c => Array.isArray(c.items) && c.items.length > 0);
 
   if (clubGroups.length === 0) {
     currentPage.drawText('No allocated item records found.', {
@@ -264,24 +263,6 @@ export async function generateAllAllocatedPdf({ data }) {
     currentY = drawTableHeader(currentPage, currentY);
 
     if (clubItems.length === 0) {
-      // Empty placeholder row
-      const emptyRowH = 24;
-      currentPage.drawRectangle({
-        x: tX,
-        y: currentY - emptyRowH,
-        width: contentWidth,
-        height: emptyRowH,
-        borderColor: rgb(0, 0, 0),
-        borderWidth: 1
-      });
-      currentPage.drawText('No items currently allocated for this club.', {
-        x: tX + 15,
-        y: currentY - 16,
-        size: 9,
-        font: fontItalic,
-        color: rgb(0.5, 0.5, 0.5)
-      });
-      currentY -= (emptyRowH + 20);
       return;
     }
 

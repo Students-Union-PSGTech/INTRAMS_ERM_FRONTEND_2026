@@ -102,15 +102,16 @@ export default function RolePdf() {
         });
       });
 
-      const sortedClubs = Object.values(clubMap).sort((a, b) => a.club_name.localeCompare(b.club_name, undefined, { sensitivity: 'base' }));
-
-      sortedClubs.forEach(c => {
-        const allocatedOnly = c.items.filter(it => it.approved > 0);
-        c.items = (allocatedOnly.length > 0 ? allocatedOnly : c.items).map((it, idx) => ({
-          ...it,
-          sno: `${idx + 1}`
-        }));
-      });
+      const sortedClubs = Object.values(clubMap)
+        .map(c => ({
+          ...c,
+          items: c.items.filter(it => Number(it.approved) > 0).map((it, idx) => ({
+            ...it,
+            sno: `${idx + 1}`
+          }))
+        }))
+        .filter(c => c.items.length > 0)
+        .sort((a, b) => a.club_name.localeCompare(b.club_name, undefined, { sensitivity: 'base' }));
 
       return await generateAllAllocatedPdf({ data: sortedClubs });
     }
