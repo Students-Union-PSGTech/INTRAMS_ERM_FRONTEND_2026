@@ -206,8 +206,8 @@ export async function generateAllocationPdf(event) {
 
   currentY -= (boxHeight + 20);
 
-  const colWidths = [45, 200, 90, 90, 70];
-  const headers = ['S.No', 'Item Name', 'Requested Qty', 'Approved Qty', 'Returnability'];
+  const colWidths = [35, 165.28, 70, 75, 80, 70];
+  const headers = ['S.No', 'Item Name', 'Requested Qty', 'Approved Qty', 'Newly Allocated', 'Returnability'];
 
   const drawTableHeader = () => {
     currentPage.drawRectangle({
@@ -222,9 +222,9 @@ export async function generateAllocationPdf(event) {
     let cellX = tX;
     headers.forEach((h, idx) => {
       const w = colWidths[idx];
-      const hw = fontBold.widthOfTextAtSize(h, 9);
+      const hw = fontBold.widthOfTextAtSize(h, 8.5);
       let xPos = cellX + (w - hw) / 2;
-      currentPage.drawText(h, { x: xPos, y: currentY - 16, size: 9, font: fontBold, color: rgb(0, 0, 0) });
+      currentPage.drawText(h, { x: xPos, y: currentY - 16, size: 8.5, font: fontBold, color: rgb(0, 0, 0) });
       if (idx > 0) {
         currentPage.drawLine({
           start: { x: cellX, y: currentY - 24 },
@@ -249,18 +249,24 @@ export async function generateAllocationPdf(event) {
       String(isRetVal).toUpperCase() === 'TRUE' ||
       String(isRetVal).toUpperCase() === 'RETURNABLE'
     );
+    const newlyAllocVal = item.newly_allocated !== undefined && item.newly_allocated !== null
+      ? String(item.newly_allocated).trim()
+      : (item.newlyAllocated !== undefined && item.newlyAllocated !== null
+        ? String(item.newlyAllocated).trim()
+        : '');
     return {
       sno: `${index + 1}`,
       name: String(item.item_name || item.name || 'Unknown Item').trim(),
       requested: String(item.requested_quantity || item.quantity || 0),
       approved: String(item.approved_quantity !== undefined ? item.approved_quantity : (item.quantity_provided !== undefined ? item.quantity_provided : (item.quantity || 0))),
+      newly_allocated: newlyAllocVal,
       returnability: isRet
     };
   });
 
   if (items.length < 8) {
     while (items.length < 8) {
-      items.push({ sno: '', name: '', requested: '', approved: '' });
+      items.push({ sno: '', name: '', requested: '', approved: '', newly_allocated: '' });
     }
   }
 
@@ -329,13 +335,21 @@ export async function generateAllocationPdf(event) {
       const appW = fontRegular.widthOfTextAtSize(it.approved, 9);
       currentPage.drawText(it.approved, { x: appX + (colWidths[3] - appW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
     }
+
+    // Newly Allocated
+    if (it.newly_allocated) {
+      const newX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3];
+      const newW = fontRegular.widthOfTextAtSize(it.newly_allocated, 9);
+      currentPage.drawText(it.newly_allocated, { x: newX + (colWidths[4] - newW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+    }
+
     // Returnability column
     if (it.name) {
-      const retX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3];
+      const retX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4];
       const retStr = it.returnability ? 'Returnable' : 'Non-Returnable';
       const retColor = it.returnability ? rgb(0.18, 0.49, 0.20) : rgb(0.78, 0.16, 0.16);
-      const retW = fontBold.widthOfTextAtSize(retStr, 9);
-      currentPage.drawText(retStr, { x: retX + (colWidths[4] - retW) / 2, y: topY, size: 9, font: fontBold, color: retColor });
+      const retW = fontBold.widthOfTextAtSize(retStr, 8.5);
+      currentPage.drawText(retStr, { x: retX + (colWidths[5] - retW) / 2, y: topY, size: 8.5, font: fontBold, color: retColor });
     }
 
     currentY -= rowH;

@@ -166,7 +166,8 @@ export default function GrantEventItems() {
                         ...it,
                         item_name: it.item_name,
                         requested_quantity: it.quantity || it.requested_quantity || 0,
-                        approved_quantity: it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (it.approved_quantity !== undefined ? it.approved_quantity : 0)),
+                        approved_quantity: it.approved_quantity !== undefined ? it.approved_quantity : 0,
+                        newly_allocated: it.newly_allocated !== undefined ? it.newly_allocated : 0,
                         is_returnable: it.is_returnable !== undefined ? it.is_returnable : (master?.is_returnable ?? false)
                       };
                     });

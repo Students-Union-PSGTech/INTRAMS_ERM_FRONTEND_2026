@@ -163,8 +163,8 @@ export async function generateAllAllocatedPdf({ data }) {
     });
   };
 
-  const colWidths = [45, 200, 90, 90, 70];
-  const headers = ['S.No', 'Item Name', 'Requested Qty', 'Approved Qty', 'Returnability'];
+  const colWidths = [35, 165.28, 70, 75, 80, 70];
+  const headers = ['S.No', 'Item Name', 'Requested Qty', 'Approved Qty', 'Newly Allocated', 'Returnability'];
 
   const drawTableHeader = (page, y) => {
     page.drawRectangle({
@@ -179,9 +179,9 @@ export async function generateAllAllocatedPdf({ data }) {
     let cellX = margin;
     headers.forEach((h, idx) => {
       const w = colWidths[idx];
-      const hw = fontBold.widthOfTextAtSize(h, 9);
+      const hw = fontBold.widthOfTextAtSize(h, 8.5);
       let xPos = cellX + (w - hw) / 2;
-      page.drawText(h, { x: xPos, y: y - 16, size: 9, font: fontBold, color: rgb(0, 0, 0) });
+      page.drawText(h, { x: xPos, y: y - 16, size: 8.5, font: fontBold, color: rgb(0, 0, 0) });
       if (idx > 0) {
         page.drawLine({
           start: { x: cellX, y: y - 24 },
@@ -290,7 +290,7 @@ export async function generateAllAllocatedPdf({ data }) {
     const clubName = String(club.club_name || club.name || 'Students Union').trim();
     const rawItems = Array.isArray(club.items) ? club.items : [];
 
-    const totalAllocated = rawItems.reduce((sum, it) => sum + (Number(it.approved !== undefined ? it.approved : it.approved_quantity) || 0), 0);
+    const totalAllocated = rawItems.reduce((sum, it) => sum + (Number(it.approved !== undefined ? it.approved : it.approved_quantity) || 0) + (Number(it.newly_allocated) || 0), 0);
 
     // Metadata Card for this club
     const clubNameLines = wrapText('Club Name: ' + clubName, 230, fontBold, 10);
@@ -333,11 +333,17 @@ export async function generateAllAllocatedPdf({ data }) {
         String(isRetVal).toUpperCase() === 'TRUE' ||
         String(isRetVal).toUpperCase() === 'RETURNABLE'
       );
+      const newlyAllocVal = item.newly_allocated !== undefined && item.newly_allocated !== null
+        ? String(item.newly_allocated).trim()
+        : (item.newlyAllocated !== undefined && item.newlyAllocated !== null
+          ? String(item.newlyAllocated).trim()
+          : '');
       return {
         sno: `${index + 1}`,
         name: String(item.name || item.item_name || 'Unknown Item').trim() + (item.event_name ? ` (${item.event_name})` : ''),
         requested: String(item.requested !== undefined ? item.requested : (item.requested_quantity || 0)),
         approved: String(item.approved !== undefined ? item.approved : (item.approved_quantity || 0)),
+        newly_allocated: newlyAllocVal,
         returnability: isRet
       };
     });
@@ -345,7 +351,7 @@ export async function generateAllAllocatedPdf({ data }) {
     // Ensure at least 8 rows for visual consistency with individual allocation PDF
     if (items.length < 8) {
       while (items.length < 8) {
-        items.push({ sno: '', name: '', requested: '', approved: '' });
+        items.push({ sno: '', name: '', requested: '', approved: '', newly_allocated: '' });
       }
     }
 
@@ -417,13 +423,20 @@ export async function generateAllAllocatedPdf({ data }) {
         currentPage.drawText(it.approved, { x: appX + (colWidths[3] - appW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
       }
 
+      // Newly Allocated
+      if (it.newly_allocated) {
+        const newX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3];
+        const newW = fontRegular.widthOfTextAtSize(it.newly_allocated, 9);
+        currentPage.drawText(it.newly_allocated, { x: newX + (colWidths[4] - newW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      }
+
       // Returnability
       if (it.name) {
-        const retX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3];
+        const retX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4];
         const retStr = it.returnability ? 'Returnable' : 'Non-Returnable';
         const retColor = it.returnability ? rgb(0.18, 0.49, 0.20) : rgb(0.78, 0.16, 0.16);
-        const retW = fontBold.widthOfTextAtSize(retStr, 9);
-        currentPage.drawText(retStr, { x: retX + (colWidths[4] - retW) / 2, y: topY, size: 9, font: fontBold, color: retColor });
+        const retW = fontBold.widthOfTextAtSize(retStr, 8.5);
+        currentPage.drawText(retStr, { x: retX + (colWidths[5] - retW) / 2, y: topY, size: 8.5, font: fontBold, color: retColor });
       }
 
       currentY -= rowH;

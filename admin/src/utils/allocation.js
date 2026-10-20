@@ -3,7 +3,9 @@ export function getRequested(item) {
 }
 
 export function getAllocated(item) {
-  return Number(item?.provided_quantity ?? item?.approved_quantity ?? 0);
+  if (item?.allocated_quantity !== undefined) return Number(item.allocated_quantity);
+  if (item?.provided_quantity !== undefined) return Number(item.provided_quantity);
+  return (Number(item?.approved_quantity) || 0) + (Number(item?.newly_allocated) || 0);
 }
 
 export function getAllocationMetrics(item, availableStock) {

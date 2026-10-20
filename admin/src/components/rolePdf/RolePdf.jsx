@@ -80,9 +80,11 @@ export default function RolePdf() {
         }
         const evItems = Array.isArray(ev.items) ? ev.items : [];
         evItems.forEach(it => {
-          const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (it.allocated_quantity !== undefined ? it.allocated_quantity : 0)));
+          const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : 0);
+          const newQty = Number(it.newly_allocated !== undefined ? it.newly_allocated : (it.newlyAllocated !== undefined ? it.newlyAllocated : 0));
+          const totalApp = Number(it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (appQty + newQty)));
           const reqQty = Number(it.requested_quantity || it.quantity || 0);
-          if (appQty > 0 || reqQty > 0) {
+          if (totalApp > 0 || reqQty > 0) {
             const master = masterMap[(it.item_name || it.name || '').trim().toLowerCase()];
             const isRetVal = it.is_returnable !== undefined ? it.is_returnable : master?.is_returnable;
             const isRet = (
@@ -96,6 +98,7 @@ export default function RolePdf() {
               event_name: ev.event_name || ev.name || '',
               requested: reqQty,
               approved: appQty,
+              newly_allocated: newQty > 0 ? newQty : (it.newly_allocated || ''),
               returnability: isRet
             });
           }
@@ -105,7 +108,7 @@ export default function RolePdf() {
       const sortedClubs = Object.values(clubMap)
         .map(c => ({
           ...c,
-          items: c.items.filter(it => Number(it.approved) > 0).map((it, idx) => ({
+          items: c.items.filter(it => (Number(it.approved) || 0) + (Number(it.newly_allocated) || 0) > 0).map((it, idx) => ({
             ...it,
             sno: `${idx + 1}`
           }))
@@ -283,9 +286,11 @@ export default function RolePdf() {
               const eventName = e.event_name || '';
               const items = e.items || [];
               items.forEach(it => {
-                const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (it.allocated_quantity !== undefined ? it.allocated_quantity : 0)));
+                const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : 0);
+                const newQty = Number(it.newly_allocated !== undefined ? it.newly_allocated : (it.newlyAllocated !== undefined ? it.newlyAllocated : 0));
+                const totalApp = Number(it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (appQty + newQty)));
                 const reqQty = Number(it.requested_quantity || it.quantity || 0);
-                if (appQty > 0) {
+                if (totalApp > 0) {
                   const master = masterMap[(it.item_name || it.name || '').trim().toLowerCase()];
                   const isRetVal = it.is_returnable !== undefined ? it.is_returnable : master?.is_returnable;
                   flattenRows.push({
@@ -295,6 +300,8 @@ export default function RolePdf() {
                     ItemName: it.item_name || it.name || '',
                     RequestedQuantity: reqQty,
                     ApprovedQuantity: appQty,
+                    NewlyAllocated: newQty,
+                    TotalAllocated: totalApp,
                     Returnability: isRetVal ? 'Returnable' : 'Non-Returnable'
                   });
                 }
