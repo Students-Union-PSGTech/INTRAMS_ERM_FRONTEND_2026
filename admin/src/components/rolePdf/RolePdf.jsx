@@ -26,9 +26,48 @@ const ROLES = [
   { id: 'volunteer', label: 'Volunteer' },
 ];
 
+export const isEventOnDay = (ev, targetDay) => {
+  if (!targetDay || targetDay === 'Both' || targetDay === 'both' || targetDay === 'all') return true;
+
+  const form = ev.form || ev.form_specs || {};
+  const isTwoDay = Boolean(
+    form.is_two_day ||
+    form.is_two_day_lab ||
+    ev.is_two_day ||
+    ev.is_two_day_lab ||
+    (form.day1_slot && form.day2_slot)
+  );
+
+  // 2-day events take place on both Day 1 and Day 2
+  if (isTwoDay) return true;
+
+  const dayStr = String(
+    form.day ||
+    form.event_day ||
+    form.lab_day ||
+    ev.day ||
+    ev.event_day ||
+    ev.lab_day ||
+    ''
+  ).trim().toLowerCase();
+
+  const target = String(targetDay).trim().toLowerCase();
+
+  if (target.includes('2') || target === 'day 2') {
+    return dayStr.includes('2') || dayStr.includes('day 2');
+  }
+
+  if (target.includes('1') || target === 'day 1') {
+    return dayStr.includes('1') || dayStr.includes('day 1') || dayStr === '';
+  }
+
+  return true;
+};
+
 export default function RolePdf() {
   const { showToast } = useToast();
   const [selected, setSelected] = useState(ROLES[0].id);
+  const [selectedDay, setSelectedDay] = useState('Both');
   const [busy, setBusy] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -125,6 +164,7 @@ export default function RolePdf() {
         const res = await adminAPI.getEvents();
         const events = res.data?.data || res.data || [];
         rawData = events.filter(e => e.status === 'submitted');
+        if (rawData.length === 0) rawData = events;
       } else {
         const res = await adminAPI.getRoleMembers(selected);
         rawData = res.data?.data || res.data || {};
@@ -133,7 +173,10 @@ export default function RolePdf() {
       rawData = (selected === 'event' || selected === 'items') ? [] : {};
     }
     if (selected === 'items') {
-      return await generateItemsPdf({ data: rawData });
+      const filtered = selectedDay === 'Both'
+        ? rawData
+        : (Array.isArray(rawData) ? rawData : []).filter(e => isEventOnDay(e, selectedDay));
+      return await generateItemsPdf({ data: filtered, day: selectedDay });
     }
     if (selected === 'event') {
       return await generateEventsPdf({ data: rawData });
@@ -141,11 +184,22 @@ export default function RolePdf() {
     return await generateRolePdf({ role: selected, data: rawData });
   };
 
+  const getPdfFilename = () => {
+    if (selected === 'items') {
+      if (selectedDay === 'Both') {
+        return 'Requested_Items_Both_Days.pdf';
+      }
+      return `Requested_Items_${selectedDay.replace(/\s+/g, '_')}.pdf`;
+    }
+    return `Role_${selected}.pdf`;
+  };
+
   const previewPdf = async () => {
     try {
       setBusy('preview');
       const pdfBlob = await generateExactPdfBlob();
-      const url = await handlePdfBlob({ data: pdfBlob }, { filename: `Role_${selected}.pdf`, preview: true });
+      const filename = getPdfFilename();
+      const url = await handlePdfBlob({ data: pdfBlob }, { filename, preview: true });
       if (url) {
         setPreviewUrl(url);
         setPreviewOpen(true);
@@ -161,7 +215,8 @@ export default function RolePdf() {
     try {
       setBusy('download');
       const pdfBlob = await generateExactPdfBlob();
-      await handlePdfBlob({ data: pdfBlob }, { filename: `Role_${selected}.pdf` });
+      const filename = getPdfFilename();
+      await handlePdfBlob({ data: pdfBlob }, { filename });
     } catch (err) {
       showToast(getApiErrorMessage(err, 'Unable to download PDF.'), 'error');
     } finally {
@@ -204,7 +259,7 @@ export default function RolePdf() {
               const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
               if (comp !== 0) return comp;
               const nameA = (a.event_name || a.name || a.eventName || '').trim();
-              const nameB = (b.event_name || b.name || b.eventName || '').trim();
+              const nameB = (b.event_name || b.name || a.eventName || '').trim();
               return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
             });
             flattenRows = sortedEvents.map((e, index) => {
@@ -241,7 +296,10 @@ export default function RolePdf() {
             }));
           } else if (selected === 'items') {
             let sn = 1;
-            const sortedEvents = [...rawData].sort((a, b) => {
+            const targetEvents = selectedDay === 'Both'
+              ? rawData
+              : rawData.filter(e => isEventOnDay(e, selectedDay));
+            const sortedEvents = [...targetEvents].sort((a, b) => {
               const clubA = (a.club_id?.club_name || a.club_name || 'General').trim();
               const clubB = (b.club_id?.club_name || b.club_name || 'General').trim();
               const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
@@ -253,12 +311,14 @@ export default function RolePdf() {
             sortedEvents.forEach(e => {
               const club = e.club_id?.club_name || e.club_name || 'General';
               const eventName = e.event_name || '';
+              const dayText = e.form?.is_two_day ? '2 Days' : (e.form?.day || e.form?.event_day || 'Day 1');
               const items = e.items || [];
               items.forEach(it => {
                 flattenRows.push({
                   SNo: sn++,
                   Club: club,
                   EventName: eventName,
+                  Day: dayText,
                   ItemName: it.item_name || it.name || '',
                   Quantity: it.quantity || it.requested_quantity || 1
                 });
@@ -341,7 +401,9 @@ export default function RolePdf() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Role_${selected}.csv`;
+      a.download = selected === 'items'
+        ? (selectedDay === 'Both' ? 'Requested_Items_Both_Days.csv' : `Requested_Items_${selectedDay.replace(/\s+/g, '_')}.csv`)
+        : `Role_${selected}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -379,11 +441,11 @@ export default function RolePdf() {
         </div>
 
         <div className="col-span-2 p-5 bg-[#050505] border border-[#252525]">
-          <ReportSummary role={selected} />
+          <ReportSummary role={selected} selectedDay={selectedDay} onSelectDay={setSelectedDay} />
         </div>
       </div>
 
-      <PdfPreviewModal open={previewOpen} url={previewUrl} filename={`Role_${selected}.pdf`} onClose={() => setPreviewOpen(false)} />
+      <PdfPreviewModal open={previewOpen} url={previewUrl} filename={getPdfFilename()} onClose={() => setPreviewOpen(false)} />
     </div>
   );
 }

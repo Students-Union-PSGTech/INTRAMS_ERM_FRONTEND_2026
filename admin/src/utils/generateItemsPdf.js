@@ -7,7 +7,7 @@ function cleanText(text) {
   return text.replace(/[\r\n]+/g, ' ').replace(/[\t\f\v]/g, ' ').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
 }
 
-export async function generateItemsPdf({ data }) {
+export async function generateItemsPdf({ data, day }) {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
@@ -141,7 +141,9 @@ export async function generateItemsPdf({ data }) {
       page.drawText(titleText2, { x: (pageWidth - w2) / 2, y: titleY, size: 12, font: fontBold, color: rgb(0, 0, 0) });
       titleY -= 22;
 
-      const titleText3 = 'ITEM REQUEST & LOGISTICS INVOICE (ALL EVENTS)';
+      const isFilteredDay = day && day !== 'Both' && day !== 'both' && day !== 'all';
+      const daySuffix = isFilteredDay ? ` (${String(day).toUpperCase()})` : ' (ALL EVENTS)';
+      const titleText3 = `ITEM REQUEST & LOGISTICS INVOICE${daySuffix}`;
       const w3 = fontBold.widthOfTextAtSize(titleText3, 13);
       page.drawText(titleText3, { x: (pageWidth - w3) / 2, y: titleY, size: 13, font: fontBold, color: rgb(0, 0, 0) });
       page.drawLine({
@@ -178,7 +180,8 @@ export async function generateItemsPdf({ data }) {
   const tableWidth = pageWidth - 100;
   
   if (eventsList.length === 0) {
-    currentPage.drawText('No items requested.', { x: tX + 15, y: currentY - 15, size: 10, font: fontItalic, color: rgb(0.4, 0.4, 0.4) });
+    const isFilteredDay = day && day !== 'Both' && day !== 'both' && day !== 'all';
+    currentPage.drawText(isFilteredDay ? `No events or items requested for ${day}.` : 'No items requested.', { x: tX + 15, y: currentY - 15, size: 10, font: fontItalic, color: rgb(0.4, 0.4, 0.4) });
   }
 
   eventsList.forEach((ev, evIndex) => {
@@ -220,7 +223,8 @@ export async function generateItemsPdf({ data }) {
     currentPage.drawText(line, { x: tX + 270, y: rightY, size: 10.5, font: fontBold, color: rgb(0,0,0) });
     rightY -= lineHeight;
   });
-  currentPage.drawText('Status: ' + (ev.status || 'SUBMITTED').toUpperCase(), { x: tX + 270, y: rightY, size: 10.5, font: fontBold, color: rgb(0,0,0) });
+  const eventDayText = ev.form?.is_two_day ? '2 Days' : (ev.form?.day || ev.form?.event_day || ev.day || 'Day 1');
+  currentPage.drawText('Status: ' + (ev.status || 'SUBMITTED').toUpperCase() + '  |  ' + eventDayText.toUpperCase(), { x: tX + 270, y: rightY, size: 10.5, font: fontBold, color: rgb(0,0,0) });
 
   currentY -= (boxHeight + 20);
 

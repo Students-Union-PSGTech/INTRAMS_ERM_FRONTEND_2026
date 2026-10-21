@@ -1,11 +1,14 @@
 import React from 'react';
 
-export default function ReportSummary({ role, memberCount = 0 }) {
+export default function ReportSummary({ role, selectedDay = 'Both', onSelectDay, memberCount = 0 }) {
   const getRoleDisplayName = () => {
     if (role === 'all_event_pdfs') return 'ALL EVENT PDFS';
     if (role === 'all_allocated_items') return 'ALL ALLOCATED ITEMS';
     if (role === 'consolidated') return 'CONSOLIDATED EVENT REQUESTS';
-    if (role === 'items') return 'REQUESTED ITEMS';
+    if (role === 'items') {
+      const daySuffix = (selectedDay && selectedDay !== 'Both') ? ` - ${selectedDay.toUpperCase()}` : ' - BOTH DAYS';
+      return `REQUESTED ITEMS${daySuffix}`;
+    }
     if (role === 'event') return 'EVENTS';
     return String(role || '').toUpperCase();
   };
@@ -21,7 +24,10 @@ export default function ReportSummary({ role, memberCount = 0 }) {
       return 'Consolidated event item requirements report aggregating total quantities requested, unit prices, and estimated budget totals across all club proposals.';
     }
     if (role === 'items') {
-      return 'Official logistics invoice of requested items grouped by event proposals with detailed cost and GST breakdowns.';
+      if (selectedDay === 'Both') {
+        return 'Official logistics invoice of requested items grouped by event proposals across all days with detailed cost and GST breakdowns.';
+      }
+      return `Official logistics invoice of requested items filtered specifically for ${selectedDay} event proposals (including multi-day events) with detailed cost and GST breakdowns.`;
     }
     if (role === 'event') {
       return 'Official list of submitted club events with unique event identifiers and association details.';
@@ -46,6 +52,35 @@ export default function ReportSummary({ role, memberCount = 0 }) {
           </div>
         </div>
       </div>
+
+      {role === 'items' && onSelectDay && (
+        <div className="p-4 bg-[#080808] border border-[#252525] space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#FFFFFF]">
+              SELECT EVENT DAY
+            </span>
+            <span className="text-[11px] font-bold text-[#00AEEF] uppercase tracking-wider">
+              {selectedDay === 'Both' ? 'BOTH DAYS' : selectedDay} SELECTED
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {['Day 1', 'Day 2', 'Both'].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => onSelectDay(d)}
+                className={`py-2.5 px-3 text-xs font-bold uppercase tracking-wider border transition-all text-center ${
+                  selectedDay === d
+                    ? 'border-[#00AEEF] bg-[#00AEEF] text-[#000000] shadow-[0_0_12px_rgba(0,174,239,0.3)]'
+                    : 'border-[#252525] bg-[#000000] text-[#A0A0A0] hover:border-[#00AEEF] hover:text-[#FFFFFF] hover:bg-[#111111]'
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {description ? (
         <p className="text-xs text-[#A0A0A0] leading-relaxed uppercase">
