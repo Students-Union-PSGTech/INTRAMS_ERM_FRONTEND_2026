@@ -12,6 +12,7 @@ import { generateAllEventsPdf } from '../../utils/generateAllEventsPdf';
 import { generateItemsPdf } from '../../utils/generateItemsPdf';
 import { generateConsolidatedPdf } from '../../utils/generateConsolidatedPdf';
 import { generateAllAllocatedPdf } from '../../utils/generateAllAllocatedPdf';
+import { generatePendingAllocatedPdf } from '../../utils/generatePendingAllocatedPdf';
 import Button from '../ui/Button';
 import PageHeader from '../ui/PageHeader';
 
@@ -19,6 +20,7 @@ const ROLES = [
   { id: 'event', label: 'Events' },
   { id: 'all_event_pdfs', label: 'All Event PDFs' },
   { id: 'all_allocated_items', label: 'All Allocated Items' },
+  { id: 'pending_allocated_items', label: 'Pending Items to be Allocated' },
   { id: 'items', label: 'Requested Items' },
   { id: 'consolidated', label: 'Consolidated Event Requests' },
   { id: 'secretary', label: 'Secretary' },
@@ -112,7 +114,11 @@ export default function RolePdf() {
         }
       });
 
-      events.forEach(ev => {
+      const targetEvents = selectedDay === 'Both'
+        ? events
+        : events.filter(ev => isEventOnDay(ev, selectedDay));
+
+      targetEvents.forEach(ev => {
         const cName = (ev.club_id?.club_name || ev.club_name || ev.association || ev.associationName || ev.clubName || 'General').trim();
         if (!clubMap[cName]) {
           clubMap[cName] = { club_name: cName, items: [] };
@@ -158,6 +164,66 @@ export default function RolePdf() {
       return await generateAllAllocatedPdf({ data: sortedClubs });
     }
 
+    if (selected === 'pending_allocated_items') {
+      const [eventsRes, assocRes] = await Promise.all([
+        adminAPI.getEvents().catch(() => ({ data: { data: [] } })),
+        adminAPI.getAssociations().catch(() => ({ data: { data: [] } }))
+      ]);
+      const events = eventsRes.data?.data || eventsRes.data || [];
+      const associations = assocRes.data?.data || assocRes.data || [];
+
+      const clubMap = {};
+      associations.forEach(a => {
+        const cName = (a.club_name || a.association_name || '').trim();
+        if (cName && !clubMap[cName]) {
+          clubMap[cName] = { club_name: cName, items: [] };
+        }
+      });
+
+      const targetEvents = selectedDay === 'Both'
+        ? events
+        : events.filter(ev => isEventOnDay(ev, selectedDay));
+
+      targetEvents.forEach(ev => {
+        const cName = (ev.club_id?.club_name || ev.club_name || ev.association || ev.associationName || ev.clubName || 'General').trim();
+        if (!clubMap[cName]) {
+          clubMap[cName] = { club_name: cName, items: [] };
+        }
+        const evItems = Array.isArray(ev.items) ? ev.items : [];
+        evItems.forEach(it => {
+          const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : 0);
+          const newQty = Number(it.newly_allocated !== undefined ? it.newly_allocated : (it.newlyAllocated !== undefined ? it.newlyAllocated : 0));
+          const totalAlloc = Number(it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (appQty + newQty)));
+          const sumAllocated = (appQty + newQty > 0) ? (appQty + newQty) : totalAlloc;
+          const reqQty = Number(it.requested_quantity || it.quantity || 0);
+          const pendingQty = Math.max(0, reqQty - sumAllocated);
+          if (pendingQty > 0) {
+            clubMap[cName].items.push({
+              name: String(it.item_name || it.name || 'Unknown Item').trim(),
+              event_name: ev.event_name || ev.name || '',
+              requested: reqQty,
+              allocated: sumAllocated,
+              pending: pendingQty,
+              qty_to_be_allocated: pendingQty
+            });
+          }
+        });
+      });
+
+      const sortedClubs = Object.values(clubMap)
+        .map(c => ({
+          ...c,
+          items: c.items.map((it, idx) => ({
+            ...it,
+            sno: `${idx + 1}`
+          }))
+        }))
+        .filter(c => c.items.length > 0)
+        .sort((a, b) => a.club_name.localeCompare(b.club_name, undefined, { sensitivity: 'base' }));
+
+      return await generatePendingAllocatedPdf({ data: sortedClubs });
+    }
+
     let rawData = [];
     try {
       if (selected === 'event' || selected === 'items') {
@@ -190,6 +256,18 @@ export default function RolePdf() {
         return 'Requested_Items_Both_Days.pdf';
       }
       return `Requested_Items_${selectedDay.replace(/\s+/g, '_')}.pdf`;
+    }
+    if (selected === 'all_allocated_items') {
+      if (selectedDay === 'Both') {
+        return 'All_Allocated_Items_Both_Days.pdf';
+      }
+      return `All_Allocated_Items_${selectedDay.replace(/\s+/g, '_')}.pdf`;
+    }
+    if (selected === 'pending_allocated_items') {
+      if (selectedDay === 'Both') {
+        return 'Pending_Items_to_be_Allocated_Both_Days.pdf';
+      }
+      return `Pending_Items_to_be_Allocated_${selectedDay.replace(/\s+/g, '_')}.pdf`;
     }
     return `Role_${selected}.pdf`;
   };
@@ -240,7 +318,7 @@ export default function RolePdf() {
           UnitPrice: Number(it.price_per_unit || 0).toFixed(2),
           EstimatedTotal: Number(it.total_estimated_cost || 0).toFixed(2)
         }));
-      } else if (selected === 'all_event_pdfs' || selected === 'event' || selected === 'items' || selected === 'all_allocated_items') {
+      } else if (selected === 'all_event_pdfs' || selected === 'event' || selected === 'items' || selected === 'all_allocated_items' || selected === 'pending_allocated_items') {
         const eventRes = await adminAPI.getEvents();
         const events = eventRes.data?.data || eventRes.data || [];
         const submitted = events.filter(e => e.status === 'submitted');
@@ -332,7 +410,10 @@ export default function RolePdf() {
             masterItems.forEach(mi => {
               if (mi.item_name) masterMap[mi.item_name.trim().toLowerCase()] = mi;
             });
-            const sortedEvents = [...rawData].sort((a, b) => {
+            const targetEvents = selectedDay === 'Both'
+              ? rawData
+              : rawData.filter(e => isEventOnDay(e, selectedDay));
+            const sortedEvents = [...targetEvents].sort((a, b) => {
               const clubA = (a.club_id?.club_name || a.club_name || 'General').trim();
               const clubB = (b.club_id?.club_name || b.club_name || 'General').trim();
               const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
@@ -363,6 +444,44 @@ export default function RolePdf() {
                     NewlyAllocated: newQty,
                     TotalAllocated: totalApp,
                     Returnability: isRetVal ? 'Returnable' : 'Non-Returnable'
+                  });
+                }
+              });
+            });
+          } else if (selected === 'pending_allocated_items') {
+            let sn = 1;
+            const targetEvents = selectedDay === 'Both'
+              ? rawData
+              : rawData.filter(e => isEventOnDay(e, selectedDay));
+            const sortedEvents = [...targetEvents].sort((a, b) => {
+              const clubA = (a.club_id?.club_name || a.club_name || 'General').trim();
+              const clubB = (b.club_id?.club_name || b.club_name || 'General').trim();
+              const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+              if (comp !== 0) return comp;
+              const nameA = (a.event_name || a.name || '').trim();
+              const nameB = (b.event_name || b.name || '').trim();
+              return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+            });
+            sortedEvents.forEach(e => {
+              const club = e.club_id?.club_name || e.club_name || 'General';
+              const eventName = e.event_name || '';
+              const items = e.items || [];
+              items.forEach(it => {
+                const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : 0);
+                const newQty = Number(it.newly_allocated !== undefined ? it.newly_allocated : (it.newlyAllocated !== undefined ? it.newlyAllocated : 0));
+                const totalAlloc = Number(it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (appQty + newQty)));
+                const sumAllocated = (appQty + newQty > 0) ? (appQty + newQty) : totalAlloc;
+                const reqQty = Number(it.requested_quantity || it.quantity || 0);
+                const pendingQty = Math.max(0, reqQty - sumAllocated);
+                if (pendingQty > 0) {
+                  flattenRows.push({
+                    SNo: sn++,
+                    Club: club,
+                    EventName: eventName,
+                    ItemName: it.item_name || it.name || '',
+                    RequestedQuantity: reqQty,
+                    AllocatedQuantity: sumAllocated,
+                    QtyToBeAllocated: pendingQty
                   });
                 }
               });
@@ -403,6 +522,10 @@ export default function RolePdf() {
       a.href = url;
       a.download = selected === 'items'
         ? (selectedDay === 'Both' ? 'Requested_Items_Both_Days.csv' : `Requested_Items_${selectedDay.replace(/\s+/g, '_')}.csv`)
+        : selected === 'all_allocated_items'
+        ? (selectedDay === 'Both' ? 'All_Allocated_Items_Both_Days.csv' : `All_Allocated_Items_${selectedDay.replace(/\s+/g, '_')}.csv`)
+        : selected === 'pending_allocated_items'
+        ? (selectedDay === 'Both' ? 'Pending_Items_to_be_Allocated_Both_Days.csv' : `Pending_Items_to_be_Allocated_${selectedDay.replace(/\s+/g, '_')}.csv`)
         : `Role_${selected}.csv`;
       document.body.appendChild(a);
       a.click();

@@ -3,7 +3,14 @@ import React from 'react';
 export default function ReportSummary({ role, selectedDay = 'Both', onSelectDay, memberCount = 0 }) {
   const getRoleDisplayName = () => {
     if (role === 'all_event_pdfs') return 'ALL EVENT PDFS';
-    if (role === 'all_allocated_items') return 'ALL ALLOCATED ITEMS';
+    if (role === 'all_allocated_items') {
+      const daySuffix = (selectedDay && selectedDay !== 'Both') ? ` - ${selectedDay.toUpperCase()}` : ' - BOTH DAYS';
+      return `ALL ALLOCATED ITEMS${daySuffix}`;
+    }
+    if (role === 'pending_allocated_items') {
+      const daySuffix = (selectedDay && selectedDay !== 'Both') ? ` - ${selectedDay.toUpperCase()}` : ' - BOTH DAYS';
+      return `PENDING ITEMS TO BE ALLOCATED${daySuffix}`;
+    }
     if (role === 'consolidated') return 'CONSOLIDATED EVENT REQUESTS';
     if (role === 'items') {
       const daySuffix = (selectedDay && selectedDay !== 'Both') ? ` - ${selectedDay.toUpperCase()}` : ' - BOTH DAYS';
@@ -18,7 +25,16 @@ export default function ReportSummary({ role, selectedDay = 'Both', onSelectDay,
       return 'Comprehensive official compilation of all event resource forms arranged alphabetically by club. Each event starts on a new page with complete logistics matrix, contacts, descriptions, round rules, and items with full English and Tamil support.';
     }
     if (role === 'all_allocated_items') {
-      return 'Official allocation summary report of all equipment and resources granted across all club associations, grouped club-wise with returnability status, requested quantities, and approved quantities.';
+      if (selectedDay === 'Both') {
+        return 'Official allocation summary report of all equipment and resources granted across all club associations, grouped club-wise with returnability status, requested quantities, and approved quantities across all days.';
+      }
+      return `Official allocation summary report of all equipment and resources granted across all club associations for ${selectedDay} events, grouped club-wise with returnability status, requested quantities, and approved quantities.`;
+    }
+    if (role === 'pending_allocated_items') {
+      if (selectedDay === 'Both') {
+        return 'Official summary report of equipment and resources yet to be allocated across all club associations, calculating requested quantities minus approved and newly allocated quantities across all days.';
+      }
+      return `Official summary report of equipment and resources yet to be allocated across all club associations for ${selectedDay} events, calculating requested quantities minus approved and newly allocated quantities.`;
     }
     if (role === 'consolidated') {
       return 'Consolidated event item requirements report aggregating total quantities requested, unit prices, and estimated budget totals across all club proposals.';
@@ -48,12 +64,12 @@ export default function ReportSummary({ role, selectedDay = 'Both', onSelectDay,
         <div className="p-4 bg-[#000000] border border-[#252525]">
           <div className="text-[11px] font-bold uppercase tracking-wider text-[#A0A0A0]">FORMAT SPECIFICATION</div>
           <div className="mt-1 text-xs font-bold text-[#00D084] uppercase">
-            {role === 'all_event_pdfs' ? 'INTRAMS COMPLETE EVENT DOSSIERS (PORTRAIT)' : role === 'all_allocated_items' ? 'INTRAMS ALLOCATION REPORT (PORTRAIT)' : 'INTRAMS OFFICIAL LANDSCAPE REPORT'}
+            {role === 'all_event_pdfs' ? 'INTRAMS COMPLETE EVENT DOSSIERS (PORTRAIT)' : (role === 'all_allocated_items' || role === 'pending_allocated_items') ? 'INTRAMS ALLOCATION REPORT (PORTRAIT)' : 'INTRAMS OFFICIAL LANDSCAPE REPORT'}
           </div>
         </div>
       </div>
 
-      {role === 'items' && onSelectDay && (
+      {(role === 'items' || role === 'all_allocated_items' || role === 'pending_allocated_items') && onSelectDay && (
         <div className="p-4 bg-[#080808] border border-[#252525] space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#FFFFFF]">
