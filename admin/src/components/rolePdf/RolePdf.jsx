@@ -165,12 +165,19 @@ export default function RolePdf() {
     }
 
     if (selected === 'pending_allocated_items') {
-      const [eventsRes, assocRes] = await Promise.all([
+      const [eventsRes, itemsRes, assocRes] = await Promise.all([
         adminAPI.getEvents().catch(() => ({ data: { data: [] } })),
+        adminAPI.getItems().catch(() => ({ data: { data: [] } })),
         adminAPI.getAssociations().catch(() => ({ data: { data: [] } }))
       ]);
       const events = eventsRes.data?.data || eventsRes.data || [];
+      const masterItems = itemsRes.data?.data || itemsRes.data || [];
       const associations = assocRes.data?.data || assocRes.data || [];
+
+      const masterMap = {};
+      masterItems.forEach(mi => {
+        if (mi.item_name) masterMap[mi.item_name.trim().toLowerCase()] = mi;
+      });
 
       const clubMap = {};
       associations.forEach(a => {
@@ -193,18 +200,28 @@ export default function RolePdf() {
         evItems.forEach(it => {
           const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : 0);
           const newQty = Number(it.newly_allocated !== undefined ? it.newly_allocated : (it.newlyAllocated !== undefined ? it.newlyAllocated : 0));
-          const totalAlloc = Number(it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (appQty + newQty)));
-          const sumAllocated = (appQty + newQty > 0) ? (appQty + newQty) : totalAlloc;
+          const totalAlloc = (appQty + newQty > 0) ? (appQty + newQty) : Number(it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : 0));
           const reqQty = Number(it.requested_quantity || it.quantity || 0);
-          const pendingQty = Math.max(0, reqQty - sumAllocated);
+          const pendingQty = Math.max(0, reqQty - totalAlloc);
           if (pendingQty > 0) {
+            const master = masterMap[(it.item_name || it.name || '').trim().toLowerCase()];
+            const isRetVal = it.is_returnable !== undefined ? it.is_returnable : master?.is_returnable;
+            const isRet = (
+              isRetVal === true ||
+              String(isRetVal).toUpperCase() === 'YES' ||
+              String(isRetVal).toUpperCase() === 'TRUE' ||
+              String(isRetVal).toUpperCase() === 'RETURNABLE'
+            );
+
             clubMap[cName].items.push({
               name: String(it.item_name || it.name || 'Unknown Item').trim(),
               event_name: ev.event_name || ev.name || '',
-              requested: reqQty,
-              allocated: sumAllocated,
+              allocated: totalAlloc,
               pending: pendingQty,
-              qty_to_be_allocated: pendingQty
+              total: reqQty,
+              requested: reqQty,
+              returnability: isRet,
+              is_returnable: isRet
             });
           }
         });
@@ -469,19 +486,25 @@ export default function RolePdf() {
               items.forEach(it => {
                 const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : 0);
                 const newQty = Number(it.newly_allocated !== undefined ? it.newly_allocated : (it.newlyAllocated !== undefined ? it.newlyAllocated : 0));
-                const totalAlloc = Number(it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : (appQty + newQty)));
-                const sumAllocated = (appQty + newQty > 0) ? (appQty + newQty) : totalAlloc;
+                const totalAlloc = (appQty + newQty > 0) ? (appQty + newQty) : Number(it.allocated_quantity !== undefined ? it.allocated_quantity : (it.quantity_provided !== undefined ? it.quantity_provided : 0));
                 const reqQty = Number(it.requested_quantity || it.quantity || 0);
-                const pendingQty = Math.max(0, reqQty - sumAllocated);
+                const pendingQty = Math.max(0, reqQty - totalAlloc);
                 if (pendingQty > 0) {
+                  const isRet = (
+                    it.is_returnable === true ||
+                    String(it.is_returnable).toUpperCase() === 'YES' ||
+                    String(it.is_returnable).toUpperCase() === 'TRUE' ||
+                    String(it.is_returnable).toUpperCase() === 'RETURNABLE'
+                  );
                   flattenRows.push({
                     SNo: sn++,
                     Club: club,
                     EventName: eventName,
                     ItemName: it.item_name || it.name || '',
-                    RequestedQuantity: reqQty,
-                    AllocatedQuantity: sumAllocated,
-                    QtyToBeAllocated: pendingQty
+                    Allocated: totalAlloc,
+                    Pending: pendingQty,
+                    Total: reqQty,
+                    Returnability: isRet ? 'Returnable' : 'Non-Returnable'
                   });
                 }
               });

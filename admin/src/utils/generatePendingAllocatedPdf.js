@@ -163,9 +163,9 @@ export async function generatePendingAllocatedPdf({ data }) {
     });
   };
 
-  // Only S.No, Item Name, and Qty to be Allocated
-  const colWidths = [45, 320.28, 130];
-  const headers = ['S.No', 'Item Name', 'Qty to be Allocated'];
+  // Columns: S.No, Item Name, Allocated, Pending, Total, Returnable
+  const colWidths = [35, 210.28, 60, 60, 60, 70];
+  const headers = ['S.No', 'Item Name', 'Allocated', 'Pending', 'Total', 'Returnable'];
 
   const drawTableHeader = (page, y) => {
     page.drawRectangle({
@@ -291,11 +291,16 @@ export async function generatePendingAllocatedPdf({ data }) {
     const clubName = String(club.club_name || club.name || 'Students Union').trim();
     const rawItems = Array.isArray(club.items) ? club.items : [];
 
+    const totalAllocated = rawItems.reduce((sum, it) => sum + (Number(it.allocated !== undefined ? it.allocated : ((Number(it.approved) || 0) + (Number(it.newly_allocated) || 0))) || 0), 0);
     const totalPending = rawItems.reduce((sum, it) => sum + (Number(it.pending !== undefined ? it.pending : it.qty_to_be_allocated) || 0), 0);
+    const totalQty = rawItems.reduce((sum, it) => sum + (Number(it.total !== undefined ? it.total : (it.requested !== undefined ? it.requested : (it.requested_quantity || 0))) || 0), 0);
 
     // Metadata Card for this club
-    const clubNameLines = wrapText('Club Name: ' + clubName, 230, fontBold, 10);
-    const summaryLines = wrapText(`Total Pending Qty: ${totalPending} (Items: ${rawItems.length})`, 230, fontBold, 10);
+    const clubNameLines = wrapText('Club Name: ' + clubName, 240, fontBold, 10);
+    const summaryLines = [
+      `Total Items: ${rawItems.length}   •   Total Qty: ${totalQty}`,
+      `Allocated: ${totalAllocated}   •   Pending: ${totalPending}`
+    ];
 
     const leftLines = clubNameLines.length;
     const rightLines = summaryLines.length;
@@ -317,7 +322,7 @@ export async function generatePendingAllocatedPdf({ data }) {
 
     let rightY = currentY - 12 - 10;
     summaryLines.forEach(line => {
-      currentPage.drawText(line, { x: tX + 260, y: rightY, size: 10, font: fontBold, color: rgb(0, 0, 0) });
+      currentPage.drawText(line, { x: tX + 260, y: rightY, size: 9.5, font: fontBold, color: rgb(0, 0, 0) });
       rightY -= lineHeight;
     });
 
@@ -327,18 +332,32 @@ export async function generatePendingAllocatedPdf({ data }) {
     currentY = drawTableHeader(currentPage, currentY);
 
     const items = rawItems.map((item, index) => {
-      const pQty = Number(item.pending !== undefined ? item.pending : (item.qty_to_be_allocated || 0));
+      const allocQty = Number(item.allocated !== undefined ? item.allocated : ((Number(item.approved) || 0) + (Number(item.newly_allocated) || 0)));
+      const totQty = Number(item.total !== undefined ? item.total : (item.requested !== undefined ? item.requested : (item.requested_quantity || 0)));
+      const pQty = Number(item.pending !== undefined ? item.pending : Math.max(0, totQty - allocQty));
+
+      const isRetVal = item.returnability !== undefined ? item.returnability : item.is_returnable;
+      const isRet = (
+        isRetVal === true ||
+        String(isRetVal).toUpperCase() === 'YES' ||
+        String(isRetVal).toUpperCase() === 'TRUE' ||
+        String(isRetVal).toUpperCase() === 'RETURNABLE'
+      );
+
       return {
         sno: `${index + 1}`,
         name: String(item.name || item.item_name || 'Unknown Item').trim() + (item.event_name ? ` (${item.event_name})` : ''),
-        pending: String(pQty)
+        allocated: String(allocQty),
+        pending: String(pQty),
+        total: String(totQty),
+        is_returnable: isRet
       };
     });
 
     // Ensure at least 8 rows for visual consistency
     if (items.length < 8) {
       while (items.length < 8) {
-        items.push({ sno: '', name: '', pending: '' });
+        items.push({ sno: '', name: '', allocated: '', pending: '', total: '', is_returnable: false });
       }
     }
 
@@ -379,13 +398,13 @@ export async function generatePendingAllocatedPdf({ data }) {
 
       const topY = currentY - 14;
 
-      // S.No
+      // Col 0: S.No
       if (it.sno) {
         const snoW = fontRegular.widthOfTextAtSize(it.sno, 9);
         currentPage.drawText(it.sno, { x: tX + (colWidths[0] - snoW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
       }
 
-      // Name
+      // Col 1: Item Name
       if (it.name) {
         const nameX = tX + colWidths[0] + 8;
         let currentItemY = topY;
@@ -395,11 +414,37 @@ export async function generatePendingAllocatedPdf({ data }) {
         });
       }
 
-      // Qty to be Allocated
-      if (it.pending) {
-        const pendX = tX + colWidths[0] + colWidths[1];
-        const pendW = fontBold.widthOfTextAtSize(it.pending, 9);
-        currentPage.drawText(it.pending, { x: pendX + (colWidths[2] - pendW) / 2, y: topY, size: 9, font: fontBold, color: rgb(0, 0, 0) });
+      // Col 2: Allocated
+      if (it.allocated !== '' && it.sno) {
+        const allocStr = String(it.allocated);
+        const allocW = fontRegular.widthOfTextAtSize(allocStr, 9);
+        const allocX = tX + colWidths[0] + colWidths[1];
+        currentPage.drawText(allocStr, { x: allocX + (colWidths[2] - allocW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      }
+
+      // Col 3: Pending
+      if (it.pending !== '' && it.sno) {
+        const pendStr = String(it.pending);
+        const pendW = fontBold.widthOfTextAtSize(pendStr, 9);
+        const pendX = tX + colWidths[0] + colWidths[1] + colWidths[2];
+        currentPage.drawText(pendStr, { x: pendX + (colWidths[3] - pendW) / 2, y: topY, size: 9, font: fontBold, color: rgb(0, 0, 0) });
+      }
+
+      // Col 4: Total
+      if (it.total !== '' && it.sno) {
+        const totStr = String(it.total);
+        const totW = fontRegular.widthOfTextAtSize(totStr, 9);
+        const totX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3];
+        currentPage.drawText(totStr, { x: totX + (colWidths[4] - totW) / 2, y: topY, size: 9, font: fontRegular, color: rgb(0, 0, 0) });
+      }
+
+      // Col 5: Returnable
+      if (it.sno) {
+        const retStr = it.is_returnable ? 'YES' : 'NO';
+        const retColor = it.is_returnable ? rgb(0.18, 0.49, 0.20) : rgb(0.78, 0.16, 0.16);
+        const retW = fontBold.widthOfTextAtSize(retStr, 8.5);
+        const retX = tX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4];
+        currentPage.drawText(retStr, { x: retX + (colWidths[5] - retW) / 2, y: topY, size: 8.5, font: fontBold, color: retColor });
       }
 
       currentY -= rowH;
@@ -424,9 +469,9 @@ export async function generatePendingAllocatedPdf({ data }) {
       borderWidth: 1
     });
 
-    const totalLabel = 'TOTAL QUANTITY TO BE ALLOCATED';
-    const totalLabelW = fontBold.widthOfTextAtSize(totalLabel, 8.5);
     const col01Width = colWidths[0] + colWidths[1];
+    const totalLabel = 'TOTAL';
+    const totalLabelW = fontBold.widthOfTextAtSize(totalLabel, 8.5);
     currentPage.drawText(totalLabel, {
       x: tX + col01Width - totalLabelW - 12,
       y: currentY - 15,
@@ -435,20 +480,78 @@ export async function generatePendingAllocatedPdf({ data }) {
       color: rgb(0, 0, 0)
     });
 
-    // Vertical line between Item Name & Qty
+    let divX = tX + col01Width;
     currentPage.drawLine({
-      start: { x: tX + col01Width, y: currentY - summaryRowH },
-      end: { x: tX + col01Width, y: currentY },
+      start: { x: divX, y: currentY - summaryRowH },
+      end: { x: divX, y: currentY },
       thickness: 1,
       color: rgb(0, 0, 0)
     });
 
+    // Col 2: Total Allocated
+    const totAllocStr = String(totalAllocated);
+    const totAllocW = fontBold.widthOfTextAtSize(totAllocStr, 9);
+    currentPage.drawText(totAllocStr, {
+      x: divX + (colWidths[2] - totAllocW) / 2,
+      y: currentY - 15,
+      size: 9,
+      font: fontBold,
+      color: rgb(0, 0, 0)
+    });
+
+    divX += colWidths[2];
+    currentPage.drawLine({
+      start: { x: divX, y: currentY - summaryRowH },
+      end: { x: divX, y: currentY },
+      thickness: 1,
+      color: rgb(0, 0, 0)
+    });
+
+    // Col 3: Total Pending
     const totalPendStr = String(totalPending);
     const totalPendW = fontBold.widthOfTextAtSize(totalPendStr, 9);
     currentPage.drawText(totalPendStr, {
-      x: tX + col01Width + (colWidths[2] - totalPendW) / 2,
+      x: divX + (colWidths[3] - totalPendW) / 2,
       y: currentY - 15,
       size: 9,
+      font: fontBold,
+      color: rgb(0, 0, 0)
+    });
+
+    divX += colWidths[3];
+    currentPage.drawLine({
+      start: { x: divX, y: currentY - summaryRowH },
+      end: { x: divX, y: currentY },
+      thickness: 1,
+      color: rgb(0, 0, 0)
+    });
+
+    // Col 4: Total Qty
+    const totQtyStr = String(totalQty);
+    const totQtyW = fontBold.widthOfTextAtSize(totQtyStr, 9);
+    currentPage.drawText(totQtyStr, {
+      x: divX + (colWidths[4] - totQtyW) / 2,
+      y: currentY - 15,
+      size: 9,
+      font: fontBold,
+      color: rgb(0, 0, 0)
+    });
+
+    divX += colWidths[4];
+    currentPage.drawLine({
+      start: { x: divX, y: currentY - summaryRowH },
+      end: { x: divX, y: currentY },
+      thickness: 1,
+      color: rgb(0, 0, 0)
+    });
+
+    // Col 5: Returnable empty dash
+    const dash = '—';
+    const dashW = fontBold.widthOfTextAtSize(dash, 8.5);
+    currentPage.drawText(dash, {
+      x: divX + (colWidths[5] - dashW) / 2,
+      y: currentY - 15,
+      size: 8.5,
       font: fontBold,
       color: rgb(0, 0, 0)
     });
