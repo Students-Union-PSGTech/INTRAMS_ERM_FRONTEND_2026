@@ -7,6 +7,9 @@ export default function ReportSummary({ role, selectedDay = 'Both', onSelectDay,
       const daySuffix = (selectedDay && selectedDay !== 'Both') ? ` - ${selectedDay.toUpperCase()}` : ' - BOTH DAYS';
       return `ALL ALLOCATED ITEMS${daySuffix}`;
     }
+    if (role === 'event_allocated_items') {
+      return 'EVENT LOGISTICS REPORT';
+    }
     if (role === 'pending_allocated_items') {
       const daySuffix = (selectedDay && selectedDay !== 'Both') ? ` - ${selectedDay.toUpperCase()}` : ' - BOTH DAYS';
       return `PENDING ITEMS TO BE ALLOCATED${daySuffix}`;
@@ -29,6 +32,9 @@ export default function ReportSummary({ role, selectedDay = 'Both', onSelectDay,
         return 'Official allocation summary report of all equipment and resources granted across all club associations, grouped club-wise with returnability status, requested quantities, and approved quantities across all days.';
       }
       return `Official allocation summary report of all equipment and resources granted across all club associations for ${selectedDay} events, grouped club-wise with returnability status, requested quantities, and approved quantities.`;
+    }
+    if (role === 'event_allocated_items') {
+      return 'Official event logistics report detailing event-wise items requested across all club associations, sorted club-wise with each event on a separate page with returnability and receiver acknowledgment signatures.';
     }
     if (role === 'pending_allocated_items') {
       if (selectedDay === 'Both') {
@@ -64,7 +70,7 @@ export default function ReportSummary({ role, selectedDay = 'Both', onSelectDay,
         <div className="p-4 bg-[#000000] border border-[#252525]">
           <div className="text-[11px] font-bold uppercase tracking-wider text-[#A0A0A0]">FORMAT SPECIFICATION</div>
           <div className="mt-1 text-xs font-bold text-[#00D084] uppercase">
-            {role === 'all_event_pdfs' ? 'INTRAMS COMPLETE EVENT DOSSIERS (PORTRAIT)' : (role === 'all_allocated_items' || role === 'pending_allocated_items') ? 'INTRAMS ALLOCATION REPORT (PORTRAIT)' : 'INTRAMS OFFICIAL LANDSCAPE REPORT'}
+            {role === 'all_event_pdfs' ? 'INTRAMS COMPLETE EVENT DOSSIERS (PORTRAIT)' : (role === 'all_allocated_items' || role === 'event_allocated_items' || role === 'pending_allocated_items') ? 'INTRAMS ALLOCATION REPORT (PORTRAIT)' : 'INTRAMS OFFICIAL LANDSCAPE REPORT'}
           </div>
         </div>
       </div>

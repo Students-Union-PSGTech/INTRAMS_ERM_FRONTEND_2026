@@ -12,6 +12,7 @@ import { generateAllEventsPdf } from '../../utils/generateAllEventsPdf';
 import { generateItemsPdf } from '../../utils/generateItemsPdf';
 import { generateConsolidatedPdf } from '../../utils/generateConsolidatedPdf';
 import { generateAllAllocatedPdf } from '../../utils/generateAllAllocatedPdf';
+import { generateEventAllocatedPdf } from '../../utils/generateEventAllocatedPdf';
 import { generatePendingAllocatedPdf } from '../../utils/generatePendingAllocatedPdf';
 import Button from '../ui/Button';
 import PageHeader from '../ui/PageHeader';
@@ -20,6 +21,7 @@ const ROLES = [
   { id: 'event', label: 'Events' },
   { id: 'all_event_pdfs', label: 'All Event PDFs' },
   { id: 'all_allocated_items', label: 'All Allocated Items' },
+  { id: 'event_allocated_items', label: 'Event Logistics Report' },
   { id: 'pending_allocated_items', label: 'Pending Items to be Allocated' },
   { id: 'items', label: 'Requested Items' },
   { id: 'consolidated', label: 'Consolidated Event Requests' },
@@ -164,6 +166,96 @@ export default function RolePdf() {
       return await generateAllAllocatedPdf({ data: sortedClubs });
     }
 
+    if (selected === 'event_allocated_items') {
+      const [eventsRes, itemsRes, assocRes] = await Promise.all([
+        adminAPI.getEvents().catch(() => ({ data: { data: [] } })),
+        adminAPI.getItems().catch(() => ({ data: { data: [] } })),
+        adminAPI.getAssociations().catch(() => ({ data: { data: [] } }))
+      ]);
+      const events = eventsRes.data?.data || eventsRes.data || [];
+      const masterItems = itemsRes.data?.data || itemsRes.data || [];
+      const associations = assocRes.data?.data || assocRes.data || [];
+
+      const masterMap = {};
+      masterItems.forEach(mi => {
+        if (mi.item_name) masterMap[mi.item_name.trim().toLowerCase()] = mi;
+      });
+
+      const clubMap = {};
+      associations.forEach(a => {
+        const cName = (a.club_name || a.association_name || '').trim();
+        if (cName && !clubMap[cName]) {
+          clubMap[cName] = { club_name: cName, events: [] };
+        }
+      });
+
+      // Single unified record across all events (no Day 1 / Day 2 separation)
+      events.forEach(ev => {
+        const cName = (ev.club_id?.club_name || ev.club_name || ev.association || ev.associationName || ev.clubName || 'General').trim();
+        if (!clubMap[cName]) {
+          clubMap[cName] = { club_name: cName, events: [] };
+        }
+        const evItems = Array.isArray(ev.items) ? ev.items : [];
+        const eventName = (ev.event_name || ev.name || 'Event').trim();
+        const eventId = (ev.event_id || ev.id || ev._id || '—').trim();
+        const eventDay = ev.form?.is_two_day ? '2 Days' : (ev.form?.day || ev.form?.event_day || ev.day || '—');
+
+        const allocatedItems = [];
+        evItems.forEach(it => {
+          // Strictly only approved/allocated quantity, ignoring newly allocated
+          const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : (it.allocated_quantity !== undefined ? it.allocated_quantity : 0));
+          const reqQty = Number(it.requested_quantity !== undefined ? it.requested_quantity : (it.quantity !== undefined ? it.quantity : 0));
+
+          const master = masterMap[(it.item_name || it.name || '').trim().toLowerCase()];
+          const isRetVal = it.is_returnable !== undefined ? it.is_returnable : master?.is_returnable;
+          const isRet = (
+            isRetVal === true ||
+            String(isRetVal).toUpperCase() === 'YES' ||
+            String(isRetVal).toUpperCase() === 'TRUE' ||
+            String(isRetVal).toUpperCase() === 'RETURNABLE'
+          );
+
+          allocatedItems.push({
+            name: String(it.item_name || it.name || 'Unknown Item').trim(),
+            requested: reqQty,
+            allocated: appQty,
+            returnability: isRet,
+            is_returnable: isRet
+          });
+        });
+
+        if (allocatedItems.length > 0) {
+          allocatedItems.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+          allocatedItems.forEach((it, idx) => {
+            it.sno = `${idx + 1}`;
+          });
+
+          clubMap[cName].events.push({
+            event_id: eventId,
+            event_name: eventName,
+            day: eventDay,
+            status: ev.status || 'submitted',
+            items: allocatedItems
+          });
+        }
+      });
+
+      const sortedClubs = Object.values(clubMap)
+        .map(c => {
+          const sortedEvents = [...c.events].sort((a, b) =>
+            a.event_name.localeCompare(b.event_name, undefined, { sensitivity: 'base' })
+          );
+          return {
+            ...c,
+            events: sortedEvents
+          };
+        })
+        .filter(c => c.events.length > 0)
+        .sort((a, b) => a.club_name.localeCompare(b.club_name, undefined, { sensitivity: 'base' }));
+
+      return await generateEventAllocatedPdf({ data: sortedClubs });
+    }
+
     if (selected === 'pending_allocated_items') {
       const [eventsRes, itemsRes, assocRes] = await Promise.all([
         adminAPI.getEvents().catch(() => ({ data: { data: [] } })),
@@ -280,6 +372,9 @@ export default function RolePdf() {
       }
       return `All_Allocated_Items_${selectedDay.replace(/\s+/g, '_')}.pdf`;
     }
+    if (selected === 'event_allocated_items') {
+      return 'Event_Logistics_Report.pdf';
+    }
     if (selected === 'pending_allocated_items') {
       if (selectedDay === 'Both') {
         return 'Pending_Items_to_be_Allocated_Both_Days.pdf';
@@ -335,7 +430,7 @@ export default function RolePdf() {
           UnitPrice: Number(it.price_per_unit || 0).toFixed(2),
           EstimatedTotal: Number(it.total_estimated_cost || 0).toFixed(2)
         }));
-      } else if (selected === 'all_event_pdfs' || selected === 'event' || selected === 'items' || selected === 'all_allocated_items' || selected === 'pending_allocated_items') {
+      } else if (selected === 'all_event_pdfs' || selected === 'event' || selected === 'items' || selected === 'all_allocated_items' || selected === 'event_allocated_items' || selected === 'pending_allocated_items') {
         const eventRes = await adminAPI.getEvents();
         const events = eventRes.data?.data || eventRes.data || [];
         const submitted = events.filter(e => e.status === 'submitted');
@@ -465,6 +560,44 @@ export default function RolePdf() {
                 }
               });
             });
+          } else if (selected === 'event_allocated_items') {
+            let sn = 1;
+            const itemsRes = await adminAPI.getItems().catch(() => ({ data: { data: [] } }));
+            const masterItems = itemsRes.data?.data || itemsRes.data || [];
+            const masterMap = {};
+            masterItems.forEach(mi => {
+              if (mi.item_name) masterMap[mi.item_name.trim().toLowerCase()] = mi;
+            });
+            const sortedEvents = [...rawData].sort((a, b) => {
+              const clubA = (a.club_id?.club_name || a.club_name || 'General').trim();
+              const clubB = (b.club_id?.club_name || b.club_name || 'General').trim();
+              const comp = clubA.localeCompare(clubB, undefined, { sensitivity: 'base' });
+              if (comp !== 0) return comp;
+              const nameA = (a.event_name || a.name || '').trim();
+              const nameB = (b.event_name || b.name || '').trim();
+              return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+            });
+            sortedEvents.forEach(e => {
+              const club = e.club_id?.club_name || e.club_name || 'General';
+              const eventId = e.event_id || '';
+              const eventName = e.event_name || '';
+              const items = e.items || [];
+              items.forEach(it => {
+                const appQty = Number(it.approved_quantity !== undefined ? it.approved_quantity : (it.allocated_quantity !== undefined ? it.allocated_quantity : 0));
+                const reqQty = Number(it.requested_quantity !== undefined ? it.requested_quantity : (it.quantity !== undefined ? it.quantity : 0));
+                const master = masterMap[(it.item_name || it.name || '').trim().toLowerCase()];
+                const isRetVal = it.is_returnable !== undefined ? it.is_returnable : master?.is_returnable;
+                flattenRows.push({
+                  SNo: sn++,
+                  Club: club,
+                  EventID: eventId,
+                  EventName: eventName,
+                  ItemName: it.item_name || it.name || '',
+                  Qty: appQty,
+                  Returnable: isRetVal ? 'Returnable' : 'Non-Returnable'
+                });
+              });
+            });
           } else if (selected === 'pending_allocated_items') {
             let sn = 1;
             const targetEvents = selectedDay === 'Both'
@@ -547,6 +680,8 @@ export default function RolePdf() {
         ? (selectedDay === 'Both' ? 'Requested_Items_Both_Days.csv' : `Requested_Items_${selectedDay.replace(/\s+/g, '_')}.csv`)
         : selected === 'all_allocated_items'
         ? (selectedDay === 'Both' ? 'All_Allocated_Items_Both_Days.csv' : `All_Allocated_Items_${selectedDay.replace(/\s+/g, '_')}.csv`)
+        : selected === 'event_allocated_items'
+        ? 'Event_Logistics_Report.csv'
         : selected === 'pending_allocated_items'
         ? (selectedDay === 'Both' ? 'Pending_Items_to_be_Allocated_Both_Days.csv' : `Pending_Items_to_be_Allocated_${selectedDay.replace(/\s+/g, '_')}.csv`)
         : `Role_${selected}.csv`;
