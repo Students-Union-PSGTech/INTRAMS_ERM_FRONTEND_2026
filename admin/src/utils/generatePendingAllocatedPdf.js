@@ -163,9 +163,9 @@ export async function generatePendingAllocatedPdf({ data }) {
     });
   };
 
-  // Columns: S.No, Item Name, Allocated, Pending, Total, Returnable
+  // Columns: S.No, Item Name, Batch 1, Batch 2, Total, Returnable
   const colWidths = [35, 210.28, 60, 60, 60, 70];
-  const headers = ['S.No', 'Item Name', 'Allocated', 'Pending', 'Total', 'Returnable'];
+  const headers = ['S.No', 'Item Name', 'Batch 1', 'Batch 2', 'Total', 'Returnable'];
 
   const drawTableHeader = (page, y) => {
     page.drawRectangle({
@@ -299,7 +299,7 @@ export async function generatePendingAllocatedPdf({ data }) {
     const clubNameLines = wrapText('Club Name: ' + clubName, 240, fontBold, 10);
     const summaryLines = [
       `Total Items: ${rawItems.length}   •   Total Qty: ${totalQty}`,
-      `Allocated: ${totalAllocated}   •   Pending: ${totalPending}`
+      `Batch 1: ${totalAllocated}   •   Batch 2: ${totalPending}`
     ];
 
     const leftLines = clubNameLines.length;
